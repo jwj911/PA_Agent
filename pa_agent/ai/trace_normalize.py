@@ -515,6 +515,8 @@ def normalize_trace_item(
     normalization_mode: NormalizationMode = "strict",
 ) -> None:
     """Mutate one trace item: answer + bar_range."""
+    if _is_nullish(item.get("node_id")) and not _is_nullish(item.get("node")):
+        item["node_id"] = str(item.get("node", "")).strip()
     _ensure_trace_string_fields(item)
     lenient = normalization_mode == "lenient"
     nid = str(item.get("node_id", "")).strip()
@@ -523,7 +525,7 @@ def normalize_trace_item(
     if nid != str(item.get("node_id", "")).strip():
         item["node_id"] = nid
 
-    if nid == "14":
+    if nid == "14" or (nid.startswith("14") and not nid.startswith("14.")):
         item["node_id"] = "14.1"
         nid = "14.1"
 
@@ -778,7 +780,7 @@ def _repair_gate_result(obj: dict[str, Any]) -> None:
 
     Per prompt rules, gate_result=wait/unknown is only valid for:
     - §1.2 answer≠是 (cannot identify cycle)
-    - §1.3 answer=否 (extreme chaos, extreme_tr)
+    - §1.3 answer=是 (market is extremely chaotic)
 
     If neither condition holds but gate_result is wait/unknown, force to proceed.
     """
@@ -798,7 +800,7 @@ def _repair_gate_result(obj: dict[str, Any]) -> None:
     node_13_block = any(
         isinstance(item, dict)
         and str(item.get("node_id", "")) == "1.3"
-        and str(item.get("answer", "")).strip() == "否"
+        and str(item.get("answer", "")).strip() == "是"
         for item in gate
     )
     if not node_12_block and not node_13_block:

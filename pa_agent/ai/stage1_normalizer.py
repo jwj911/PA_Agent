@@ -36,6 +36,12 @@ _BAR_ROLE_ALIASES: dict[str, str] = {
     "setup": "signal",
     "pullback": "test",
     "retest": "test",
+    "breakout_test": "test",
+    "breakout_pullback": "test",
+    "breakout-test": "test",
+    "breakout_pullback_test": "test",
+    "support": "structure",
+    "resistance": "structure",
     "failure": "trap",
     "failed": "trap",
     "exhaustion": "climax",
@@ -96,6 +102,8 @@ _CONTEXT_EFFECT_ALIASES: dict[str, str] = {
     "strengthens_bear": "strengthens_bear",
     "strengthens_bulls": "strengthens_bull",   # AI typo: extra 's'
     "strengthens_bears": "strengthens_bear",   # AI typo: extra 's'
+    "strengthens_bash": "strengthens_bear",    # AI typo: bash → bear
+    "strengthen_bash": "strengthens_bear",
     "weakens_bull": "weakens_bull",
     "weakens_bear": "weakens_bear",
     "weaken_bull": "weakens_bull",
@@ -112,6 +120,15 @@ _BAR_TYPE_ENUM = frozenset({
     "trend_bull", "trend_bear", "doji", "inside",
     "outside_bull", "outside_bear", "flat", "other",
 })
+_VALID_BAR_ROLES = frozenset({
+    "structure", "signal", "entry", "confirmation", "noise", "trap", "climax", "test",
+})
+
+_VALID_CONTEXT_EFFECTS = frozenset({
+    "strengthens_bull", "weakens_bull", "strengthens_bear", "weakens_bear",
+    "neutral", "transition", "weakened_bull", "weakened_bear",
+})
+
 _BAR_TYPE_ALIASES: dict[str, str] = {
     "ine": "inside",
     "ins": "inside",
@@ -217,6 +234,40 @@ def _normalize_strategy_file_names(files: Any) -> list[str]:
     return out
 
 
+def _normalize_bar_role_value(raw: str) -> str | None:
+    key = raw.strip().lower().replace(" ", "_").replace("-", "_")
+    mapped = _BAR_ROLE_ALIASES.get(key)
+    if mapped:
+        return mapped
+    if key in _VALID_BAR_ROLES:
+        return key
+    if "breakout" in key and ("test" in key or "pullback" in key):
+        return "test"
+    if key.startswith("trend_"):
+        return "structure"
+    return None
+
+
+def _normalize_context_effect_value(raw: str) -> str | None:
+    key = raw.strip().lower().replace(" ", "_").replace("-", "_")
+    mapped = _CONTEXT_EFFECT_ALIASES.get(key)
+    if mapped:
+        return mapped
+    if key in _VALID_CONTEXT_EFFECTS:
+        return key
+    if key.startswith("strengthen"):
+        if "bear" in key or "bash" in key:
+            return "strengthens_bear"
+        if "bull" in key:
+            return "strengthens_bull"
+    if key.startswith("weaken"):
+        if "bear" in key:
+            return "weakens_bear"
+        if "bull" in key:
+            return "weakens_bull"
+    return None
+
+
 def _normalize_bar_by_bar_roles(out: dict[str, Any]) -> None:
     summary = out.get("bar_by_bar_summary")
     if not isinstance(summary, list):
@@ -227,9 +278,8 @@ def _normalize_bar_by_bar_roles(out: dict[str, Any]) -> None:
         role = item.get("role")
         if not isinstance(role, str):
             continue
-        key = role.strip().lower()
-        normalized = _BAR_ROLE_ALIASES.get(key)
-        if normalized:
+        normalized = _normalize_bar_role_value(role)
+        if normalized and normalized != role:
             item["role"] = normalized
             logger.debug("Mapped bar_by_bar_summary role %r -> %s", role, normalized)
 
@@ -244,8 +294,7 @@ def _normalize_bar_by_bar_context_effects(out: dict[str, Any]) -> None:
         effect = item.get("context_effect")
         if not isinstance(effect, str):
             continue
-        key = effect.strip().lower()
-        normalized = _CONTEXT_EFFECT_ALIASES.get(key)
+        normalized = _normalize_context_effect_value(effect)
         if normalized and normalized != effect:
             item["context_effect"] = normalized
             logger.debug(
@@ -253,6 +302,31 @@ def _normalize_bar_by_bar_context_effects(out: dict[str, Any]) -> None:
                 effect,
                 normalized,
             )
+
+
+_VALID_TRAPPED_SIDES = frozenset({"bulls", "bears", "both", "none", "unknown"})
+
+
+def _normalize_bar_by_bar_trapped_side(out: dict[str, Any]) -> None:
+    summary = out.get("bar_by_bar_summary")
+    if not isinstance(summary, list):
+        return
+    for item in summary:
+        if not isinstance(item, dict):
+            continue
+        side = item.get("trapped_side")
+        if side is None or (isinstance(side, str) and not side.strip()):
+            item["trapped_side"] = "none"
+            logger.debug("Mapped bar_by_bar_summary trapped_side null/empty -> none")
+            continue
+        if isinstance(side, str):
+            key = side.strip().lower()
+            if key in _VALID_TRAPPED_SIDES:
+                if key != side:
+                    item["trapped_side"] = key
+            else:
+                item["trapped_side"] = "unknown"
+                logger.debug("Mapped bar_by_bar_summary trapped_side %r -> unknown", side)
 
 
 def _infer_signal_bar_from_summary(summary: object) -> dict[str, Any] | None:
@@ -582,6 +656,7 @@ def normalize_stage1(
     normalize_stage1_traces(out, normalization_mode=normalization_mode)
     _normalize_bar_by_bar_roles(out)
     _normalize_bar_by_bar_context_effects(out)
+    _normalize_bar_by_bar_trapped_side(out)
     _normalize_bar_types(out)
     _normalize_signal_bar_object(out)
     _normalize_signal_bar_quality(out)

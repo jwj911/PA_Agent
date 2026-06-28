@@ -441,7 +441,16 @@ def apply_continuity_guard(
 
     existing = str(decision.get("reasoning") or "")
     prefix = f"【程序连续性守卫】{reason}；改为不下单。 "
-    decision["reasoning"] = prefix + existing
+    # Keep in sync with stage2_normalizer.DECISION_REASONING_MAX_LEN (schema maxLength).
+    max_len = 280
+    budget = max_len - len(prefix)
+    if budget < 1:
+        decision["reasoning"] = prefix[:max_len]
+    else:
+        body = existing
+        if len(body) > budget:
+            body = body[: budget - 1] + "…"
+        decision["reasoning"] = prefix + body
 
     terminal = dict(stage2.get("terminal") or {})
     terminal["outcome"] = "wait"

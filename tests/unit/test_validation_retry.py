@@ -28,7 +28,21 @@ class _Settings:
 
 def test_should_retry_format_errors():
     assert should_retry("b", [], ["gate_trace"], attempt=0, settings=_Settings())
+    assert should_retry("c", ["node_overrides.0.answer"], [], attempt=0, settings=_Settings())
+    assert should_retry("c", ["decision.reasoning"], [], attempt=0, settings=_Settings())
     assert not should_retry("c", ["metrics:bad"], [], attempt=0, settings=_Settings())
+
+
+def test_build_retry_feedback_node_overrides_answer_hint():
+    err = _FakeErr(
+        "c",
+        "'空头' is not one of ['是', '否', '中性', '等待', '不适用']",
+        [],
+        ["node_overrides.0.answer"],
+    )
+    text = build_retry_feedback(err, stage="stage1", attempt=1, max_attempts=3)
+    assert "node_overrides answer" in text
+    assert "branch" in text
 
 
 def test_detect_cheat_immutable_direction():
@@ -36,6 +50,61 @@ def test_detect_cheat_immutable_direction():
     after = {"direction": "bearish", "cycle_position": "spike", "gate_result": "proceed"}
     flags = detect_cheat("stage1", before, after)
     assert any("direction" in f for f in flags)
+
+
+def test_detect_cheat_allows_direction_with_incremental_override():
+    before = {"direction": "neutral", "cycle_position": "trading_range", "gate_result": "proceed"}
+    after = {"direction": "bearish", "cycle_position": "trading_range", "gate_result": "proceed"}
+    after_raw = {
+        **after,
+        "node_overrides": [
+            {
+                "node_id": "2.3",
+                "answer": "是",
+                "branch": "bearish",
+                "override_reason": "K1 trend_bear broke support.",
+            }
+        ],
+        "incremental_delta": {
+            "new_closed_bars": ["K1"],
+            "changed_fields": ["direction"],
+            "summary": "direction neutral→bearish",
+        },
+    }
+    flags = detect_cheat(
+        "stage1",
+        before,
+        after,
+        before_raw={**before, "direction": "neutral"},
+        after_raw=after_raw,
+    )
+    assert not any("direction" in f for f in flags)
+
+
+def test_detect_cheat_ignores_gate_result_when_normalizer_repairs_to_same():
+    before = {"direction": "neutral", "cycle_position": "broad_channel", "gate_result": "proceed"}
+    after = {"direction": "neutral", "cycle_position": "broad_channel", "gate_result": "proceed"}
+    flags = detect_cheat(
+        "stage1",
+        before,
+        after,
+        before_raw={**before, "gate_result": "proceed"},
+        after_raw={**after, "gate_result": "unknown"},
+    )
+    assert not any("gate_result" in f for f in flags)
+
+
+def test_detect_cheat_flags_raw_gate_weakening():
+    before = {"direction": "neutral", "cycle_position": "broad_channel", "gate_result": "proceed"}
+    after = {"direction": "neutral", "cycle_position": "broad_channel", "gate_result": "unknown"}
+    flags = detect_cheat(
+        "stage1",
+        before,
+        after,
+        before_raw={**before, "gate_result": "proceed"},
+        after_raw={**after, "gate_result": "unknown"},
+    )
+    assert any("gate_result" in f for f in flags)
 
 
 def test_detect_cheat_no_false_positive_when_program_normalizes_direction():

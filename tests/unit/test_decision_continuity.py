@@ -119,6 +119,31 @@ def test_apply_continuity_guard_forces_no_order():
     assert out["terminal"]["outcome"] == "wait"
 
 
+def test_apply_continuity_guard_reasoning_within_max_len():
+    ctx = {
+        "direction": "neutral",
+        "always_in_branch": None,
+        "has_previous_plan": False,
+        "cooldown_bars": 3,
+    }
+    long_body = "x" * 300
+    stage2 = {
+        "decision": {
+            "order_type": "限价单",
+            "order_direction": "做空",
+            "entry_price": 3990.0,
+            "stop_loss_price": 4000.0,
+            "take_profit_price": 3970.0,
+            "reasoning": long_body,
+        },
+        "terminal": {"outcome": "trade", "node_id": "11.2"},
+    }
+    out = apply_continuity_guard(stage2, ctx)
+    reasoning = out["decision"]["reasoning"]
+    assert len(reasoning) <= 280
+    assert reasoning.startswith("【程序连续性守卫】")
+
+
 def test_render_prompt_mentions_neutral_ais():
     ctx = build_continuity_context(
         frame=_frame(),
