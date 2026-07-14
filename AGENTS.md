@@ -56,7 +56,7 @@
 price_action_agent/
 ├── pa_agent/            # 主程序包
 │   ├── main.py          # 应用入口
-│   ├── app_context.py   # 依赖容器与启动装配
+│   ├── app_context.py   # 依赖容器与启动装配（AppContext 字段已用 TYPE_CHECKING 补全真实类型）
 │   ├── ai/              # LLM 客户端、prompt 组装、JSON 校验、归一化、策略路由
 │   ├── config/          # 路径常量、Pydantic 配置模型
 │   ├── data/            # 数据源抽象与实现
