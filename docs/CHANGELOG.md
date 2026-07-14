@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-14（第二十一轮：继续拆分 decision_nodes，提取 signal_bar_judges §9 判定器簇 R-M3-5）
+
+本轮为**大文件拆分 M3 的第五刀**（第十七轮 `decision_thresholds.py` 常量、第十八轮 `bar_geometry.py` 几何原语、第十九轮 `preflight.py` 数据闸门、第二十轮 `trace_nodes.py` 结果层），是**首次剥离 section-judge 本身**。前四刀已把各 judge 共享的「底层依赖」（常量/几何/闸门/`NodeFill` 结果层）抽成无环叶子模块，为拆 judge 铺好路。本刀选**最自足的 §9「信号棒」判定器簇**作为第一个 judge 模块：`judge_signal_bar_closed`（§9.1 信号棒恒已收盘）、`judge_signal_bar_direction`（§9.2 bar_type 与下单方向一致性，外包棒降级为「弱」集合并告警）、`judge_signal_bar_length`（§9.3 过长棒判定，对比 `SIGNAL_BAR_LONG_ATR_RATIO`）、`judge_follow_through`（§9.5 follow_through_1_2 映射），连同 §9.2 的 4 个 bar-type 常量（`_LONG_BAR_TYPES`/`_SHORT_BAR_TYPES`/`_LONG_BAR_TYPES_WEAK`/`_SHORT_BAR_TYPES_WEAK`）。选它作为第一个 judge 的关键动机：这簇**只依赖叶子模块**——`NodeFill`（来自 `trace_nodes`）与 `SIGNAL_BAR_LONG_ATR_RATIO`（来自 `decision_thresholds`），**不引用任何其他 judge、不回依赖 `decision_nodes`**（无环前提：`signal_bar_judges` ← `decision_nodes`），故能一刀干净剥离而不触发循环导入。
+
+### 代码清理
+
+- **新增 `pa_agent/ai/signal_bar_judges.py`（§9 信号棒判定器簇模块）**：把上述 4 个 judge 与 4 个 bar-type 常量**逐字节搬迁**至新模块（保留全部 docstring、中文 reason 串、`answer`/`bar_range` 取值与原文件特有的双空行排版），import 仅 `from __future__ import annotations` + `typing.Any` + `from pa_agent.ai.decision_thresholds import SIGNAL_BAR_LONG_ATR_RATIO` + `from pa_agent.ai.trace_nodes import NodeFill`，无其他项目依赖、无副作用。模块 docstring 说明其「首个被剥离的 judge 簇」定位、叶子依赖与「行为须与原文一致」的约束。
+- **`decision_nodes.py` 改为从 `signal_bar_judges` 导入这 4 个 judge**：删除原 4 个 judge 定义块与 §9.2 的 4 个常量块，在文件顶部 import 组新增 `from pa_agent.ai.signal_bar_judges import (judge_follow_through, judge_signal_bar_closed, judge_signal_bar_direction, judge_signal_bar_length)`（字母序排在 `preflight` 之后、`trace_nodes` 之前，单一 import 块内，避免新增 I001 区块）。这 4 个名字在 `decision_nodes.py` 函数体内**确有引用**（`apply_stage2` 的 §9 填充链 `fill_91`/`fill_92`/`fill_93`/`fill_95`），属**正常 import**（非纯重导出，无需 `# noqa: F401`）。因 `from pa_agent.ai.decision_nodes import judge_signal_bar_*` 站点仍从 `decision_nodes` 命名空间取到同一对象，**跨模块 import 逐字节兼容**（`tests/unit/test_decision_nodes_judges.py` 无需改动）。
+- **`SIGNAL_BAR_LONG_ATR_RATIO` 转为纯重导出**：该常量原在 `judge_signal_bar_length` 体内引用，随函数迁出后在 `decision_nodes.py` 内已无其他引用点，但 `test_decision_nodes_judges.py` 仍从 `decision_nodes` 命名空间 import 它——故在 `decision_thresholds` 的 import 行上补 `# noqa: F401`（标注「re-exported for tests; used in signal_bar_judges」），保持既有测试站点逐字节兼容。4 个 bar-type 常量为私有实现细节、全仓库无 import 点，随簇迁入新模块、`decision_nodes` 不再暴露（无兼容风险）。文件进一步收缩约 250 行（80654→68220 字节）。
+
+### 验证
+
+- `py_compile` 通过（`signal_bar_judges.py`、`decision_nodes.py`，EXIT=0）。
+- **重导出/迁移等价性**：`python -c` 断言 `decision_nodes.judge_signal_bar_closed`/`judge_signal_bar_direction`/`judge_signal_bar_length`/`judge_follow_through` 均 `is` `signal_bar_judges` 下的**同一对象**，`decision_nodes.SIGNAL_BAR_LONG_ATR_RATIO is signal_bar_judges.SIGNAL_BAR_LONG_ATR_RATIO`、`decision_nodes.NodeFill is signal_bar_judges.NodeFill`，且 `hasattr(signal_bar_judges, "_LONG_BAR_TYPES") is True`、`hasattr(decision_nodes, "_LONG_BAR_TYPES") is False`（"IDENTITY_OK"）。
+- **运行时行为对比**（本机 `decision_nodes`/`signal_bar_judges`/`data.base` 不经 PyQt6 链可直接跑）：经**重导出的 `decision_nodes.*` 路径**（即 `apply_stage2`/测试实际调用路径）逐例断言输出**逐字节一致**——§9.1→`(9.1,是,K{sig})`；§9.2 无方向→`不适用`、trend_bull 顺多→`是`、outside_bull 顺多→`否`且含「外包棒」、trend_bull 逆空→`否`、trend_bear 顺空→`是`；§9.3 ratio=None→`是`含「无法计算」、2.5→`是`含「过长」、1.0→`否`；§9.5 `yes/failed/no/pending/None`→`是/否/否/等待/等待`，且 `bar_range` 在 `sig>1` 为 `K{sig}-K1`、`sig==1` 为 `K1`（"RUNTIME_OK"/"ALL_GREEN"）。
+- `ruff check` 对比基线：基线 `decision_nodes.py` 单文件 **220** 条（200×RUF001、6×RUF003、5×RUF002、3×RUF100、1×I001、1×RUF005、1×SIM103、1×SIM105、1×SIM108、1×SIM114）→ 拆分后 `decision_nodes.py`（180：161×RUF001、6×RUF003、5×RUF002、3×RUF100、1×I001、1×RUF005、1×SIM103、1×SIM105、1×SIM114）+ 新增 `signal_bar_judges.py`（40：39×RUF001、1×SIM108）合计 **220**，**逐类别完全一致、零净新增告警**（39×RUF001 随中文 reason 串、1×SIM108 随 `judge_signal_bar_length` 迁入新模块；`decision_nodes.py` 的 RUF100 仍为 3——新增的 `SIGNAL_BAR_LONG_ATR_RATIO` `# noqa: F401` 生效未被判为冗余）。全仓库 `ruff check pa_agent` 总数 **3796** 保持不变。
+- `git diff` 密钥扫描（`sk-...` / `api_key` / `Bearer` / `secret=` / `token=`）无命中——纯结构搬迁，无密钥。
+
+---
+
 ## [Unreleased] — 2026-07-14（第二十轮：继续拆分 decision_nodes，提取 trace_nodes 结果层模块 R-M3-4）
 
 本轮为**大文件拆分 M3 的第四刀**（第十七轮 `decision_thresholds.py` 常量、第十八轮 `bar_geometry.py` 几何原语、第十九轮 `preflight.py` 数据闸门），继续把 `pa_agent/ai/decision_nodes.py`（AI 层最大单文件）中**所有 section-judge 共享的「结果层」**剥离。目标是这一簇彼此紧邻、逻辑内聚的辅助：`NodeFill`（frozen dataclass——每个 judge 的返回类型）+ `_coerce_dict`/`_coerce_trace_list`（把松散的 AI JSON 防御性归一为 dict/trace 列表）+ `_node_label`/`build_program_trace_node`（把 `NodeFill` 转成合法决策 trace dict，问题文本经 call-time import 从 `decision_tree` 惰性解析）。选它作为第四刀的关键动机：`NodeFill` 是**每个 section-judge 都会 return 的公共结果类型**——先把这层抽到无环叶子模块，后续把 `DirectionJudge`/`AlwaysInJudge`/`MomentumJudge`/`SignalBarJudge` 等各自拆成独立子模块时，才能各自 `from pa_agent.ai.trace_nodes import NodeFill` 而**不与 `decision_nodes` 形成 import 循环**。该模块仅依赖 stdlib（`logging`/`dataclasses`/`typing.Any`），对 `decision_tree` 的引用走 call-time import，**无 import 期项目依赖**（无环前提：`trace_nodes` 为叶子 ← `decision_nodes`）。
