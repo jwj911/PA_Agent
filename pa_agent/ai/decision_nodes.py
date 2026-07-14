@@ -22,8 +22,6 @@ import logging
 
 import math
 
-from dataclasses import dataclass
-
 from typing import Any
 
 
@@ -67,118 +65,16 @@ from pa_agent.ai.preflight import (  # noqa: F401
     PreflightResult,
     check_preflight_data,
 )
+from pa_agent.ai.trace_nodes import (
+    NodeFill,
+    _coerce_dict,
+    _coerce_trace_list,
+    build_program_trace_node,
+)
 
 
 
 logger = logging.getLogger(__name__)
-
-
-
-def _coerce_dict(value: Any) -> dict[str, Any]:
-    """Return *value* when it is a dict; otherwise an empty dict."""
-    return value if isinstance(value, dict) else {}
-
-
-def _coerce_trace_list(trace: Any) -> list[dict[str, Any]]:
-    """Keep only dict trace nodes; tolerate non-list or string elements from AI JSON."""
-    if not isinstance(trace, list):
-        return []
-    return [item for item in trace if isinstance(item, dict)]
-
-
-# ── Result types ──────────────────────────────────────────────────────────────
-
-
-
-@dataclass(frozen=True)
-
-class NodeFill:
-
-    """Intermediate representation of a program-filled trace node."""
-
-    node_id: str
-
-    answer: str        # ∈ TRACE_ANSWERS: 是/否/中性/等待/不适用
-
-    reason: str        # non-empty
-
-    bar_range: str     # like "K20-K1" / "K1" / "不适用"
-
-    branch: str | None = None
-
-    section: str | None = None
-
-
-
-
-
-# ── Helper: node label ────────────────────────────────────────────────────────
-
-
-
-def _node_label(node_id: str) -> str:
-
-    """Get human-readable question text for a node id from the decision tree."""
-
-    try:
-
-        from pa_agent.ai.decision_tree import node_label as _nl
-
-        return _nl(node_id)
-
-    except Exception:  # noqa: BLE001
-
-        logger.debug("node_label lookup failed for %s", node_id, exc_info=True)
-
-        return node_id
-
-
-
-
-
-def build_program_trace_node(fill: NodeFill, *, tree: Any = None) -> dict[str, Any]:
-
-    """Convert a NodeFill to a valid trace dict (question from decision tree node_label)."""
-
-    try:
-
-        from pa_agent.ai.decision_tree import node_label as _nl
-
-        question = _nl(fill.node_id, tree)
-
-    except Exception:  # noqa: BLE001
-
-        question = fill.node_id
-
-
-
-    node: dict[str, Any] = {
-
-        "node_id": fill.node_id,
-
-        "question": question,
-
-        "answer": fill.answer,
-
-        "reason": fill.reason,
-
-        "bar_range": fill.bar_range,
-
-        "skipped": False,
-
-    }
-
-    if fill.branch:
-
-        node["branch"] = fill.branch
-
-    if fill.section:
-
-        node["section"] = fill.section
-
-    return node
-
-
 
 
 

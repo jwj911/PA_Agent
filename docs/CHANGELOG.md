@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-14（第二十轮：继续拆分 decision_nodes，提取 trace_nodes 结果层模块 R-M3-4）
+
+本轮为**大文件拆分 M3 的第四刀**（第十七轮 `decision_thresholds.py` 常量、第十八轮 `bar_geometry.py` 几何原语、第十九轮 `preflight.py` 数据闸门），继续把 `pa_agent/ai/decision_nodes.py`（AI 层最大单文件）中**所有 section-judge 共享的「结果层」**剥离。目标是这一簇彼此紧邻、逻辑内聚的辅助：`NodeFill`（frozen dataclass——每个 judge 的返回类型）+ `_coerce_dict`/`_coerce_trace_list`（把松散的 AI JSON 防御性归一为 dict/trace 列表）+ `_node_label`/`build_program_trace_node`（把 `NodeFill` 转成合法决策 trace dict，问题文本经 call-time import 从 `decision_tree` 惰性解析）。选它作为第四刀的关键动机：`NodeFill` 是**每个 section-judge 都会 return 的公共结果类型**——先把这层抽到无环叶子模块，后续把 `DirectionJudge`/`AlwaysInJudge`/`MomentumJudge`/`SignalBarJudge` 等各自拆成独立子模块时，才能各自 `from pa_agent.ai.trace_nodes import NodeFill` 而**不与 `decision_nodes` 形成 import 循环**。该模块仅依赖 stdlib（`logging`/`dataclasses`/`typing.Any`），对 `decision_tree` 的引用走 call-time import，**无 import 期项目依赖**（无环前提：`trace_nodes` 为叶子 ← `decision_nodes`）。
+
+### 代码清理
+
+- **新增 `pa_agent/ai/trace_nodes.py`（trace 结果层模块）**：把 `NodeFill`、`_coerce_dict`、`_coerce_trace_list`、`_node_label`、`build_program_trace_node` 五者**逐字节搬迁**至新模块（保留全部 docstring、trace dict 键序与惰性 `node_label` 回退逻辑）；import 仅 `logging`/`dataclass`/`Any`，`node_label` 查询走 call-time import。模块 docstring 说明其「结果层」定位与「先抽叶子以打破后续 judge 拆分的循环依赖」动机。
+- **`decision_nodes.py` 改为从 `trace_nodes` 导入这四者**：删除原五个定义块，在文件顶部 import 组新增 `from pa_agent.ai.trace_nodes import (NodeFill, _coerce_dict, _coerce_trace_list, build_program_trace_node)`（字母序排在 `preflight` 之后、单一 import 块内，避免新增 I001 区块）。这四个名字在 `decision_nodes.py` 函数体内**确有引用**（`NodeFill` 遍布各 judge，`_coerce_*` 用于 `route_order_method`/`apply_stage2`，`build_program_trace_node` 用于 `apply_stage1`/`apply_stage2`），属**正常 import**（非纯重导出，无需 `# noqa: F401`）。因 `from pa_agent.ai.decision_nodes import NodeFill` 站点仍从 `decision_nodes` 命名空间取到同一对象，**跨模块 import 逐字节兼容**（`tests/unit/test_decision_nodes_judges.py` 等无需改动）。
+- **`_node_label` 随簇迁入、不再重导出**：该私有辅助全仓库**无任何 import/调用点**（仅曾与 `build_program_trace_node` 相邻定义），逻辑上属同一「trace 构建」簇，故整簇迁至 `trace_nodes.py` 并在那里保留 `logger`；`decision_nodes.py` 不再暴露 `_node_label`（无兼容风险）。同时删除 `decision_nodes.py` 中因 `NodeFill` 迁出而不再使用的 `from dataclasses import dataclass`。文件进一步收缩约 100 行。
+
+### 验证
+
+- `py_compile` 通过（`trace_nodes.py`、`decision_nodes.py`，EXIT=0）。
+- **重导出/迁移等价性**：`python -c` 断言 `decision_nodes.NodeFill is trace_nodes.NodeFill`、`decision_nodes._coerce_dict is trace_nodes._coerce_dict`、`decision_nodes._coerce_trace_list is trace_nodes._coerce_trace_list`、`decision_nodes.build_program_trace_node is trace_nodes.build_program_trace_node` 均为**同一对象**；且 `hasattr(decision_nodes, "_node_label") is False`、`hasattr(trace_nodes, "_node_label") is True`（"IDENTITY_OK"）。
+- **运行时行为对比**（本机 `decision_nodes`/`trace_nodes`/`data.base` 不经 PyQt6 链可直接跑）：`_coerce_dict`/`_coerce_trace_list` 对 dict/None/str/list/混入非 dict 元素的归一化逐例一致；`NodeFill` frozen 语义（改字段抛 `FrozenInstanceError`）与默认值 `branch=None`/`section=None` 一致；`build_program_trace_node` 输出 trace dict 键（`node_id`/`question`/`answer`/`reason`/`bar_range`/`skipped=False`）一致，`branch`/`section` 为 None 时省略、非 None 时写入；经 `decision_nodes` 命名空间调用 `judge_data_sufficiency`→`build_program_trace_node` 冒烟通过（"COERCE_OK"/"NODEFILL_OK"/"BUILD_OK"/"SMOKE_OK"/"ALL_GREEN"）。
+- `ruff check` 对比基线：基线 `decision_nodes.py` 单文件 **222** 条（200×RUF001、6×RUF003、5×RUF002、5×RUF100、1×I001、1×RUF005、1×SIM103、1×SIM105、1×SIM108、1×SIM114）→ 拆分后 `decision_nodes.py`（220）+ 新增 `trace_nodes.py`（2×RUF100）合计 **222**，**逐类别完全一致、零净新增告警**（`decision_nodes.py` 的 RUF100 由 5 降至 3——迁走的 2 个 `# noqa: BLE001` 随 `_node_label`/`build_program_trace_node` 进入 `trace_nodes.py` 计为其 2×RUF100）。全仓库 `ruff check pa_agent` 总数 **3796** 保持不变。
+- `git diff` 密钥扫描（`sk-...` / `api_key=` / `Bearer` / `secret=` / `token=`）无命中——纯结构搬迁，无密钥。
+
+---
+
 ## [Unreleased] — 2026-07-14（第十九轮：继续拆分 decision_nodes，提取 preflight 数据闸门模块 R-M3-3）
 
 本轮为**大文件拆分 M3 的第三刀**（第十七轮提取 `decision_thresholds.py` 常量、第十八轮提取 `bar_geometry.py` 几何原语），继续把 `pa_agent/ai/decision_nodes.py`（AI 层最大单文件）中**自足的前置数据质量闸门**剥离。目标是 `PreflightResult`（frozen dataclass 结果类型）+ `check_preflight_data`（对外入口，含异常保护）+ `_check_preflight_data_inner`（内部实现）这一组「Stage1 前数据校验」逻辑。它们：① 是**纯函数**（无 AI 调用、无副作用，仅在异常分支写一条 warning 日志），依次校验「frame/bars 非空且 OHLC 合法 → 已收盘 K 线数 ≥ 20 → EMA20/ATR14 非全 NaN」，任一不满足即保守返回 `ok=False`；② 仅依赖 stdlib（`logging`/`math`/`dataclass`/`typing.Any`）与同级纯数据模块 `decision_thresholds` 的 `BAR_COUNT_THRESHOLD`——无循环依赖前提（`decision_thresholds` 为叶子 ← `preflight` ← `decision_nodes`）；③ 在 `decision_nodes.py` 内部**不再被任何其他函数引用**，仅由 `orchestrator/two_stage.py`（`submit()` 的 Step 2.5 前置闸门）与 `tests/unit/test_decision_nodes_preflight.py` 从 `decision_nodes` 命名空间 import——故属**纯重导出**场景（与 M2 一致，需 `# noqa: F401`），而非第十七/十八轮的「函数体内确有引用的正常 import」。
