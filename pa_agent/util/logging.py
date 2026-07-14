@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import logging.handlers
+import threading
 from pathlib import Path
 from typing import List
 
@@ -20,6 +21,8 @@ from pa_agent.util.mask_secret import mask_secret
 
 _active_formatters: List["MaskingFormatter"] = []
 _configured: bool = False
+# Reentrant: configure_logging() may call update_api_key() while holding it.
+_STATE_LOCK = threading.RLock()
 
 # ── MaskingFormatter ──────────────────────────────────────────────────────────
 
@@ -80,62 +83,64 @@ def configure_logging(api_key: str = "") -> None:
     """
     global _configured  # noqa: PLW0603
 
-    if _configured:
-        if api_key:
-            update_api_key(api_key)
-        if verify_logging_handlers():
-            return
-        # Handlers missing (e.g. external code cleared root.handlers) — re-install.
-        _configured = False
+    with _STATE_LOCK:
+        if _configured:
+            if api_key:
+                update_api_key(api_key)
+            if verify_logging_handlers():
+                return
+            # Handlers missing (e.g. external code cleared root.handlers) — re-install.
+            _configured = False
 
-    # Build formatters
-    file_formatter = MaskingFormatter(_LOG_FORMAT, api_key=api_key)
-    console_formatter = MaskingFormatter(_LOG_FORMAT, api_key=api_key)
+        # Build formatters
+        file_formatter = MaskingFormatter(_LOG_FORMAT, api_key=api_key)
+        console_formatter = MaskingFormatter(_LOG_FORMAT, api_key=api_key)
 
-    # Track all active formatters so update_api_key can reach them
-    _active_formatters.clear()
-    _active_formatters.append(file_formatter)
-    _active_formatters.append(console_formatter)
+        # Track all active formatters so update_api_key can reach them
+        _active_formatters.clear()
+        _active_formatters.append(file_formatter)
+        _active_formatters.append(console_formatter)
 
-    # Rotating file handler
-    LOG_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    file_handler = logging.handlers.RotatingFileHandler(
-        LOG_FILE_PATH,
-        maxBytes=5 * 1024 * 1024,
-        backupCount=10,
-        encoding="utf-8",
-    )
-    file_handler.setFormatter(file_formatter)
+        # Rotating file handler
+        LOG_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.handlers.RotatingFileHandler(
+            LOG_FILE_PATH,
+            maxBytes=5 * 1024 * 1024,
+            backupCount=10,
+            encoding="utf-8",
+        )
+        file_handler.setFormatter(file_formatter)
 
-    # Console (stream) handler — INFO+ only; file keeps DEBUG for troubleshooting
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(console_formatter)
+        # Console (stream) handler — INFO+ only; file keeps DEBUG for troubleshooting
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+        console_handler.setFormatter(console_formatter)
 
-    handlers: list[logging.Handler] = [file_handler, console_handler]
+        handlers: list[logging.Handler] = [file_handler, console_handler]
 
-    # Configure root logger
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)
-    # Remove any previously installed handlers to avoid duplicates on re-call
-    for h in list(root_logger.handlers):
-        root_logger.removeHandler(h)
-    for h in handlers:
-        root_logger.addHandler(h)
-
-    # Attach the same handlers to third-party loggers
-    for name in _THIRD_PARTY_LOGGERS:
-        tp_logger = logging.getLogger(name)
-        for h in list(tp_logger.handlers):
-            tp_logger.removeHandler(h)
+        # Configure root logger
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.DEBUG)
+        # Remove any previously installed handlers to avoid duplicates on re-call
+        for h in list(root_logger.handlers):
+            root_logger.removeHandler(h)
         for h in handlers:
-            tp_logger.addHandler(h)
-        # Prevent double-logging via root propagation
-        tp_logger.propagate = False
+            root_logger.addHandler(h)
 
-    _silence_noisy_libraries()
+        # Attach the same handlers to third-party loggers
+        for name in _THIRD_PARTY_LOGGERS:
+            tp_logger = logging.getLogger(name)
+            for h in list(tp_logger.handlers):
+                tp_logger.removeHandler(h)
+            for h in handlers:
+                tp_logger.addHandler(h)
+            # Prevent double-logging via root propagation
+            tp_logger.propagate = False
 
-    _configured = True
+        _silence_noisy_libraries()
+
+        _configured = True
+
     logging.getLogger("pa_agent.diagnostics").info(
         "configure_logging: handlers attached (log_file=%s)", LOG_FILE_PATH
     )
@@ -149,5 +154,6 @@ def _silence_noisy_libraries() -> None:
 
 def update_api_key(new_key: str) -> None:
     """Update the masking key in all active MaskingFormatter instances."""
-    for formatter in _active_formatters:
-        formatter.set_api_key(new_key)
+    with _STATE_LOCK:
+        for formatter in _active_formatters:
+            formatter.set_api_key(new_key)

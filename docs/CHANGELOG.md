@@ -13,6 +13,33 @@
 
 ---
 
+## [Unreleased] — 2026-07-14（第六轮：并发安全 R8）
+
+本轮落实后端审查报告（`docs/backend_review_report.md`）§4.2「中优先级」#6 与路线图 §5.1 的 **R8**：给若干**进程级可变状态**补上线程锁。项目大量使用后台 QThread（RefreshLoop tick、快照/分析/聊天 worker、数据源并发拉取），这些全局缓存/开关此前无锁保护，多线程并发读写存在 race（`dict` 并发写、复权模式读写撕裂、日志 handler 重装竞态、cursor-sdk monkeypatch 标志重复打补丁）。**原则：只加锁、不改语义与外部行为**——缓存命中/未命中结果、复权取值、日志输出、补丁幂等性均与原实现一致，耗时的文件 IO / prompt 构建放在锁外。
+
+### 并发安全
+
+- **`records/analysis_history.py:_LATEST_RECORD_CACHE` 无锁（审查 §4.2#6）**：后台增量分析线程读、保存后失效线程写，`dict` 并发读写可能 race。新增 `_LATEST_RECORD_LOCK`：`find_latest_successful_record` 的缓存读与缓存写各自在锁内完成，中间**耗时的 `records/pending/*.json` 扫描与解析放在锁外**（不长时间持锁）；`invalidate_latest_record_cache` 的 `clear()` 也纳入锁。缓存命中/未命中语义不变。
+- **`ai/prompt_assembler.py:_SYSTEM_PROMPT_CACHE` 无锁**：多个 `PromptAssembler` 实例（不同 worker）并发首建同一 prompt_dir 的共享系统提示时会重复构建并互相覆盖。新增 `_SYSTEM_PROMPT_LOCK` + **双检锁**：先加锁读缓存，未命中则**在锁外构建**（避免长时间持锁做大字符串拼接），再加锁写入；若期间已有其他线程写入则复用既有条目，保证所有调用方拿到**同一份 byte-identical 前缀**（DeepSeek KV cache 命中依赖此不变式）。
+- **`data/eastmoney_extended.py:_COMPACT_CTX_CACHE` 无锁**：A 股 F10/资金上下文的 TTL 缓存被并发数据拉取读写。新增 `_COMPACT_CTX_LOCK`：缓存读、写、`clear`/`pop` 均在锁内；实际的 `_build_compact_stock_context` 网络拉取放在锁外。TTL 与返回副本（`dict(...)`）语义不变。
+- **`util/logging.py:_active_formatters/_configured` 无锁**：`configure_logging` 可能被重复调用（含 handler 重装），`update_api_key` 从设置对话框线程调用，二者对全局状态无保护。新增可重入 `_STATE_LOCK`（RLock，因 `configure_logging` 持锁期间会调用 `update_api_key`）：`configure_logging` 主体与 `update_api_key` 全程在锁内；仅把末尾的 diagnostics info 日志移出锁外，避免在持锁时触发日志链路。
+- **`data/kline_adjust.py:_current` 无锁**：全局复权模式被设置动作与数据源并发读写。新增 `_LOCK`：`set_kline_adjust` 写、`get_kline_adjust` 读均在锁内，消除读写撕裂。取值归一化（`qfq/hfq/none` 白名单、非法回退默认）语义不变。
+- **`ai/cursor_sdk_client.py` 四个 `_PATCHED_*` 开关无锁**：`_ensure_cursor_sdk_patches()` 除 import 期外，还从分析 worker 线程调用，多个 patch 函数的「check-then-set」标志非线程安全，可能重复打补丁或补丁半完成。新增 `_PATCH_LOCK` 串行化 `_ensure_cursor_sdk_patches()` 全过程，保证四个补丁整体幂等。
+
+### 明确不改（保持原样）
+
+- **`gui/decision_flow_viz.py` 动画相位**：审查 §4.2#6 曾列出模块级 `_ANIM_PHASE`，但已在第一轮（`7387943`）改为 `_FlowScene` 实例属性 `anim_phase`，仅 GUI 线程访问，无需加锁。
+- **`ai/deepseek_client.py:_client` 连接池缓存（L4 新增）**：`DeepSeekClient` 实例通常由单一编排线程串行使用（Stage1→Stage2），`_get_client()` 的 check-then-build 不在跨线程共享路径上；加锁收益不抵复杂度，保持不动。
+
+### 验证
+
+- `py_compile` 通过（全部 6 个改动文件）。
+- `ruff check` 对比基线：6 个文件改动前后同为 **1529** 条既有告警（全为全仓既有的 RUF001/002/003 中文标点、UP035、SIM 等噪音），**未新增任何告警**。
+- 功能验证：`kline_adjust` set/get（含非法值回退、None 回退）逐项通过；`eastmoney_extended` 导入、`_COMPACT_CTX_LOCK` 为 `Lock`、`clear_compact_stock_context_cache()` 正常；`analysis_history` 的 `_LATEST_RECORD_LOCK` 存在、预置缓存后 `invalidate_latest_record_cache()` 清空生效。
+- `cursor_sdk_client`、`prompt_assembler` 因本机无 PyQt6（`util/__init__`→`event_bus`→PyQt6 导入链）无法运行时导入，与既往各轮一致；改动为纯加锁、不改控制流与输出，建议在项目 venv 运行 `pytest -m "not e2e" -q` 回归，重点 `test_prompt_assembler_*`、`test_analysis_history_*`、`test_logs_have_no_plaintext_key`、`test_eastmoney_*`。
+
+---
+
 ## [Unreleased] — 2026-07-14（第五轮：性能优化 L4）
 
 本轮落实后端审查报告（`docs/backend_review_report.md`）路线图中的 **L4 性能优化**，针对 §8「性能热点」清单里在**热路径**（每次 RefreshLoop tick / 每次分析 / 每次 API 调用）重复付出的开销做减法。**原则：只降开销、不改语义与外部行为**——每处改动都保持输出与原实现逐位一致，仅避免重复计算或提前短路。

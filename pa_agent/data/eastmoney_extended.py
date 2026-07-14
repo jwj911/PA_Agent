@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Callable
@@ -704,16 +705,18 @@ def fetch_portal_datacenter_bundle(symbol: str) -> dict[str, list[dict[str, Any]
 
 
 _COMPACT_CTX_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
+_COMPACT_CTX_LOCK = threading.Lock()
 _COMPACT_CTX_TTL_S = 60.0
 _COMPACT_PARALLEL_WORKERS = 8
 
 
 def clear_compact_stock_context_cache(symbol: str | None = None) -> None:
     """Drop cached compact context (one symbol or all)."""
-    if symbol is None:
-        _COMPACT_CTX_CACHE.clear()
-        return
-    _COMPACT_CTX_CACHE.pop(_symbol_code(symbol), None)
+    with _COMPACT_CTX_LOCK:
+        if symbol is None:
+            _COMPACT_CTX_CACHE.clear()
+            return
+        _COMPACT_CTX_CACHE.pop(_symbol_code(symbol), None)
 
 
 def fetch_compact_stock_context(symbol: str, *, use_cache: bool = True) -> dict[str, Any]:
@@ -721,12 +724,14 @@ def fetch_compact_stock_context(symbol: str, *, use_cache: bool = True) -> dict[
     code = _symbol_code(symbol)
     if use_cache:
         now = time.monotonic()
-        cached = _COMPACT_CTX_CACHE.get(code)
+        with _COMPACT_CTX_LOCK:
+            cached = _COMPACT_CTX_CACHE.get(code)
         if cached and now - cached[0] < _COMPACT_CTX_TTL_S:
             return dict(cached[1])
     ctx = _build_compact_stock_context(code)
     if use_cache:
-        _COMPACT_CTX_CACHE[code] = (time.monotonic(), ctx)
+        with _COMPACT_CTX_LOCK:
+            _COMPACT_CTX_CACHE[code] = (time.monotonic(), ctx)
     return dict(ctx)
 
 

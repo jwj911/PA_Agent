@@ -5,6 +5,7 @@ import functools
 import json
 import logging
 import math
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -756,6 +757,7 @@ COMMON_SYSTEM_PROMPT_TXT_FILES: tuple[str, ...] = COMMON_SYSTEM_STAGE2_TXT_FILES
 # Process-wide system prompt cache: DeepSeek KV hits need byte-identical prefixes
 # across PromptAssembler instances that share the same prompt directory.
 _SYSTEM_PROMPT_CACHE: dict[str, str] = {}
+_SYSTEM_PROMPT_LOCK = threading.Lock()
 
 STAGE1_TASK_PROMPT_TXT_FILES: tuple[str, ...] = (
     "市场诊断框架.txt",
@@ -921,11 +923,18 @@ class PromptAssembler:
 
     def _get_shared_system_prompt(self) -> str:
         key = str(self._prompt_dir.resolve())
-        cached = _SYSTEM_PROMPT_CACHE.get(key)
+        with _SYSTEM_PROMPT_LOCK:
+            cached = _SYSTEM_PROMPT_CACHE.get(key)
         if cached is not None:
             return cached
         built = self._build_shared_system_prompt_inner()
-        _SYSTEM_PROMPT_CACHE[key] = built
+        with _SYSTEM_PROMPT_LOCK:
+            # Another thread may have built it meanwhile; prefer the existing
+            # entry so every caller shares one byte-identical prefix (KV cache).
+            existing = _SYSTEM_PROMPT_CACHE.get(key)
+            if existing is not None:
+                return existing
+            _SYSTEM_PROMPT_CACHE[key] = built
         return built
 
     def _build_stage1_system_prompt(self) -> str:

@@ -26,6 +26,9 @@ _PATCHED_CURSOR_SDK_BRIDGE = False
 _PATCHED_CURSOR_SDK_AUTH_TOKENS = False
 _PATCHED_CURSOR_SDK_BRIDGE_ARGV = False
 _PATCHED_CURSOR_SDK_POPEN = False
+# Serializes the one-time monkeypatch flags below; _ensure_cursor_sdk_patches()
+# runs from analysis worker threads, not just at import time.
+_PATCH_LOCK = threading.Lock()
 
 _AUTH_TOKEN_FLAGS = (
     "--tool-callback-auth-token",
@@ -138,10 +141,11 @@ def _patch_cursor_sdk_subprocess_popen() -> None:
 
 
 def _ensure_cursor_sdk_patches() -> None:
-    _patch_cursor_sdk_bridge_auth_tokens()
-    _patch_cursor_sdk_bridge_argv()
-    _patch_cursor_sdk_subprocess_popen()
-    _patch_cursor_sdk_bridge_windows()
+    with _PATCH_LOCK:
+        _patch_cursor_sdk_bridge_auth_tokens()
+        _patch_cursor_sdk_bridge_argv()
+        _patch_cursor_sdk_subprocess_popen()
+        _patch_cursor_sdk_bridge_windows()
 
 
 def _patch_cursor_sdk_bridge_windows() -> None:

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -63,9 +64,10 @@ def find_latest_successful_record(
         dir_mtime = root.stat().st_mtime if root.is_dir() else 0.0
     except OSError:
         dir_mtime = 0.0
-    cached = _LATEST_RECORD_CACHE.get(cache_key)
-    if cached is not None and cached[0] == dir_mtime:
-        return cached[1]
+    with _LATEST_RECORD_LOCK:
+        cached = _LATEST_RECORD_CACHE.get(cache_key)
+        if cached is not None and cached[0] == dir_mtime:
+            return cached[1]
 
     result: AnalysisRecord | None = None
     # Records are saved as ``{ts}_{symbol}_{timeframe}.json`` (see
@@ -93,16 +95,19 @@ def find_latest_successful_record(
             continue
         result = record
         break
-    _LATEST_RECORD_CACHE[cache_key] = (dir_mtime, result)
+    with _LATEST_RECORD_LOCK:
+        _LATEST_RECORD_CACHE[cache_key] = (dir_mtime, result)
     return result
 
 
+_LATEST_RECORD_LOCK = threading.Lock()
 _LATEST_RECORD_CACHE: dict[tuple[str, str, str], tuple[float, AnalysisRecord | None]] = {}
 
 
 def invalidate_latest_record_cache() -> None:
     """Clear cached latest-record lookups (call after saving a new record)."""
-    _LATEST_RECORD_CACHE.clear()
+    with _LATEST_RECORD_LOCK:
+        _LATEST_RECORD_CACHE.clear()
 
 
 def compute_incremental_bar_delta(
