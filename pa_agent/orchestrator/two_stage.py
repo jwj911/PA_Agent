@@ -92,8 +92,12 @@ def _json_truncation_hint(content: str, err: ValidationError) -> str | None:
     return None
 
 
-def _enrich_stage2_validation_message(err: ValidationError, reply: Any) -> str:
-    """Add actionable context for empty content or truncated JSON."""
+def _enrich_validation_message(err: ValidationError, reply: Any, *, stage: str) -> str:
+    """Add actionable context for empty content or truncated JSON.
+
+    ``stage`` is ``"stage1"`` or ``"stage2"``; only a few Chinese hint strings
+    (the truncation cause and the "阶段一/阶段二" label) differ between stages.
+    """
     from pa_agent.ai.provider_errors import (
         PROVIDER_QUOTA_USER_MESSAGE,
         is_provider_quota_exhausted,
@@ -121,60 +125,26 @@ def _enrich_stage2_validation_message(err: ValidationError, reply: Any) -> str:
     reasoning = getattr(reply, "reasoning_content", None) or ""
     usage = getattr(reply, "usage", None)
     completion = getattr(usage, "completion_tokens", 0) if usage else 0
+    stage_label = "阶段二" if stage == "stage2" else "阶段一"
     if reasoning and "{" not in reasoning:
+        if stage == "stage2":
+            truncation_cause = (
+                " 常见原因是思考在输出阶段二 JSON 前被截断或网关提前结束流。"
+                " 请缩短 prompt、检查 Packy 分组限额，或调整模型/Reasoning Effort 后重新分析。"
+            )
+        else:
+            truncation_cause = (
+                " 常见原因是思考占满输出额度后被截断。"
+                " 请缩短 prompt、检查网关输出上限，或调整 Reasoning Effort 后重新分析。"
+            )
         return (
             f"{err.message}：扩展思考已输出约 {len(reasoning)} 字，但正文 content 为空，"
             f"且思考中未见 JSON（completion_tokens≈{completion}）。"
-            " 常见原因是思考在输出阶段二 JSON 前被截断或网关提前结束流。"
-            " 请缩短 prompt、检查 Packy 分组限额，或调整模型/Reasoning Effort 后重新分析。"
+            f"{truncation_cause}"
         )
     if reasoning:
         return (
-            f"{err.message}：正文 content 为空；请把阶段二 JSON 写在 content 正文，"
-            "不要只写在思考区。"
-        )
-    return f"{err.message}。{detail}" if detail else err.message
-
-
-def _enrich_stage1_validation_message(err: ValidationError, reply: Any) -> str:
-    """Add actionable context for empty content or truncated JSON."""
-    from pa_agent.ai.provider_errors import (
-        PROVIDER_QUOTA_USER_MESSAGE,
-        is_provider_quota_exhausted,
-    )
-
-    if err.category == "e" or is_provider_quota_exhausted(err.raw_text):
-        return err.message or PROVIDER_QUOTA_USER_MESSAGE
-    from pa_agent.ai.validation_messages import format_validation_errors
-
-    detail = format_validation_errors(
-        err.invalid_fields, missing_fields=err.missing_fields
-    )
-    content = (getattr(reply, "content", None) or "").strip()
-    trunc = _json_truncation_hint(content, err)
-    if trunc:
-        usage = getattr(reply, "usage", None)
-        completion = getattr(usage, "completion_tokens", 0) if usage else 0
-        reasoning_len = len(getattr(reply, "reasoning_content", None) or "")
-        msg = f"{err.message}。{trunc} completion_tokens≈{completion}，思考区约 {reasoning_len} 字。"
-        return f"{msg}。{detail}" if detail else msg
-    if err.category != "d" or (err.raw_text or "").strip():
-        return f"{err.message}。{detail}" if detail else err.message
-    if content:
-        return f"{err.message}。{detail}" if detail else err.message
-    reasoning = getattr(reply, "reasoning_content", None) or ""
-    usage = getattr(reply, "usage", None)
-    completion = getattr(usage, "completion_tokens", 0) if usage else 0
-    if reasoning and "{" not in reasoning:
-        return (
-            f"{err.message}：扩展思考已输出约 {len(reasoning)} 字，但正文 content 为空，"
-            f"且思考中未见 JSON（completion_tokens≈{completion}）。"
-            " 常见原因是思考占满输出额度后被截断。"
-            " 请缩短 prompt、检查网关输出上限，或调整 Reasoning Effort 后重新分析。"
-        )
-    if reasoning:
-        return (
-            f"{err.message}：正文 content 为空；请把阶段一 JSON 写在 content 正文，"
+            f"{err.message}：正文 content 为空；请把{stage_label} JSON 写在 content 正文，"
             "不要只写在思考区。"
         )
     return f"{err.message}。{detail}" if detail else err.message
@@ -561,7 +531,7 @@ class TwoStageOrchestrator:
 
         if isinstance(result_s1, ValidationError):
             err = result_s1
-            err_message = _enrich_stage1_validation_message(err, reply_s1)
+            err_message = _enrich_validation_message(err, reply_s1, stage="stage1")
             logger.warning(
                 "Stage 1 validation failed: category=%s message=%s",
                 err.category,
@@ -871,7 +841,7 @@ class TwoStageOrchestrator:
 
         if isinstance(result_s2, ValidationError):
             err = result_s2
-            err_message = _enrich_stage2_validation_message(err, reply_s2)
+            err_message = _enrich_validation_message(err, reply_s2, stage="stage2")
             logger.warning(
                 "Stage 2 validation failed: category=%s message=%s",
                 err.category,

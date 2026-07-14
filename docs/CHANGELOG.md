@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-14（第七轮：代码去重 R2）
+
+本轮落实后端审查报告（`docs/backend_review_report.md`）§4.3 与路线图 §5.1 的 **R2**：合并 `orchestrator/two_stage.py` 中两个高度重复的校验错误富化函数。`_enrich_stage1_validation_message` 与 `_enrich_stage2_validation_message` 逐行几乎一致（配额短路、`format_validation_errors` 明细、`_json_truncation_hint` 截断提示、content 空 / 仅思考区分支判断完全相同），仅**两处**中文提示串不同：思考截断成因（阶段一「思考占满输出额度…检查网关输出上限」vs 阶段二「思考在输出阶段二 JSON 前被截断…检查 Packy 分组限额」）与「阶段一/阶段二」标签。**原则：只去重、不改任何输出**——合并后两个 stage 产出的错误文案与原实现逐字节一致。
+
+### 代码清理
+
+- **合并为单一 `_enrich_validation_message(err, reply, *, stage)`**：把 stage 相关的差异收敛到一个 `stage` 关键字参数（`"stage1"`/`"stage2"`）。函数内仅在「仅思考区、正文为空」分支按 `stage` 选择对应的 `truncation_cause` 文案，并用 `stage_label` 变量渲染「阶段一/阶段二」标签；其余逻辑（配额短路、截断提示、明细拼接、分支顺序）完全共享。两处调用点（Stage 1 第 534 行、Stage 2 第 844 行）改为传入对应 `stage`。净减少约 45 行重复代码。
+
+### 明确不改（保持原样）
+
+- **两个 stage 的错误文案**：合并后逐字节保持与原双函数一致（含全角标点、`completion_tokens≈` 记法、成因指引措辞），不改变任何用户可见输出与日志内容。
+- **调用时机与控制流**：仅替换函数名与新增 `stage` 关键字参数，`err_message` 的赋值位置、后续 `logger.warning` 与 `record.model_copy` 均不变。
+
+### 验证
+
+- `py_compile pa_agent/orchestrator/two_stage.py` 通过。
+- `ruff check` 对比基线：改动前 **56** 条既有告警 → 改动后 **47** 条，减少的 9 条全部为 **RUF001**（去掉重复中文串带来的模糊 Unicode 标点告警）；其余类别（E402:11、UP037:7、RUF100:3、UP045:2、I001:1、UP035:1）与改动前**逐项一致，零新增**。
+- 全仓 `grep` 确认旧函数名 `_enrich_stage1_validation_message`/`_enrich_stage2_validation_message` 已无残留引用，新函数 `_enrich_validation_message` 定义 1 处 + 调用 2 处。
+- 该函数无独立单元测试直接覆盖（仅 `two_stage.py` 内部引用）；改动为纯重构、输出不变，建议在项目 venv 运行 `pytest -m "not e2e" -q` 回归两阶段编排相关用例。
+
+---
+
 ## [Unreleased] — 2026-07-14（第六轮：并发安全 R8）
 
 本轮落实后端审查报告（`docs/backend_review_report.md`）§4.2「中优先级」#6 与路线图 §5.1 的 **R8**：给若干**进程级可变状态**补上线程锁。项目大量使用后台 QThread（RefreshLoop tick、快照/分析/聊天 worker、数据源并发拉取），这些全局缓存/开关此前无锁保护，多线程并发读写存在 race（`dict` 并发写、复权模式读写撕裂、日志 handler 重装竞态、cursor-sdk monkeypatch 标志重复打补丁）。**原则：只加锁、不改语义与外部行为**——缓存命中/未命中结果、复权取值、日志输出、补丁幂等性均与原实现一致，耗时的文件 IO / prompt 构建放在锁外。
