@@ -49,6 +49,11 @@ from pa_agent.ai.signal_bar_judges import (
     judge_signal_bar_direction,
     judge_signal_bar_length,
 )
+from pa_agent.ai.signal_context import (
+    _get_signal_seq,
+    has_background_limit_path,
+    is_planned_limit_order,
+)
 from pa_agent.ai.trace_nodes import (
     NodeFill,
     _coerce_dict,
@@ -59,105 +64,6 @@ from pa_agent.ai.trace_nodes import (
 
 
 logger = logging.getLogger(__name__)
-
-
-
-# ── SignalBarJudge ─────────────────────────────────────────────────────────────
-
-
-
-
-def _get_signal_seq(out: dict[str, Any], bars: Any) -> int:
-
-    """Locate signal bar seq: prefer bar_analysis.signal_bar.bar, else K1."""
-
-    try:
-
-        from pa_agent.util.price_tick import parse_k_seq
-
-        bar_analysis = out.get("bar_analysis")
-
-        if isinstance(bar_analysis, dict):
-
-            signal_bar = bar_analysis.get("signal_bar")
-
-            if isinstance(signal_bar, dict):
-
-                bar_str = signal_bar.get("bar")
-
-                if bar_str:
-
-                    seq = parse_k_seq(bar_str)
-
-                    if seq is not None and seq >= 1:
-
-                        return seq
-
-    except Exception:  # noqa: BLE001
-
-        logger.debug("signal bar seq parse failed", exc_info=True)
-
-    return 1  # default to K1
-
-
-def has_background_limit_path(out: dict[str, Any]) -> bool:
-    """True when decision_trace records §9.0P=是 (background-driven limit path)."""
-    trace = out.get("decision_trace")
-    if not isinstance(trace, list):
-        return False
-    for item in trace:
-        if not isinstance(item, dict):
-            continue
-        if str(item.get("node_id", "")).strip() != "9.0P":
-            continue
-        return str(item.get("answer", "") or "").strip() == "是"
-    return False
-
-
-def is_planned_limit_order(out: dict[str, Any]) -> bool:
-    """True when order is a pending limit plan without requiring a closed signal bar."""
-    decision = out.get("decision")
-    if not isinstance(decision, dict) or decision.get("order_type") != "限价单":
-        return False
-    if has_background_limit_path(out):
-        return True
-    bar_analysis = out.get("bar_analysis")
-    if not isinstance(bar_analysis, dict):
-        return False
-    entry_bar = bar_analysis.get("entry_bar")
-    signal_bar = bar_analysis.get("signal_bar")
-    if not isinstance(entry_bar, dict) or not isinstance(signal_bar, dict):
-        return False
-    strength = str(entry_bar.get("strength", "") or "").strip().lower()
-    freshness = str(entry_bar.get("freshness", "") or "").strip().lower()
-    pending = (
-        strength == "not_triggered"
-        or entry_bar.get("bar") is None
-        or freshness == "pending"
-    )
-    if not pending:
-        return False
-    quality = str(signal_bar.get("quality", "") or "").strip().lower()
-    pattern = str(signal_bar.get("pattern", "") or "").strip().lower()
-    if signal_bar.get("bar") is None and quality in ("invalid", "weak"):
-        return True
-    if quality == "weak" and pattern in (
-        "",
-        "none",
-        "tr_boundary",
-        "breakout_pullback",
-        "h1",
-        "h2",
-        "l1",
-        "l2",
-        "wedge",
-        "mtr",
-        "trendline",
-    ):
-        return True
-    return False
-
-
 
 
 
