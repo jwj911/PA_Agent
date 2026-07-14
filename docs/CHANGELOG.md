@@ -13,6 +13,25 @@
 
 ---
 
+## [Unreleased] — 2026-07-14（第十七轮：拆分 decision_nodes，提取 decision_thresholds 常量模块 R-M3）
+
+本轮继续**大文件拆分**，属后端审查报告（`docs/backend_review_report.md`）路线图 §5.2 的 **M3**（拆分 `decision_nodes.py`——按 §1/§2/§9/§11/preflight/risk 拆分子模块），是 M1-M4 拆分组的第二刀，紧接第十六轮的 M2。`pa_agent/ai/decision_nodes.py` 是 AI 层**最大的单文件（3073 行）**：文件头部集中了 **28 个模块级调参常量与节点权限集合**（§1.1 数据充分性阈值、§2.3 方向投票窗口/阈值、§2.4 Always-In 窗口/占比、§2.5 动量强度阈值、§1.3 极端混沌阈值、`LOCKED_NODES`/`OVERRIDABLE_NODES`/`AI_PRIMARY_NODES`/`SAFETY_GATE_NODES` 等 override 权限集）。这些常量：① 是**纯数据**（无 import、无副作用），编码了经过调优的 Brooks 价格行为阈值与闸门/override 策略；② 同时被 `decision_nodes.py` 自身与 `trend_context.py` 引用；③ 是后续把各 section-judge（DirectionJudge/AlwaysInJudge/MomentumJudge 等）拆成独立子模块的**共享依赖前提**——必须先把它们抽到一个无环依赖的独立模块，section-judge 才能各自 import 而不产生循环依赖。
+
+### 代码清理
+
+- **新增 `pa_agent/ai/decision_thresholds.py`（调参常量/权限集纯数据模块）**：把 `decision_nodes.py` 头部（原 47-119 行）的 28 个常量**逐字节搬迁**至新模块（含全部中文调参注释与 §编号），仅 `from __future__ import annotations`，无任何 import 与副作用。模块 docstring 说明其来源、纯数据定位与「取值须与原文逐字节一致」的约束。
+- **`decision_nodes.py` 改为从 `decision_thresholds` 导入这 28 个常量**：删除原常量定义块，在文件顶部 import 组新增 `from pa_agent.ai.decision_thresholds import (...)`。这 28 个常量在 `decision_nodes.py` 函数体内**确有引用**（故是正常 import 而非需 `# noqa: F401` 的纯重导出）；因所有既有 `from pa_agent.ai.decision_nodes import <常量>` 站点仍能从 `decision_nodes` 命名空间取到同一对象，**跨模块 import 逐字节兼容**（`trend_context.py` 及 `test_decision_nodes_*` 等无需改动）。文件从 3073 行降至约 3001 行。
+
+### 验证
+
+- `py_compile` 通过（`decision_thresholds.py`、`decision_nodes.py`，EXIT=0）。
+- **重导出等价性**：`python -c` 逐一断言 `decision_nodes` 与 `decision_thresholds` 的 **28 个常量 `is` 同一对象**（"re-export OK, all 28 names identical"），并确认 `trend_context` 仍可正常 import。
+- **运行时冒烟**（本机 `decision_nodes`/`data.base` 不经 PyQt6 链，可直接跑；`hypothesis` 未装故既有 `test_decision_nodes_*` 无法 collect，另写自足冒烟脚本）：断言 28 个常量取值与原文一致（`BAR_COUNT_THRESHOLD==20`、`LOCKED_NODES`/`OVERRIDABLE_NODES`/`SAFETY_GATE_NODES` 集合逐字相等等），且 `check_preflight_data` 行为不变（n=19→`bar_count_lt_20` 失败、n=20→通过、`None`→保守失败）——"SMOKE_OK"。
+- `ruff check` 对比基线：基线 `decision_nodes.py` 单文件的错误码分布（1×I001、209×RUF001、5×RUF002、20×RUF003、1×RUF005、6×RUF100、1×SIM103、1×SIM105、1×SIM108、1×SIM114）→ 拆分后两文件合计**逐类别完全一致**（其中 14×RUF003 随中文注释迁入新模块），**零净新增告警**（新模块自身仅继承 14×RUF003 既有 Chinese-comment 告警）。
+- `git diff` 密钥扫描（`sk-...` / `"api_key":` / `Bearer` / `secret=` / `token=`）无命中——纯常量搬迁，无密钥。
+
+---
+
 ## [Unreleased] — 2026-07-14（第十六轮：拆分 JsonValidator，提取 json_repair 模块 R-M2）
 
 本轮为一次**大文件拆分**，属后端审查报告（`docs/backend_review_report.md`）路线图 §5.2 的 **M2**（拆分 `json_validator.py`）范畴——报告 §7 建议的迭代顺序为「R1-R8 → M1-M4 大文件拆分 → 安全 M8-M10 → 性能 L1-L7」，本项是 M1-M4 拆分组的第一刀。`pa_agent/ai/json_validator.py` 原为 **1023 行**的单一大文件，其中**前半段（原 65-427 行，约 360 行）是一组自足的纯 JSON 文本提取/修复函数**（去 markdown fence、修不转义引号、补截断括号、闭合未完结字符串等），**与后半段的 `JsonValidator` 校验器类混杂在同一文件**。这组修复函数：① 仅依赖 stdlib（`json`/`logging`/`re`），零依赖 `JsonValidator` 类及任何项目模块；② 被 `validation_retry.py`、`prompt_assembler.py`、`tools/debug_stage2_json.py`、多个测试等**跨模块直接 import**（关注点独立）。两者混居导致文件臃肿、职责不清、修改修复逻辑时需在千行文件中定位。
