@@ -10,6 +10,7 @@ from PyQt6.QtGui import (
     QBrush,
     QColor,
     QFont,
+    QHideEvent,
     QLinearGradient,
     QPainter,
     QPainterPath,
@@ -70,7 +71,6 @@ _LEVEL_DY = 270
 _BRANCH_DX = 360
 _PLAY_TICK_MS = 40
 _FX_TICK_MS = 60
-_ANIM_PHASE = 0.0
 
 _NEON_CYAN = "#37f8ff"
 _NEON_BLUE = "#58a6ff"
@@ -90,6 +90,12 @@ def _font_ui(pt: int, *, bold: bool = False, mono: bool = False) -> QFont:
 def _answer_color(answer: str) -> str:
     base = str(answer).split("（", 1)[0]
     return _ANSWER_COLOR.get(base, T.ACCENT_PRIMARY)
+
+
+def _item_anim_phase(item: Any) -> float:
+    """Read the owning scene's animation phase (0.0 if not on a _FlowScene)."""
+    scene = item.scene()
+    return float(getattr(scene, "anim_phase", 0.0)) if scene is not None else 0.0
 
 
 def _draw_corner_brackets(painter: QPainter, rect: QRectF, color: QColor) -> None:
@@ -134,8 +140,11 @@ class _Placed:
 
 
 class _FlowScene(QGraphicsScene):
+    def __init__(self) -> None:
+        super().__init__()
+        self.anim_phase = 0.0
+
     def drawBackground(self, painter: QPainter, rect: QRectF) -> None:  # noqa: N802
-        global _ANIM_PHASE
         grad = QLinearGradient(rect.topLeft(), rect.bottomRight())
         grad.setColorAt(0, QColor("#020711"))
         grad.setColorAt(0.48, QColor("#07111f"))
@@ -180,7 +189,7 @@ class _FlowScene(QGraphicsScene):
             painter.drawLine(int(rect.left()), int(y), int(rect.right()), int(y))
             y += major
 
-        scan_y = rect.top() + ((rect.height() + 220) * ((_ANIM_PHASE * 0.18) % 1.0)) - 110
+        scan_y = rect.top() + ((rect.height() + 220) * ((self.anim_phase * 0.18) % 1.0)) - 110
         scan = QLinearGradient(rect.left(), scan_y - 34, rect.left(), scan_y + 34)
         transparent = QColor(_NEON_CYAN)
         transparent.setAlpha(0)
@@ -214,7 +223,6 @@ class _BranchEdge(QGraphicsObject):
         return QRectF(self._p0, self._p1).normalized().adjusted(-40, -24, 40, 24)
 
     def paint(self, painter: QPainter, _option: Any, _widget: Any = None) -> None:
-        global _ANIM_PHASE
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         col = QColor(_NEON_CYAN if self._active else T.TEXT_MUTED)
         if not self._active:
@@ -235,8 +243,9 @@ class _BranchEdge(QGraphicsObject):
 
         if self._active:
             painter.setPen(Qt.PenStyle.NoPen)
+            phase = _item_anim_phase(self)
             for i in range(3):
-                pct = (_ANIM_PHASE * 0.42 + i * 0.33) % 1.0
+                pct = (phase * 0.42 + i * 0.33) % 1.0
                 pt = path.pointAtPercent(pct)
                 dot = QColor(_NEON_CYAN)
                 dot.setAlpha(210 - i * 45)
@@ -587,11 +596,10 @@ class _TerminalNode(QGraphicsObject):
         return QRectF(-_TERMINAL_W / 2 - 8, -8, _TERMINAL_W + 16, _TERMINAL_H + 16)
 
     def paint(self, painter: QPainter, _option: Any, _widget: Any = None) -> None:
-        global _ANIM_PHASE
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         w, h = _TERMINAL_W, _TERMINAL_H
         rect = QRectF(-w / 2, 0, w, h)
-        pulse = int(70 + 35 * (0.5 + 0.5 * math.sin(_ANIM_PHASE * 2.7)))
+        pulse = int(70 + 35 * (0.5 + 0.5 * math.sin(_item_anim_phase(self) * 2.7)))
         glow = QPen(QColor(self._color.red(), self._color.green(), self._color.blue(), pulse))
         glow.setWidth(16)
         painter.setPen(glow)
@@ -910,7 +918,17 @@ class DecisionFlowVizPanel(QWidget):
 
     def showEvent(self, event: QShowEvent) -> None:  # noqa: N802
         super().showEvent(event)
+        if not self._fx_timer.isActive():
+            self._fx_timer.start(_FX_TICK_MS)
         self.schedule_refit_view()
+
+    def hideEvent(self, event: QHideEvent) -> None:  # noqa: N802
+        # Pause the always-on background animation and any camera playback while
+        # this panel is hidden (e.g. user switched tabs) to avoid wasting paints.
+        self._fx_timer.stop()
+        if self._play_active:
+            self._stop_playback()
+        super().hideEvent(event)
 
     def should_auto_play_after_load(self) -> bool:
         """Whether to switch tab and play when new trace data is loaded."""
@@ -922,8 +940,7 @@ class DecisionFlowVizPanel(QWidget):
         return bool(getattr(self._settings.general, "decision_flow_auto_play", False))
 
     def _on_fx_tick(self) -> None:
-        global _ANIM_PHASE
-        _ANIM_PHASE = (_ANIM_PHASE + 0.06) % 1000.0
+        self._scene.anim_phase = (self._scene.anim_phase + 0.06) % 1000.0
         self._scene.update(self._scene.sceneRect())
 
     def play_path(self) -> bool:
@@ -1068,6 +1085,7 @@ class DecisionFlowVizPanel(QWidget):
             self._play_status.setText("暂无可全屏推演路径，请先完成一次分析")
             return
         dlg = QDialog(self)
+        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         dlg.setWindowTitle("AI Tactical Decision Matrix — Fullscreen")
         dlg.resize(1500, 950)
         layout = QVBoxLayout(dlg)

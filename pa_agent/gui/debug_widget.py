@@ -10,8 +10,6 @@ from __future__ import annotations
 
 import json
 import logging
-from pathlib import Path
-from typing import TYPE_CHECKING, Optional
 
 from PyQt6.QtWidgets import (
     QHBoxLayout,
@@ -345,10 +343,8 @@ class DebugWidget(QWidget):
         try:
             RECORDS_PENDING_DIR.mkdir(parents=True, exist_ok=True)
             out_path = RECORDS_PENDING_DIR / filename
-            out_path.write_text(
-                json.dumps(turn, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
+            payload = self._mask(json.dumps(turn, ensure_ascii=False, indent=2))
+            out_path.write_text(payload, encoding="utf-8")
             logger.info("Debug turn exported to %s", out_path)
             QMessageBox.information(self, "导出成功", f"已写入：\n{out_path}")
         except Exception as exc:  # noqa: BLE001

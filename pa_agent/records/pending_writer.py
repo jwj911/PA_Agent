@@ -64,6 +64,14 @@ class PendingWriter:
                 exc,
             )
 
+    def set_api_key(self, api_key: str) -> None:
+        """Update the plaintext API key used for record sanitization.
+
+        Must be called after the user changes the key at runtime so newly
+        written records mask the current key rather than a stale one.
+        """
+        self._api_key = api_key or ""
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -168,7 +176,7 @@ class PendingWriter:
         )
         if self._event_bus is not None:
             try:
-                self._event_bus.emit("disk_error", {"path": str(path), "error": str(exc)})
+                self._event_bus.emit_disk_error({"path": str(path), "error": str(exc)})
             except Exception as bus_exc:  # noqa: BLE001
                 self._logger.error(
                     "PendingWriter: event_bus emit failed: %s", bus_exc

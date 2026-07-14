@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 from PyQt6.QtCore import Qt, QUrl
-from PyQt6.QtGui import QDesktopServices, QFont
+from PyQt6.QtGui import QDesktopServices
 
 from pa_agent.config.settings import Settings, save_settings
 from pa_agent.config.paths import SETTINGS_JSON_PATH
@@ -79,11 +79,12 @@ class SettingsDialog(QDialog):
 
         api_key_row = QHBoxLayout()
         self._api_key_edit = QLineEdit()
-        self._api_key_edit.setEchoMode(QLineEdit.EchoMode.Normal)
+        self._api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self._api_key_edit.setPlaceholderText("输入 API Key")
         api_key_row.addWidget(self._api_key_edit)
-        self._show_key_btn = QPushButton("隐藏")
+        self._show_key_btn = QPushButton("显示")
         self._show_key_btn.setCheckable(True)
+        self._show_key_btn.setChecked(True)
         self._show_key_btn.setFixedWidth(52)
         self._show_key_btn.toggled.connect(self._toggle_api_key_visibility)
         api_key_row.addWidget(self._show_key_btn)
@@ -453,8 +454,15 @@ class SettingsDialog(QDialog):
         g.decision_flow_default_zoom_pct = self._flow_default_zoom_spin.value()
         g.decision_confidence_threshold = self._decision_conf_threshold_spin.value()
 
-        save_settings(self._settings, SETTINGS_JSON_PATH)
-        self.accept()
+        try:
+            save_settings(self._settings, SETTINGS_JSON_PATH)
+            self.accept()
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.critical(
+                self,
+                "保存失败",
+                f"写入 config/settings.json 失败：\n{exc}",
+            )
 
     def focus_api_key_field(self) -> None:
         """Focus the API Key field (e.g. when prompting on first launch)."""

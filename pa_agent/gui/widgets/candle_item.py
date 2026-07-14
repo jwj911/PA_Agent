@@ -43,6 +43,18 @@ class CandleItem(pg.GraphicsObject):
 
     # ── pyqtgraph interface ───────────────────────────────────────────────────
 
+    def update_bar(self, bar: "KlineBar", *, forming: bool) -> None:
+        """Update this candle's OHLC in place and repaint (avoids item churn).
+
+        Used by the chart's incremental fast path when only the newest forming
+        bar changes on a live tick, so the other candles are left untouched.
+        """
+        self.prepareGeometryChange()
+        self._bar = bar
+        self._forming = forming
+        self._generate_picture()
+        self.update()
+
     def boundingRect(self) -> QRectF:
         half = (_FORMING_BODY_WIDTH if self._forming else _BODY_WIDTH) / 2.0
         top = self._bar.high

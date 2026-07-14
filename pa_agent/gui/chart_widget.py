@@ -54,6 +54,8 @@ class ChartWidget(pg.PlotWidget):
 
         # Internal state
         self._latest_frame: KlineFrame | None = None
+        self._rendered_frame: KlineFrame | None = None  # last frame actually drawn
+        self._needs_full_render: bool = False  # set when style (font) changed
         self._dirty: bool = False
         self._candle_items: list[CandleItem] = []
         self._seq_labels: list[SeqLabelItem] = []
@@ -89,6 +91,7 @@ class ChartWidget(pg.PlotWidget):
             return
         self._seq_label_font_pt = point_size
         if self._latest_frame is not None:
+            self._needs_full_render = True  # font change requires full rebuild
             self._dirty = True
 
     def set_frame(self, frame: "KlineFrame", *, fit_view: bool = False) -> None:
@@ -353,6 +356,8 @@ class ChartWidget(pg.PlotWidget):
             self.removeItem(self._ema_line)
             self._ema_line = None
         self._latest_frame = None
+        self._rendered_frame = None
+        self._needs_full_render = False
         self._dirty = False
         self._fit_on_next_render = False
         self._first_frame_fitted = False
@@ -369,7 +374,15 @@ class ChartWidget(pg.PlotWidget):
     # ── Internal rendering ────────────────────────────────────────────────────
 
     def _render_frame(self, frame: "KlineFrame") -> None:
-        """Rebuild all candle items, EMA line, and sequence labels."""
+        """Redraw the chart. Uses an in-place fast path when only the forming bar changed."""
+        if self._try_forming_only_update(frame):
+            self._rendered_frame = frame
+            if self._fit_on_next_render:
+                self._fit_on_next_render = False
+                self.fit_view()
+            return
+
+        self._needs_full_render = False
         self._clear_candles_and_labels()
         if self._ema_line is not None:
             self.removeItem(self._ema_line)
@@ -377,6 +390,7 @@ class ChartWidget(pg.PlotWidget):
         bars = frame.bars
         n = len(bars)
         if n == 0:
+            self._rendered_frame = frame
             return
 
         # bars[0] is newest (seq=1); we want x=0 for oldest, x=n-1 for newest
@@ -431,6 +445,69 @@ class ChartWidget(pg.PlotWidget):
         if self._fit_on_next_render:
             self._fit_on_next_render = False
             self.fit_view()
+
+        self._rendered_frame = frame
+
+    def _try_forming_only_update(self, frame: "KlineFrame") -> bool:
+        """Update just the newest forming candle + EMA line when nothing else changed.
+
+        Returns True when the fast path was applied; False when a full rebuild is needed.
+        """
+        if self._needs_full_render:
+            return False
+        prev = self._rendered_frame
+        if prev is None or not self._candle_items:
+            return False
+        if len(self._candle_items) != len(frame.bars):
+            return False
+        if not self._forming_only_change(prev, frame):
+            return False
+
+        # EMA presence must stay stable (no warm-up crossing) for a safe in-place update.
+        n = len(frame.bars)
+        ema_x: list[float] = []
+        ema_y: list[float] = []
+        for i in range(n):
+            ema_val = frame.indicators.ema20[i]
+            if not math.isnan(ema_val):
+                ema_x.append(float(n - 1 - i))
+                ema_y.append(ema_val)
+        if (self._ema_line is None) != (not ema_x):
+            return False
+
+        forming_bar = frame.bars[0]
+        self._candle_items[0].update_bar(forming_bar, forming=not forming_bar.closed)
+        if self._ema_line is not None and ema_x:
+            self._ema_line.setData(x=np.array(ema_x), y=np.array(ema_y))
+        return True
+
+    @staticmethod
+    def _forming_only_change(prev: "KlineFrame", frame: "KlineFrame") -> bool:
+        """True when *frame* differs from *prev* only in the newest forming bar's OHLC."""
+        if prev.symbol != frame.symbol or prev.timeframe != frame.timeframe:
+            return False
+        pb, nb = prev.bars, frame.bars
+        if not pb or len(pb) != len(nb):
+            return False
+        # Newest slot must be the still-forming bar in both snapshots (same seq).
+        if pb[0].closed or nb[0].closed:
+            return False
+        if pb[0].seq != nb[0].seq:
+            return False
+        # Every closed bar (index >= 1) must be identical.
+        if pb[1:] != nb[1:]:
+            return False
+        # EMA for closed bars (index >= 1) must be unchanged; only ema20[0] may move.
+        pe, ne = prev.indicators.ema20, frame.indicators.ema20
+        if len(pe) != len(ne):
+            return False
+        for i in range(1, len(pe)):
+            a, b = pe[i], ne[i]
+            if math.isnan(a) and math.isnan(b):
+                continue
+            if a != b:
+                return False
+        return True
 
     def _view_ranges_for_frame(
         self,

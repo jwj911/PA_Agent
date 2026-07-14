@@ -10,7 +10,6 @@ from PyQt6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QGroupBox,
-    QHBoxLayout,
     QLineEdit,
     QMessageBox,
     QPushButton,
@@ -274,8 +273,15 @@ class GeneralSettingsDialog(QDialog):
         g.decision_flow_play_seconds = self._flow_play_seconds_spin.value()
         g.decision_flow_default_zoom_pct = self._flow_default_zoom_spin.value()
 
-        save_settings(self._settings, SETTINGS_JSON_PATH)
-        self.accept()
+        try:
+            save_settings(self._settings, SETTINGS_JSON_PATH)
+            self.accept()
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.critical(
+                self,
+                "保存失败",
+                f"写入 config/settings.json 失败：\n{exc}",
+            )
 
     # ── 辅助 ──────────────────────────────────────────────────────────────────
 

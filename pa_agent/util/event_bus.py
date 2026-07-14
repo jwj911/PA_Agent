@@ -16,12 +16,14 @@ class EventBus(QObject):
     status      : emitted with a human-readable status string for the status bar
     exception   : emitted when a JSON-validation alarm fires (AlarmPayload)
     token_update: emitted with a dict of token/cost update data for Tab2
+    disk_error  : emitted when persisting a record to disk fails
     """
 
     data_frame = pyqtSignal(object)    # KlineFrame
     status = pyqtSignal(str)           # status text
     exception = pyqtSignal(object)     # AlarmPayload
     token_update = pyqtSignal(dict)    # token/cost update dict
+    disk_error = pyqtSignal(dict)      # {"path": str, "error": str}
 
     def emit_status(self, text: str) -> None:
         """Convenience wrapper — emit a status string."""
@@ -38,3 +40,7 @@ class EventBus(QObject):
     def emit_token_update(self, data: dict) -> None:
         """Convenience wrapper — emit a token/cost update dict."""
         self.token_update.emit(data)
+
+    def emit_disk_error(self, data: dict) -> None:
+        """Convenience wrapper — emit a disk-error payload."""
+        self.disk_error.emit(data)

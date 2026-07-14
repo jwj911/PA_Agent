@@ -41,6 +41,8 @@ _STYLE_RED = "QProgressBar#tokenProgress::chunk { background-color: #cc0000; }"
 
 _SUMMARY_MAX = 42
 
+_WORKER_JOIN_TIMEOUT_MS = 5000
+
 
 def _one_line_summary(text: str, max_len: int = _SUMMARY_MAX) -> str:
     line = text.strip().replace("\n", " ").replace("\r", "")
@@ -628,3 +630,22 @@ class ConversationWidget(QWidget):
         self._input_edit.setEnabled(True)
         self._worker = None
         self._chat_turn = None
+
+    def shutdown(self) -> None:
+        """Cancel and join any in-flight chat worker before teardown."""
+        if self._cancel_token is not None:
+            self._cancel_token.set()
+        worker = self._worker
+        self._worker = None
+        if worker is None:
+            return
+        try:
+            worker.finished.disconnect()
+            worker.error.disconnect()
+            worker.reasoning_token.disconnect()
+            worker.content_token.disconnect()
+        except (TypeError, RuntimeError):
+            pass
+        if worker.isRunning():
+            worker.wait(_WORKER_JOIN_TIMEOUT_MS)
+        worker.deleteLater()

@@ -1,4 +1,4 @@
-﻿"""Main application window for PA Agent."""
+"""Main application window for PA Agent."""
 from __future__ import annotations
 
 import logging
@@ -18,7 +18,6 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSizePolicy,
-    QSpinBox,
     QSplitter,
     QStatusBar,
     QVBoxLayout,
@@ -693,6 +692,7 @@ class MainWindow(QMainWindow):
         if bus is None:
             return
         bus.status.connect(self._on_status_update)
+        bus.disk_error.connect(self._on_disk_error)
 
     def _start_refresh_loop(self) -> None:
         """Start the RefreshLoop only when the data source is connected."""
@@ -879,7 +879,7 @@ class MainWindow(QMainWindow):
             logger.info(
                 "Analysis worker still running after %d ms cancel wait; "
                 "tracking as zombie",
-                _WORKER_JOIN_TIMEOUT_MS,
+                join_ms,
             )
             zombies = getattr(self, "_zombie_workers", None)
             if zombies is None:
@@ -1412,6 +1412,13 @@ class MainWindow(QMainWindow):
                 for idx in range(5):
                     flow.set_step_status(idx, "idle")
 
+    def _on_disk_error(self, payload: dict) -> None:
+        """Surface a record-persistence failure to the status bar."""
+        if not self._ui_is_alive():
+            return
+        path = payload.get("path", "") if isinstance(payload, dict) else ""
+        self._status_bar.showMessage(f"记录保存失败：{path}")
+
     def _set_chart_refresh_paused(self, paused: bool) -> None:
         """Pause or resume live chart updates from RefreshLoop."""
         self._chart_refresh_paused = paused
@@ -1605,7 +1612,6 @@ class MainWindow(QMainWindow):
 
         from pa_agent.ai.prompt_assembler import PromptAssembler
 
-        data_source = getattr(self._ctx, "data_source", None)
         chart = getattr(self, "_chart_widget", None)
         display_frame = None
         export_frame = None
@@ -2658,7 +2664,6 @@ class MainWindow(QMainWindow):
 
     def _exit_demo_mode(self, *, silent: bool = False) -> None:
         """Leave demo mode and restore live controls."""
-        from pathlib import Path
 
         self._demo_auto_next_armed = False
         self._demo_waiting_flow_playback = False
@@ -3395,7 +3400,20 @@ class MainWindow(QMainWindow):
                 except TypeError:
                     parts.append(str(raw)[:6000])
 
-        return "\n".join(parts).strip()
+        return self._mask_api_key("\n".join(parts).strip())
+
+    def _mask_api_key(self, text: str) -> str:
+        """Replace the current provider API key with its masked form in ``text``."""
+        if not text:
+            return text
+        from pa_agent.util.mask_secret import mask_secret
+
+        settings = getattr(self._ctx, "settings", None)
+        provider = getattr(settings, "provider", None)
+        key = getattr(provider, "api_key", "") or ""
+        if not key:
+            return text
+        return text.replace(key, mask_secret(key))
 
     def _prompt_debug_report_for_bug_fix(
         self,
@@ -4004,9 +4022,12 @@ class MainWindow(QMainWindow):
         """Stop background work before Qt destroys widgets."""
         self._window_closing = True
         try:
-            self._cancel_analysis_worker()
+            self._cancel_analysis_worker(join_ms=_WORKER_JOIN_TIMEOUT_MS)
             self._cancel_snapshot_fetch_worker()
             self._stop_refresh_loop()
+            stream = getattr(self, "_stream_panel", None)
+            if stream is not None and hasattr(stream, "shutdown"):
+                stream.shutdown()
         except RuntimeError as exc:
             logger.debug("Shutdown cleanup skipped: %s", exc)
         super().closeEvent(event)
@@ -4088,6 +4109,9 @@ class MainWindow(QMainWindow):
                 self._debug_widget._api_key = key
                 self._ai_sidebar.bind_settings(settings)
                 update_api_key(key)
+                pending_writer = getattr(self._ctx, "pending_writer", None)
+                if pending_writer is not None and hasattr(pending_writer, "set_api_key"):
+                    pending_writer.set_api_key(key)
             self._update_ai_mode_label()
             self._refresh_api_key_ui_state()
 
@@ -4254,7 +4278,6 @@ class MainWindow(QMainWindow):
                 compute_incremental_bar_delta,
                 find_latest_successful_record,
             )
-            from pa_agent.data.snapshot import INDICATOR_WARMUP_BARS
 
             bar_count = self._analysis_bar_count()
             frame = self._build_chart_frame_from_bars(

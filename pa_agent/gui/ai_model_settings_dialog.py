@@ -69,11 +69,12 @@ class AIModelSettingsDialog(QDialog):
 
         api_key_row = QHBoxLayout()
         self._api_key_edit = QLineEdit()
-        self._api_key_edit.setEchoMode(QLineEdit.EchoMode.Normal)
+        self._api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self._api_key_edit.setPlaceholderText("输入 API Key")
         api_key_row.addWidget(self._api_key_edit)
-        self._show_key_btn = QPushButton("隐藏")
+        self._show_key_btn = QPushButton("显示")
         self._show_key_btn.setCheckable(True)
+        self._show_key_btn.setChecked(True)
         self._show_key_btn.setFixedWidth(52)
         self._show_key_btn.toggled.connect(self._toggle_api_key_visibility)
         api_key_row.addWidget(self._show_key_btn)
@@ -165,8 +166,15 @@ class AIModelSettingsDialog(QDialog):
         p.thinking = self._thinking_check.isChecked()
         p.reasoning_effort = self._reasoning_effort_combo.currentText()  # type: ignore[assignment]
 
-        save_settings(self._settings, SETTINGS_JSON_PATH)
-        self.accept()
+        try:
+            save_settings(self._settings, SETTINGS_JSON_PATH)
+            self.accept()
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.critical(
+                self,
+                "保存失败",
+                f"写入 config/settings.json 失败：\n{exc}",
+            )
 
     # ── 辅助 ──────────────────────────────────────────────────────────────────
 
