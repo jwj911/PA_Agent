@@ -1035,34 +1035,11 @@ class TwoStageOrchestrator:
             apply_qclaw_provider_to_settings,
             is_openclaw_model,
         )
-        from pa_agent.config.paths import SETTINGS_JSON_PATH
 
-        if not is_openclaw_model(original_model):
+        if not is_openclaw_model(original_model) or self._settings is None:
             return False
-        if self._settings is None:
-            return False
-
-        from pa_agent.config.settings import save_settings
-        from pa_agent.util.logging import update_api_key
-
         err = apply_qclaw_provider_to_settings(self._settings)
-        if err:
-            logger.warning("QClaw auto-fallback unavailable: %s", err)
-            return False
-
-        self._client.update_provider(self._settings.provider)
-        try:
-            save_settings(self._settings, SETTINGS_JSON_PATH)
-            update_api_key(self._settings.provider.api_key)
-        except Exception as save_exc:  # noqa: BLE001
-            logger.warning("QClaw fallback applied but settings save failed: %s", save_exc)
-
-        logger.info(
-            "QClaw auto-fallback: model=%s base_url=%s",
-            self._settings.provider.model,
-            self._settings.provider.base_url,
-        )
-        return True
+        return self._finish_provider_fallback("QClaw", err)
 
     def _try_cursor_fallback(self, *, original_model: str = "") -> bool:
         """Apply Cursor route via QClaw (like settings Save with model=openclaw_cs)."""
@@ -1070,37 +1047,11 @@ class TwoStageOrchestrator:
             apply_cursor_provider_to_settings,
             is_openclaw_cs_model,
         )
-        from pa_agent.config.paths import SETTINGS_JSON_PATH
 
-        if not is_openclaw_cs_model(original_model):
+        if not is_openclaw_cs_model(original_model) or self._settings is None:
             return False
-        if self._settings is None:
-            return False
-
-        from pa_agent.config.settings import save_settings
-        from pa_agent.util.logging import update_api_key
-
-        err = apply_cursor_provider_to_settings(
-            self._settings,
-            preferred_model=original_model,
-        )
-        if err:
-            logger.warning("Cursor auto-fallback unavailable: %s", err)
-            return False
-
-        self._client.update_provider(self._settings.provider)
-        try:
-            save_settings(self._settings, SETTINGS_JSON_PATH)
-            update_api_key(self._settings.provider.api_key)
-        except Exception as save_exc:  # noqa: BLE001
-            logger.warning("Cursor fallback applied but settings save failed: %s", save_exc)
-
-        logger.info(
-            "Cursor auto-fallback: model=%s base_url=%s",
-            self._settings.provider.model,
-            self._settings.provider.base_url,
-        )
-        return True
+        err = apply_cursor_provider_to_settings(self._settings, preferred_model=original_model)
+        return self._finish_provider_fallback("Cursor", err)
 
     def _try_workbuddy_fallback(self, *, original_model: str = "") -> bool:
         """Apply WorkBuddy provider (like settings Save with model=openclaw_wb)."""
@@ -1108,19 +1059,28 @@ class TwoStageOrchestrator:
             apply_workbuddy_provider_to_settings,
             is_openclaw_wb_model,
         )
+
+        if not is_openclaw_wb_model(original_model) or self._settings is None:
+            return False
+        err = apply_workbuddy_provider_to_settings(self._settings)
+        return self._finish_provider_fallback("WorkBuddy", err)
+
+    def _finish_provider_fallback(self, provider_name: str, err: str | None) -> bool:
+        """Shared tail for QClaw/Cursor/WorkBuddy fallback: persist + update client.
+
+        The per-provider guard and ``apply_*`` call happen in the wrappers above
+        (so their connector imports stay call-time and remain patchable in tests);
+        this handles the identical remainder — abort on ``err``, push the new
+        provider into the live client, best-effort persist settings + refresh the
+        log masking key, and log the switch. Callers only reach here with
+        ``self._settings`` already confirmed non-None.
+        """
         from pa_agent.config.paths import SETTINGS_JSON_PATH
-
-        if not is_openclaw_wb_model(original_model):
-            return False
-        if self._settings is None:
-            return False
-
         from pa_agent.config.settings import save_settings
         from pa_agent.util.logging import update_api_key
 
-        err = apply_workbuddy_provider_to_settings(self._settings)
         if err:
-            logger.warning("WorkBuddy auto-fallback unavailable: %s", err)
+            logger.warning("%s auto-fallback unavailable: %s", provider_name, err)
             return False
 
         self._client.update_provider(self._settings.provider)
@@ -1128,10 +1088,13 @@ class TwoStageOrchestrator:
             save_settings(self._settings, SETTINGS_JSON_PATH)
             update_api_key(self._settings.provider.api_key)
         except Exception as save_exc:  # noqa: BLE001
-            logger.warning("WorkBuddy fallback applied but settings save failed: %s", save_exc)
+            logger.warning(
+                "%s fallback applied but settings save failed: %s", provider_name, save_exc
+            )
 
         logger.info(
-            "WorkBuddy auto-fallback: model=%s base_url=%s",
+            "%s auto-fallback: model=%s base_url=%s",
+            provider_name,
             self._settings.provider.model,
             self._settings.provider.base_url,
         )

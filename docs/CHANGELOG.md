@@ -13,6 +13,33 @@
 
 ---
 
+## [Unreleased] — 2026-07-14（第十一轮：统一 provider fallback R3）
+
+本轮落实后端审查报告（`docs/backend_review_report.md`）路线图 §5.1 的 **R3**：统一 provider 自动降级逻辑。`orchestrator/two_stage.py` 中的三个网络降级方法 `_try_qclaw_fallback` / `_try_cursor_fallback` / `_try_workbuddy_fallback` 各约 33 行、结构近乎完全相同，仅在「连接器 `apply_*` 函数、`is_openclaw_*_model` 守卫、provider 名称字符串、Cursor 多一个 `preferred_model` 入参」四点上不同；三者尾部（`err` 判空 → `update_provider` → best-effort `save_settings` + `update_api_key` → 记录切换日志）逐行重复，任一处改动都要同步改三遍、极易偏移。**原则：抽出单一共享尾部方法，消除重复；外部行为、返回值、日志输出文本、连接器 patch 点与改动前逐字节一致**——降级链的调用点 `_stream_chat_resilient` 依赖三方法的返回语义（`True` 表示已切换可重试、`False` 表示不适用/失败），且 `tests/unit/test_qclaw_auto_fallback.py` 依赖连接器函数为 call-time 导入方可 patch。
+
+### 代码清理
+
+- **新增共享尾部 `_finish_provider_fallback(provider_name, err) -> bool`**：把三方法完全相同的尾部（`err` 判空告警 → `self._client.update_provider(...)` → `try: save_settings + update_api_key except: 告警` → `logger.info` 记录切换 → `return True`）合并为一处；`provider_name` 参数注入 provider 名，日志文案由字面量（如 `"QClaw auto-fallback unavailable: %s"`）改为 `"%s auto-fallback unavailable: %s"` + 参数，**输出文本与原字面量逐字节等价**。
+- **三个 `_try_*_fallback` 瘦身为薄包装器**：各自保留 **call-time 连接器导入**（`apply_*` / `is_openclaw_*_model`，确保测试可 `patch("pa_agent.ai.qclaw_connector.apply_qclaw_provider_to_settings")`）、守卫、`apply_*` 调用，尾部改为 `return self._finish_provider_fallback(<name>, err)`。守卫从两个 `if`（`if not is_openclaw_*: return False` / `if self._settings is None: return False`）合并为 `if not is_openclaw_*(original_model) or self._settings is None: return False`（短路语义等价）。Cursor 的 `preferred_model=original_model` 入参保留在其包装器中。
+- 净减少约 37 行重复代码（`git diff --stat`：25 insertions / 62 deletions）；顺带移除 2 条因合并而多余的 `# noqa`（RUF100 3→1）。
+
+### 明确不改（保持原样）
+
+- **调用点 `_stream_chat_resilient` 零改动**：WorkBuddy → Cursor → QClaw 的尝试顺序、`tried_*` 标志、network-error 判定、重试循环全部不变。
+- **连接器导入位置**：三个 `apply_*` / `is_openclaw_*_model` 仍在各包装器方法体内 call-time 导入，不上提到模块顶层——否则 `test_qclaw_fallback_skipped_for_non_openclaw_model` 的 `patch("pa_agent.ai.qclaw_connector.apply_...")` 会失效。
+- **既有告警**（RUF001 中文标点等）：不在 R3 范围内，未改动。
+
+### 验证
+
+- `py_compile` 通过（`orchestrator/two_stage.py`）。
+- **等价性验证**：从 git `HEAD` 提取旧三方法，逐行确认新「薄包装器 + `_finish_provider_fallback`」与原实现在守卫、`apply_*` 调用、`err` 分支、`update_provider`、`save_settings`/`update_api_key`、日志文案上语义一致。
+- **行为验证**：因本机缺 `PyQt6`（经 `util/__init__`→`event_bus` 链，与既往各轮一致），用等价脚本 stub `PyQt6.QtCore` 后复刻 `test_qclaw_auto_fallback.py` 三个用例（fallback 成功→ `stream_chat` 调 2 次、不可用→调 1 次、非 openclaw 模型→ `_try_qclaw_fallback` 返回 False 且 `apply_*` 未被调用且可 patch），并补充 Cursor/WorkBuddy 守卫可 patch、`_finish_provider_fallback` 的 err 分支（不触碰 client）与成功分支（`update_provider` 被调）——全部 PASS。
+- `ruff check` 对比基线：改动前 **42** 条 → 改动后 **40** 条，减少的 2 条为 RUF100（3→1，合并去重后多余的 `# noqa`）；其余类别（RUF001:22、E402:11、UP037:5、I001:1）与改动前**逐项一致、零新增**。
+- `git diff` 密钥扫描（`sk-...` / `api_key=...` / `Bearer` / `secret`）仅命中 `update_api_key(...)` 标识符引用，无明文密钥。
+- 建议在项目 venv 运行 `pytest tests/unit/test_qclaw_auto_fallback.py -q` 回归。
+
+---
+
 ## [Unreleased] — 2026-07-14（第十轮：策略文件注册表 R1）
 
 本轮落实后端审查报告（`docs/backend_review_report.md`）§4.3/§10「代码重复」与路线图 §5.1 的 **R1**：提取策略文件注册表。此前同一批策略/提示 `.txt` 文件名字面量在 `ai/router.py`（阶段一→阶段二文件路由）与 `ai/prompt_assembler.py`（提示词组装）中各写一遍，新增或重命名策略文件需同步改两处、极易漏改或写错中文文件名。**原则：抽出单一权威文件名常量，消除重复；文件名取值与顺序逐字节不变**——阶段二提示前缀命中 DeepSeek KV 缓存依赖 byte-identical 前缀，故所有消费方构建的文件列表必须与改动前完全一致。
