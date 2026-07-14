@@ -1467,11 +1467,16 @@ class MainWindow(QMainWindow):
                 if choice == "mt5":
                     self._select_data_source_kind("mt5", switch=True)
                 return
-            # Brief pause to let the probe's WebSocket fully disconnect before
-            # the refresh loop opens its own connection (avoids TV rate-limiting)
-            import time as _time
-            _time.sleep(1.5)
-        # Stop any existing loop first so we can start fresh.
+            # Defer the (re)start by 1.5 s so the probe's WebSocket fully
+            # disconnects before the refresh loop opens its own connection
+            # (avoids TV rate-limiting). Never sleep on the GUI thread.
+            self._status_bar.showMessage("正在连接 TradingView，请稍候…")
+            QTimer.singleShot(1500, self._restart_refresh_loop_fresh)
+            return
+        self._restart_refresh_loop_fresh()
+
+    def _restart_refresh_loop_fresh(self) -> None:
+        """Stop any running refresh loop and start a clean one for the current symbol."""
         # Reset the keep-analysis sentinel so a stale closed-bar ts from a
         # previous session / interrupted fetch does not immediately fire a
         # spurious analysis round on the very first frame after reconnect.

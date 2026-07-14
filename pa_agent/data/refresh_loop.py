@@ -5,7 +5,7 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
-from pa_agent.data.base import DataSource, DataSourceTransientError, KlineBar
+from pa_agent.data.base import DataSource, DataSourceTransientError
 from pa_agent.data.snapshot import INDICATOR_WARMUP_BARS
 
 if TYPE_CHECKING:
@@ -51,12 +51,24 @@ class RefreshLoop(QThread):
         self._failure_threshold_s = 5.0
         self._in_flight = False  # guard against overlapping fetches
 
+    def _cancelled(self) -> bool:
+        return self._cancel_token is not None and self._cancel_token.is_set()
+
+    def _sleep_cancellable(self, seconds: float) -> None:
+        """Sleep up to *seconds*, waking early (within ~0.1 s) if cancelled."""
+        deadline = time.monotonic() + max(0.0, seconds)
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0 or self._cancelled():
+                return
+            time.sleep(min(0.1, remaining))
+
     def run(self) -> None:  # noqa: C901
         """Main loop — runs on the worker thread."""
         failure_start: float | None = None
 
         while True:
-            if self._cancel_token is not None and self._cancel_token.is_set():
+            if self._cancelled():
                 logger.debug("RefreshLoop cancelled")
                 break
 
@@ -64,7 +76,7 @@ class RefreshLoop(QThread):
             # This prevents overlapping WebSocket connections that trigger
             # TradingView rate-limiting (especially in nologin mode).
             if self._in_flight:
-                time.sleep(0.5)
+                self._sleep_cancellable(0.5)
                 continue
 
             t0 = time.monotonic()
@@ -110,11 +122,11 @@ class RefreshLoop(QThread):
                     backoff_s,
                     self._consecutive_failures,
                 )
-                time.sleep(backoff_s)
+                self._sleep_cancellable(backoff_s)
                 continue
 
             elapsed_ms = (time.monotonic() - t0) * 1000
             sleep_ms = max(0.0, self._interval_ms - elapsed_ms)
             if sleep_ms > 0:
-                time.sleep(sleep_ms / 1000.0)
+                self._sleep_cancellable(sleep_ms / 1000.0)
 
