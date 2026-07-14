@@ -42,7 +42,7 @@
 | A 股数据源      | akshare、baostock、tushare、东方财富客户端                      |
 | 国际市场        | MetaTrader5（Windows）、TradingView（tvdatafeed）、yfinance |
 | 通知          | 飞书机器人、PushPlus                                        |
-| 加解密         | cryptography（仅用于 WorkBuddy DPAPI 解密等少数场景）             |
+| 加解密         | cryptography（WorkBuddy DPAPI 解密等）；`ctypes`+`crypt32` DPAPI（API Key 至静态加密） |
 
 完整依赖见 [`pyproject.toml`](./pyproject.toml)。
 
@@ -66,7 +66,7 @@ price_action_agent/
 │   ├── notify/          # 飞书、PushPlus 通知
 │   ├── orchestrator/    # 两阶段分析流水线、自由追问、校验重试
 │   ├── records/         # 分析记录持久化、经验库读取、交易日志
-│   ├── security/        # 安全包（当前为空占位，实际密钥处理在 util/ 与 git hooks）
+│   ├── security/        # 安全包：secret_store.py（API Key 至静态加密，Windows DPAPI，非 Windows 优雅降级）
 │   └── util/            # 日志脱敏、事件总线、崩溃诊断、线程、时间格式化、安全文件名等
 ├── config/              # 本地配置模板（运行时配置被 gitignore 忽略）
 ├── docs/                # 项目文档
@@ -156,6 +156,8 @@ price_action_agent/
   - `event_bus.py`：应用内事件总线。
   - `crash_diagnostics.py`：崩溃诊断与启动信息记录。
   - `threading.py`：取消令牌、worker 事件等并发原语。
+- **`pa_agent/security/`**：本地安全。
+  - `secret_store.py`：API Key **至静态加密**（encryption at rest）。`encrypt_secret`/`decrypt_secret`/`is_encryption_available`/`looks_encrypted`。Windows 经 DPAPI（`ctypes` 直调 `crypt32` 的 `CryptProtectData`/`CryptUnprotectData`）加密为自描述令牌 `dpapi:v1:<base64>`，绑定当前 Windows 账户；非 Windows/DPAPI 不可用时 `encrypt_secret` 返回 `None`，`config/settings.py` 回退明文至静态。仅改磁盘表示——内存态 `provider.api_key` 恒为明文，`save_settings`/`load_settings` 分别在落盘/加载时调 `_encrypt_provider_key_for_disk`/`_decrypt_provider_key_in_place`。与运行时脱敏（`util/`）正交。
 
 ***
 
@@ -274,19 +276,24 @@ pytest -m live
 
 ### 7.1 实际行为（请务必注意）
 
-- `config/settings.json` 中的 `provider.api_key` **以明文形式存储**。
-- 字段 `provider.api_key_encrypted` 在模型中存在，但当前代码**未实现本地加密存储逻辑**；保存设置时直接把内存中的 `api_key` 明文写入 `settings.json`。
-- `pa_agent/security/` 包目前为空占位，未承担实际加密职责。
+- `config/settings.json` 中的 API Key 采用**至静态加密（encryption at rest）**，实现见 `pa_agent/security/secret_store.py`：
+  - **Windows**：保存时经 **DPAPI**（`CryptProtectData`/`CryptUnprotectData`，`ctypes` 直调 `crypt32`）把明文加密为自描述令牌 `dpapi:v1:<base64(blob)>` 写入 `provider.api_key_encrypted`，磁盘上的 `provider.api_key` 置空；加载时 `load_settings` 解密回内存态 `provider.api_key` 并清空内存中的 `api_key_encrypted`。DPAPI 密文**绑定当前 Windows 用户账户**，他机/他账户无法解密。
+  - **非 Windows / DPAPI 不可用**：`encrypt_secret` 返回 `None`，优雅降级为**明文至静态**（`provider.api_key` 明文写盘），行为与加密引入前一致。
+  - **向后兼容**：磁盘上的**旧明文 key** 照常加载，并在**下次保存时自动加密**（无缝迁移）。
+  - **加密仅改磁盘表示**：内存态 `provider.api_key` 始终为明文，所有调用方（客户端、脱敏、降级同步）零改动，仍统一读明文。
+- 加密与脱敏是两个正交层：**至静态加密**（secret_store，只改磁盘密文）vs **运行时脱敏**（下方三层，处理内存明文进入日志/记录的路径）。
+- `pa_agent/security/` 包现含 `secret_store.py`（本地密钥加密），不再是空占位。
 
-因此，项目的密钥安全主要依赖：
+因此，项目的密钥安全依赖以下多层：
 
-1. **Git 忽略**：`config/settings.json` 等敏感文件已被 `.gitignore` 排除；
-2. **pre-commit 拦截**：`.githooks/pre-commit` 阻止提交 `settings.json`、`.env`、日志、分析记录，并扫描 diff 中的 `api_key` / `sk-...` 模式；
-3. **运行时脱敏**：
+1. **至静态加密**：Windows 下 `provider.api_key` 经 DPAPI 加密存盘（见上）；非 Windows 回退明文。
+2. **Git 忽略**：`config/settings.json` 等敏感文件已被 `.gitignore` 排除；
+3. **pre-commit 拦截**：`.githooks/pre-commit` 阻止提交 `settings.json`、`.env`、日志、分析记录，并扫描 diff 中的 `api_key` / `api_key_encrypted` / `sk-...` 模式（DPAPI 令牌命中既有 `api_key_encrypted` 大 base64 规则）；
+4. **运行时脱敏**（内存明文进入外部载体前替换）：
    - `pa_agent/util/mask_secret.py` 提供掩码函数（保留最后 4 位，其余替换为 `*`）；
    - `pa_agent/util/logging.py` 的 `MaskingFormatter` 在日志输出前替换明文 API Key；
    - `pa_agent/records/pending_writer.py` 在序列化记录前递归扫描并替换明文 API Key；
-   - 多处测试（`test_logs_have_no_plaintext_key.py`、`test_pending_writer_no_plaintext_key.py` 等）确保脱敏有效。
+   - 多处测试（`test_secret_store.py`、`test_settings_round_trip.py`、`test_pending_writer_no_plaintext_key.py` 等）确保加密与脱敏有效。
 
 ### 7.2 开发者必须遵守的安全规范
 
@@ -295,7 +302,8 @@ pytest -m live
 - 修改涉及密钥读取/保存的代码时，确保：
   - 保存到文件前仍经过脱敏或保持在 gitignored 文件中；
   - 日志和持久化记录中不出现明文 key；
-  - 如需新增密钥字段，同步更新 `.gitignore` 与 `.githooks/pre-commit`。
+  - **密钥落盘统一走 `save_settings`**（内部对 `provider.api_key` 施加至静态加密），不要绕过它直接写 `settings.json`；
+  - 如需新增密钥字段，同步更新 `.gitignore` 与 `.githooks/pre-commit`，并考虑纳入 `secret_store` 的至静态加密。
 - 建议新贡献者运行：
 
 ```cmd
@@ -360,7 +368,7 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
 2. **Prompt 文本在** **`prompt_engineering/`**：策略路由、阶段一/阶段二的 prompt 片段多为中文 `.txt` 文件。修改这些文件可能改变模型输出格式，需要同步更新 `tests/` 中的 JSON fixture 与校验用例。
 3. **JSON schema 在** **`pa_agent/ai/prompts/schemas.py`**：阶段一/阶段二的输出结构严格受 schema 约束，改动需同步更新 `json_validator.py` 与 normalizer。
 4. **MainWindow 是巨型文件**：`pa_agent/gui/main_window.py` 接近 200KB、4000+ 行。做小改动时优先定位到具体方法；做大重构时建议与维护者沟通。
-5. **不要假设 API Key 已加密**：当前实现为明文存储在 gitignored 的 `settings.json` 中。任何涉及密钥持久化的新功能都要保持这一安全边界（或明确引入加密方案并更新本文件）。
+5. **API Key 至静态加密，但内存态是明文**：磁盘上（Windows）经 DPAPI 加密为 `dpapi:v1:` 令牌存于 `api_key_encrypted`（见 §7.1、`security/secret_store.py`），非 Windows 回退明文；但**内存态 `provider.api_key` 始终为明文**，所有读取方零改动。任何涉及密钥持久化的新功能都要统一走 `save_settings`（自动加密），任何日志/记录落盘仍须经运行时脱敏——两层正交，不可混淆。
 6. **优先用测试验证**：本项目测试覆盖较全，改动后请运行相关分层测试；涉及 LLM 输出解析的改动建议同时跑 `unit` 与 `integration`。
 7. **保持中文用户界面**：新增用户可见字符串、日志、提示信息时，默认使用简体中文，与项目现有风格保持一致。
 8. **每次迭代必须更新变更日志**：任何代码更新/修复/优化完成后，都要在 [`docs/CHANGELOG.md`](./docs/CHANGELOG.md) 追加或更新对应条目（问题/动机 → 修复/改动 → 涉及文件 → 验证方式），不得只改代码而不记录。

@@ -12,7 +12,7 @@
    copy config\settings.example.json config\settings.json
    ```
 
-2. 启动程序，在 **设置** 中填写你的 **API Key**（明文保存到本机 `config/settings.json`，该文件已被 `.gitignore` 忽略，不会进入 Git）。
+2. 启动程序，在 **设置** 中填写你的 **API Key**。保存时：**Windows** 下会经 DPAPI 加密为 `dpapi:v1:` 令牌写入 `api_key_encrypted`，磁盘上的 `api_key` 置空（密文绑定当前 Windows 账户，他机/他账户无法解密）；**非 Windows** 平台则回退为明文写入 `api_key`。无论哪种方式，`config/settings.json` 都已被 `.gitignore` 忽略，不会进入 Git。
 
    也可直接编辑 `config/settings.json` 中的 `base_url`、`model`、`api_key` 等字段。请务必确保该文件不被提交或分享。
 
@@ -34,8 +34,8 @@
 |------|------|--------|------|
 | `provider.model` | string | `"deepseek-v4-flash"` | 模型名称（须与网关支持的名称一致） |
 | `provider.base_url` | string | `"https://api.deepseek.com"` | OpenAI 兼容 API 根地址。DeepSeek：`https://api.deepseek.com`；MiMo：`https://api.xiaomimimo.com/v1`（程序自动处理 `enable_thinking` 与 `reasoning_content` 回放） |
-| `provider.api_key` | string | `""` | API Key（**明文**保存到 `settings.json`，依赖 `.gitignore` + pre-commit + 运行时脱敏保护，切勿提交或分享该文件） |
-| `provider.api_key_encrypted` | string | `""` | 历史遗留字段，**当前版本未实现本地加密**，实际不使用；保留仅为兼容旧配置 |
+| `provider.api_key` | string | `""` | API Key。**Windows** 下保存时自动加密到 `api_key_encrypted`、本字段置空；**非 Windows** 平台回退为明文保存于此。加载时统一解密回内存明文供程序使用。依赖 `.gitignore` + pre-commit + 运行时脱敏保护，切勿提交或分享该文件 |
+| `provider.api_key_encrypted` | string | `""` | 至静态加密令牌（`dpapi:v1:<base64>`，Windows DPAPI，绑定当前 Windows 账户）。由程序在保存时自动写入、加载时自动解密；非 Windows 平台或加密不可用时留空并回退明文。一般无需手动编辑 |
 | `provider.thinking` | bool | `true` | 是否启用思考/推理类扩展参数（依模型与网关而定）。关闭可 3–5 倍提速但分析质量下降 |
 | `provider.reasoning_effort` | string | `"high"` | 推理深度：`low` / `medium` / `high` / `max` |
 | `provider.context_window` | int | `2000000` | 用于上下文占用提示的窗口大小（tokens） |
