@@ -23,6 +23,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from pa_agent.util.safe_filename import sanitize_filename_component
+
 logger = logging.getLogger(__name__)
 
 _TRADE_RECORDS_DIR = Path("trade_records")
@@ -484,8 +486,8 @@ def _save_trade_record_impl(
     record_time = now.strftime("%Y-%m-%d %H:%M:%S")
 
     # ── File paths ────────────────────────────────────────────────────────────
-    safe_symbol = meta_symbol.replace("/", "-").replace("\\", "-")
-    safe_tf = meta_timeframe.replace("/", "-")
+    safe_symbol = sanitize_filename_component(meta_symbol, fallback="symbol")
+    safe_tf = sanitize_filename_component(meta_timeframe, fallback="tf")
     _TRADE_RECORDS_DIR.mkdir(parents=True, exist_ok=True)
     csv_path = _TRADE_RECORDS_DIR / f"{safe_symbol}_{safe_tf}.csv"
     image_filename = f"{safe_symbol}_{safe_tf}_{ts_str}.png"

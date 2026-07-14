@@ -16,6 +16,7 @@ from typing import Optional
 
 from pa_agent.records.schema import AnalysisRecord, FollowupTurn
 from pa_agent.util.mask_secret import mask_secret
+from pa_agent.util.safe_filename import sanitize_filename_component
 
 
 def _default_logger() -> logging.Logger:
@@ -31,8 +32,8 @@ def _build_basename(record: AnalysisRecord) -> str:
     """Build the filename stem (without extension) for a record."""
     dt = _ms_to_local_datetime(record.meta.timestamp_local_ms)
     ts_str = dt.strftime("%Y-%m-%d_%H-%m-%S")
-    symbol = record.meta.symbol
-    timeframe = record.meta.timeframe
+    symbol = sanitize_filename_component(record.meta.symbol, fallback="symbol")
+    timeframe = sanitize_filename_component(record.meta.timeframe, fallback="tf")
     return f"{ts_str}_{symbol}_{timeframe}"
 
 
