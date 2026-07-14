@@ -13,6 +13,25 @@
 
 ---
 
+## [Unreleased] — 2026-07-14（第十九轮：继续拆分 decision_nodes，提取 preflight 数据闸门模块 R-M3-3）
+
+本轮为**大文件拆分 M3 的第三刀**（第十七轮提取 `decision_thresholds.py` 常量、第十八轮提取 `bar_geometry.py` 几何原语），继续把 `pa_agent/ai/decision_nodes.py`（AI 层最大单文件）中**自足的前置数据质量闸门**剥离。目标是 `PreflightResult`（frozen dataclass 结果类型）+ `check_preflight_data`（对外入口，含异常保护）+ `_check_preflight_data_inner`（内部实现）这一组「Stage1 前数据校验」逻辑。它们：① 是**纯函数**（无 AI 调用、无副作用，仅在异常分支写一条 warning 日志），依次校验「frame/bars 非空且 OHLC 合法 → 已收盘 K 线数 ≥ 20 → EMA20/ATR14 非全 NaN」，任一不满足即保守返回 `ok=False`；② 仅依赖 stdlib（`logging`/`math`/`dataclass`/`typing.Any`）与同级纯数据模块 `decision_thresholds` 的 `BAR_COUNT_THRESHOLD`——无循环依赖前提（`decision_thresholds` 为叶子 ← `preflight` ← `decision_nodes`）；③ 在 `decision_nodes.py` 内部**不再被任何其他函数引用**，仅由 `orchestrator/two_stage.py`（`submit()` 的 Step 2.5 前置闸门）与 `tests/unit/test_decision_nodes_preflight.py` 从 `decision_nodes` 命名空间 import——故属**纯重导出**场景（与 M2 一致，需 `# noqa: F401`），而非第十七/十八轮的「函数体内确有引用的正常 import」。
+
+### 代码清理
+
+- **新增 `pa_agent/ai/preflight.py`（前置数据质量闸门模块）**：把 `PreflightResult` 与 `check_preflight_data`/`_check_preflight_data_inner` **逐字节搬迁**至新模块（保留全部 docstring、三类 `failed_check` 令牌与中文 reason 串），import 仅 `logging`/`math`/`dataclass`/`Any` 与 `from pa_agent.ai.decision_thresholds import BAR_COUNT_THRESHOLD`，无其他项目依赖、无副作用。模块 docstring 说明其来源、near-stdlib 定位与「行为须与原文一致（三类令牌与 reason 串被下游消费）」的约束。
+- **`decision_nodes.py` 改为从 `preflight` 重导出**：删除原 `PreflightResult` 类定义块（保留同区的「Result types」header 与 `NodeFill`）与整个 `PreflightDataGate` 函数区，在文件顶部 import 组新增 `from pa_agent.ai.preflight import (PreflightResult, check_preflight_data)  # noqa: F401`（字母序排在 `decision_thresholds` 之后、单一 import 块内，避免新增 I001 区块）。因这两个名字在 `decision_nodes.py` 内已无其他引用点，属**故意的纯重导出**（`# noqa: F401`）；既有 `from pa_agent.ai.decision_nodes import check_preflight_data` 站点仍从 `decision_nodes` 命名空间取到同一对象，**跨模块 import 逐字节兼容**（`two_stage.py`、`test_decision_nodes_preflight.py` 无需改动）。文件进一步收缩约 230 行。
+
+### 验证
+
+- `py_compile` 通过（`preflight.py`、`decision_nodes.py`，EXIT=0）。
+- **重导出等价性**：`python -c` 断言 `decision_nodes.check_preflight_data is preflight.check_preflight_data`、`decision_nodes.PreflightResult is preflight.PreflightResult` 均为**同一对象**，且 `decision_nodes.BAR_COUNT_THRESHOLD is decision_thresholds.BAR_COUNT_THRESHOLD == 20`（"IDENTITY_OK"）。
+- **运行时行为对比**（本机 `decision_nodes`/`preflight`/`data.base` 不经 PyQt6 链可直接跑）：经**重导出的 `decision_nodes.check_preflight_data` 路径**（即 `two_stage`/测试实际调用路径）构造真实 `KlineFrame` 断言输出**逐字节一致**——`None`→`bars_empty_or_bad_ohlc`、n=19→`bar_count_lt_20`、n=20→`ok=True`/`reason=""`/`failed_check=None`、全 NaN 指标→`indicators_all_nan`、首棒 high<low→`bars_empty_or_bad_ohlc`、字符串/整数入参不崩溃、仅 EMA 或仅 ATR 为 NaN→通过（"RUNTIME_OK"/"SMOKE_OK"）。
+- `ruff check` 对比基线：基线 `decision_nodes.py` 单文件 **232** 条（209×RUF001、6×RUF003、6×RUF100、5×RUF002、1×I001、1×RUF005、1×SIM103、1×SIM105、1×SIM108、1×SIM114）→ 拆分后 `decision_nodes.py`（222）+ 新增 `preflight.py`（10：9×RUF001、1×RUF100）合计 **232**，**逐类别完全一致、零净新增告警**（其中 9×RUF001 随中文 reason 串迁入新模块；`decision_nodes.py` 的 RUF100 由 6 降至 5——迁走的 `# noqa: BLE001` 随函数进入 `preflight.py` 计为其 1×RUF100）。
+- `git diff` 密钥扫描（`sk-...` / `api_key` / `Bearer` / `secret=` / `token=`）无命中——纯函数搬迁，无密钥。
+
+---
+
 ## [Unreleased] — 2026-07-14（第十八轮：继续拆分 decision_nodes，提取 bar_geometry 几何原语模块 R-M3-2）
 
 本轮为**大文件拆分 M3 的第二刀**（第十七轮已提取 `decision_thresholds.py` 常量模块），继续把 `pa_agent/ai/decision_nodes.py`（AI 层最大单文件）中**与决策语义无关的纯 K 线几何原语**剥离。目标是 3 个 stdlib-only、无项目依赖的底层计算函数：`_count_trend_bars`（趋势棒计数：body/close-position 阈值分类）、`_mean_overlap_ratio`（相邻棒重叠比均值）、`_find_swings`（左右各 2 根枢轴的波段高低点检测）。这些函数：① **纯几何计算**（仅依赖 builtins 与 `typing.Any`，无 `math`/`logging`/无任何模块级常量）；② 同时被 `decision_nodes.py`（`judge_market_chaos`/`judge_direction`/`_eval_always_in_gates`/`judge_momentum_strength` 等）与 `trend_context.py` 引用；③ 与常量一样，是后续把各 section-judge 拆成独立子模块的**共享底层依赖**——先抽到无环依赖的独立模块，section-judge 才能各自 import 而不循环。
