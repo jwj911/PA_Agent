@@ -13,6 +13,29 @@
 
 ---
 
+## [Unreleased] — 2026-07-14（第八轮：类型完善 R5）
+
+本轮落实后端审查报告（`docs/backend_review_report.md`）§2.1 与路线图 §5.1 的 **R5**：给依赖注入容器 `AppContext` 的字段补全真实类型。此前 10 个字段（`settings`/`event_bus`/`data_source`/`client`/`assembler`/`router`/`validator`/`pending_writer`/`exp_reader`/`ledger`）全部标注为 `Any`，仅靠行尾注释（如 `# DeepSeekClient`）说明实际类型，静态类型检查与 IDE 补全完全失效。**原则：只补类型、不改运行时行为**——`AppContext` 仍是 `@dataclass(slots=True)`，字段默认值、构造签名、`bootstrap()` 装配逻辑一律不变。
+
+### 代码清理
+
+- **`app_context.py:AppContext` 字段全为 `Any`（审查 §2.1）**：改用 `from __future__ import annotations` 已启用的**延迟注解**，在 `if TYPE_CHECKING:` 块内导入真实类型（`Settings`、`EventBus`、`DataSource`、`DeepSeekClient`/`CursorSdkClient`、`PromptAssembler`、`JsonValidator`、`PendingWriter`、`ExperienceReader`、`SessionTokenLedger`），把各字段标注为对应的 `T | None`（`router` 标注为 `Callable[[dict[str, Any]], list[str]] | None`，对应 `route_strategy_files`）。因注解在运行期为字符串、导入仅在类型检查期发生，**不引入任何运行时导入开销，也不会触发 `util/__init__`→PyQt6 的循环导入**。删除了原有的行尾类型注释（已由注解本身表达）。
+  - 涉及：`pa_agent/app_context.py`（`TYPE_CHECKING` 导入块 + 10 个字段注解）。
+
+### 明确不改（保持原样）
+
+- **`bootstrap()` 内的 17+ 处运行时延迟导入**：属审查报告列出的「启动期副作用」中期项（M5 ProviderSyncService 抽取），本轮只做零风险的字段类型补全，不动装配流程。
+- **`logger` 字段**：本就是具体类型 `logging.Logger`（带 `default_factory`），保持不变。
+
+### 验证
+
+- `py_compile pa_agent/app_context.py` 通过。
+- **运行时导入验证**：`python -c "import pa_agent.app_context"` 成功（`TYPE_CHECKING` 块内导入不在运行期执行，规避了本机无 PyQt6 的限制）；`dataclasses.fields(AppContext)` 仍为 **11** 个字段，`AppContext()` 默认构造成功、`logger.name == "pa_agent"`，证明字段默认值与 slots 行为未变。
+- `ruff check` 对比基线：改动前后同为 **4** 条既有告警（I001:2、RUF100:1、UP037:1，均为全仓既有噪音），新增的 `TYPE_CHECKING` 导入块排序合规，**零新增**。
+- 改动为纯类型注解、运行期行为不变，建议在项目 venv 运行 `pytest -m "not e2e" -q` 回归启动装配相关用例。
+
+---
+
 ## [Unreleased] — 2026-07-14（第七轮：代码去重 R2）
 
 本轮落实后端审查报告（`docs/backend_review_report.md`）§4.3 与路线图 §5.1 的 **R2**：合并 `orchestrator/two_stage.py` 中两个高度重复的校验错误富化函数。`_enrich_stage1_validation_message` 与 `_enrich_stage2_validation_message` 逐行几乎一致（配额短路、`format_validation_errors` 明细、`_json_truncation_hint` 截断提示、content 空 / 仅思考区分支判断完全相同），仅**两处**中文提示串不同：思考截断成因（阶段一「思考占满输出额度…检查网关输出上限」vs 阶段二「思考在输出阶段二 JSON 前被截断…检查 Packy 分组限额」）与「阶段一/阶段二」标签。**原则：只去重、不改任何输出**——合并后两个 stage 产出的错误文案与原实现逐字节一致。

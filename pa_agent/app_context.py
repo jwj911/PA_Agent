@@ -3,28 +3,43 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Any
+
+    from pa_agent.ai.cursor_sdk_client import CursorSdkClient
+    from pa_agent.ai.deepseek_client import DeepSeekClient
+    from pa_agent.ai.json_validator import JsonValidator
+    from pa_agent.ai.prompt_assembler import PromptAssembler
+    from pa_agent.ai.session_ledger import SessionTokenLedger
+    from pa_agent.config.settings import Settings
+    from pa_agent.data.base import DataSource
+    from pa_agent.records.experience_reader import ExperienceReader
+    from pa_agent.records.pending_writer import PendingWriter
+    from pa_agent.util.event_bus import EventBus
 
 
 @dataclass(slots=True)
 class AppContext:
     """Carries shared resources to GUI widgets and orchestrators."""
 
-    settings: Any = None
+    settings: Settings | None = None
     logger: logging.Logger = field(default_factory=lambda: logging.getLogger("pa_agent"))
-    event_bus: Any = None
+    event_bus: EventBus | None = None
 
     # Data layer
-    data_source: Any = None       # DataSource implementation
+    data_source: DataSource | None = None
 
     # AI / orchestration layer
-    client: Any = None            # DeepSeekClient
-    assembler: Any = None         # PromptAssembler
-    router: Any = None            # route_strategy_files callable
-    validator: Any = None         # JsonValidator
-    pending_writer: Any = None    # PendingWriter
-    exp_reader: Any = None        # ExperienceReader
-    ledger: Any = None            # SessionTokenLedger
+    client: DeepSeekClient | CursorSdkClient | None = None
+    assembler: PromptAssembler | None = None
+    router: Callable[[dict[str, Any]], list[str]] | None = None
+    validator: JsonValidator | None = None
+    pending_writer: PendingWriter | None = None
+    exp_reader: ExperienceReader | None = None
+    ledger: SessionTokenLedger | None = None
 
     @classmethod
     def bootstrap(cls) -> "AppContext":
