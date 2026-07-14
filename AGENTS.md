@@ -109,7 +109,8 @@ price_action_agent/
   - `workbuddy_connector.py`：WorkBuddy / CodeBuddy 环境检测与 DPAPI 解密取 token。
   - `mimo_compat.py`：MiMo 模型适配。
   - `prompt_assembler.py`：阶段一/阶段二 prompt 组装（超大文件，含中文术语表与 schema 示例）。进程级 `_SYSTEM_PROMPT_CACHE` 由 `_SYSTEM_PROMPT_LOCK` 双检锁保护（构建放锁外，保证跨 worker 拿到同一 byte-identical 前缀）。
-  - `router.py`：根据阶段一诊断路由策略 `.txt` 文件。
+  - `router.py`：根据阶段一诊断路由策略 `.txt` 文件。文件名字面量统一引用 `ai/strategy_files.py` 注册表（`strategy_files as sf`），常量名/聚合结构/输出顺序不变。
+  - `strategy_files.py`：策略/提示 `.txt` 文件名的**单一事实来源**（27 个模块级常量）。`router.py` 与 `prompt_assembler.py` 共同引用，新增/重命名策略文件只改此处。纯数据模块（仅 `from __future__ import annotations`，无第三方依赖）；取值须与既有文件名逐字节一致（阶段二前缀 KV 缓存敏感）。`pattern_routing.py` 因文件名嵌在 KV 敏感 prompt 散文中，**不**纳入注册表。
   - `json_validator.py`：阶段一/阶段二 JSON 校验与错误分类（category a-e）。
   - `stage1_normalizer.py` / `stage2_normalizer.py` / `trace_normalize.py`：LLM 输出归一化。
   - `decision_tree.py` / `decision_nodes.py` / `decision_stance.py`：决策树、立场、节点逻辑。
