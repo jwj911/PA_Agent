@@ -108,7 +108,7 @@ price_action_agent/
   - `qclaw_connector.py` / `qclaw_relay.py` / `qclaw_relay_manager.py`：QClaw 本地网关。
   - `workbuddy_connector.py`：WorkBuddy / CodeBuddy 环境检测与 DPAPI 解密取 token。
   - `mimo_compat.py`：MiMo 模型适配。
-  - `prompt_assembler.py`：阶段一/阶段二 prompt 组装（超大文件，含中文术语表与 schema 示例）。
+  - `prompt_assembler.py`：阶段一/阶段二 prompt 组装（超大文件，含中文术语表与 schema 示例）。进程级 `_SYSTEM_PROMPT_CACHE` 由 `_SYSTEM_PROMPT_LOCK` 双检锁保护（构建放锁外，保证跨 worker 拿到同一 byte-identical 前缀）。
   - `router.py`：根据阶段一诊断路由策略 `.txt` 文件。
   - `json_validator.py`：阶段一/阶段二 JSON 校验与错误分类（category a-e）。
   - `stage1_normalizer.py` / `stage2_normalizer.py` / `trace_normalize.py`：LLM 输出归一化。
@@ -146,10 +146,10 @@ price_action_agent/
   - `pending_writer.py`：分析记录写入（会自动对明文 API Key 脱敏）。
   - `experience_reader.py`：经验库读取。
   - `trade_logger.py`：交易 CSV/截图日志。
-  - `analysis_history.py`：历史记录管理。`find_latest_successful_record` 带 `_LATEST_RECORD_CACHE`（按 dir mtime 失效），缓存未命中时按 basename 的 `symbol`/`timeframe` 子串预过滤，只解析候选文件。
+  - `analysis_history.py`：历史记录管理。`find_latest_successful_record` 带 `_LATEST_RECORD_CACHE`（按 dir mtime 失效，`_LATEST_RECORD_LOCK` 保护并发读写），缓存未命中时按 basename 的 `symbol`/`timeframe` 子串预过滤，只解析候选文件。
   - `schema.py`：记录数据结构定义。
 - **`pa_agent/util/`**：通用工具。
-  - `logging.py`：日志配置与 API Key 掩码格式化。
+  - `logging.py`：日志配置与 API Key 掩码格式化。全局 `_configured`/`_active_formatters` 由可重入 `_STATE_LOCK` 保护（`configure_logging`/`update_api_key` 线程安全）。
   - `mask_secret.py`：密钥掩码函数。
   - `safe_filename.py`：安全文件名组件（防止路径遍历与 Windows 保留名）。
   - `event_bus.py`：应用内事件总线。
@@ -365,6 +365,7 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
 8. **每次迭代必须更新变更日志**：任何代码更新/修复/优化完成后，都要在 [`docs/CHANGELOG.md`](./docs/CHANGELOG.md) 追加或更新对应条目（问题/动机 → 修复/改动 → 涉及文件 → 验证方式），不得只改代码而不记录。
 9. **新增文件/字段时注意更新本文件**：如果你新增了模块、数据源、AI 提供商、安全机制、构建流程等，请同步更新本 `AGENTS.md` 中的对应章节，保持文档与代码一致。
 10. **热路径注意性能，但不牺牲语义**：`data/snapshot.py`（RefreshLoop tick）、`ai/kline_features.py`（逐棒特征）、`records/analysis_history.py`（增量分析找上次记录）、`ai/deepseek_client.py`（每次 API 调用）等属于高频路径，改动时避免重复计算、无谓遍历与无条件构造大字符串（如把 prompt DEBUG 日志用 `logger.isEnabledFor(logging.DEBUG)` 守卫）。任何性能优化都必须保持输出与原实现一致，替换算法时应给出等价性验证；性能热点清单见 `docs/backend_review_report.md` §8。
+11. **进程级缓存/全局状态需线程安全**：后台 QThread（刷新、快照、分析、聊天）会并发访问模块级缓存。`ai/prompt_assembler.py:_SYSTEM_PROMPT_CACHE`、`records/analysis_history.py:_LATEST_RECORD_CACHE`、`data/eastmoney_extended.py:_COMPACT_CTX_CACHE`、`util/logging.py`（`_configured`/`_active_formatters`）、`data/kline_adjust.py:_current`、`ai/cursor_sdk_client.py` 的 patch 标志均已加锁保护。新增此类全局可变状态时，应配套加锁（耗时构建/IO 放锁外，用双检锁），保持输出与语义不变。
 
 ***
 
