@@ -139,7 +139,7 @@ price_action_agent/
   - `theme/`：QSS 主题与 token。
   - `ai_stream_window.py` / `conversation_widget.py`：实时推理流与会话管理。
 - **`pa_agent/orchestrator/`**：业务编排。
-  - `two_stage.py`：两阶段分析主流程。
+  - `two_stage.py`：两阶段分析主流程。Stage1/Stage2 的校验错误富化由单一 `_enrich_validation_message(err, reply, *, stage)` 完成（`stage="stage1"|"stage2"` 仅切换少量中文提示串，输出与原分函数逐字节一致）。
   - `free_chat.py`：分析后自由追问与会话管理。
   - `validation_retry.py`：校验失败后的重试策略。
 - **`pa_agent/records/`**：持久化。
