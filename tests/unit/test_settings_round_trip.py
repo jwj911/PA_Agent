@@ -40,15 +40,56 @@ def test_round_trip(tmp_path):
     assert loaded.provider.model == original.provider.model
 
 
-def test_api_key_present_on_disk(tmp_path):
-    """The saved JSON contains the plaintext API key."""
+def test_api_key_encrypted_at_rest(tmp_path):
+    """On Windows the plaintext key is not written to disk (DPAPI-encrypted).
+
+    In-memory round-trip always preserves the key; the *on-disk* JSON must not
+    contain the plaintext key when local encryption is available. Where
+    encryption is unavailable (non-Windows / DPAPI failure) it degrades to
+    plaintext-at-rest, matching the documented fallback.
+    """
+    from pa_agent.security.secret_store import is_encryption_available, looks_encrypted
+
     p = tmp_path / "settings.json"
     s = Settings()
     s.provider.api_key = "sk-super-secret-key"
     save_settings(s, p)
-    raw = p.read_text(encoding="utf-8")
-    data = json.loads(raw)
-    assert data["provider"]["api_key"] == "sk-super-secret-key"
+    data = json.loads(p.read_text(encoding="utf-8"))
+
+    # In-memory value is untouched by save (only the on-disk dict is encrypted).
+    assert s.provider.api_key == "sk-super-secret-key"
+
+    if is_encryption_available():
+        assert data["provider"]["api_key"] == ""
+        assert looks_encrypted(data["provider"]["api_key_encrypted"])
+        assert "sk-super-secret-key" not in p.read_text(encoding="utf-8")
+        # load must decrypt the token back into the plaintext field.
+        loaded = load_settings(p)
+        assert loaded.provider.api_key == "sk-super-secret-key"
+        assert loaded.provider.api_key_encrypted == ""
+    else:  # pragma: no cover - non-Windows fallback
+        assert data["provider"]["api_key"] == "sk-super-secret-key"
+
+
+def test_legacy_plaintext_key_reencrypted_on_next_save(tmp_path):
+    """A legacy plaintext ``api_key`` on disk is loaded then encrypted on re-save."""
+    from pa_agent.security.secret_store import is_encryption_available
+
+    p = tmp_path / "settings.json"
+    data = Settings().model_dump()
+    data["provider"]["api_key"] = "sk-legacy-plaintext"
+    data["provider"]["api_key_encrypted"] = ""
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    loaded = load_settings(p)
+    assert loaded.provider.api_key == "sk-legacy-plaintext"
+    save_settings(loaded, p)
+    on_disk = json.loads(p.read_text(encoding="utf-8"))
+    if is_encryption_available():
+        assert on_disk["provider"]["api_key"] == ""
+        assert on_disk["provider"]["api_key_encrypted"].startswith("dpapi:")
+    else:  # pragma: no cover - non-Windows fallback
+        assert on_disk["provider"]["api_key"] == "sk-legacy-plaintext"
 
 
 def test_corrupt_json_returns_defaults(tmp_path):

@@ -183,6 +183,49 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
+def _encrypt_provider_key_for_disk(data: dict) -> None:
+    """Encrypt ``provider.api_key`` at rest (Windows DPAPI); blank plaintext on disk.
+
+    Mutates the *data* dict produced by ``Settings.model_dump()`` — never the
+    in-memory :class:`Settings`. When encryption is unavailable (non-Windows or
+    DPAPI failure), the plaintext key is left in ``api_key`` as before (still
+    protected by ``.gitignore`` + pre-commit + runtime masking).
+    """
+    provider = data.get("provider")
+    if not isinstance(provider, dict):
+        return
+    raw_key = provider.get("api_key") or ""
+    if not raw_key.strip():
+        provider["api_key_encrypted"] = ""
+        return
+    from pa_agent.security.secret_store import encrypt_secret
+
+    token = encrypt_secret(raw_key)
+    if token:
+        provider["api_key"] = ""
+        provider["api_key_encrypted"] = token
+    else:
+        provider["api_key_encrypted"] = ""
+
+
+def _decrypt_provider_key_in_place(settings: Settings) -> None:
+    """Decrypt an at-rest ``api_key_encrypted`` token into the plaintext field.
+
+    Keeps ciphertext out of memory (``api_key_encrypted`` is cleared): all
+    callers read the plaintext ``provider.api_key``. A legacy plaintext key
+    (``api_key`` set, no token) is left as-is and re-encrypted on the next save.
+    """
+    enc = settings.provider.api_key_encrypted or ""
+    if enc:
+        from pa_agent.security.secret_store import decrypt_secret, looks_encrypted
+
+        if looks_encrypted(enc):
+            plain = decrypt_secret(enc)
+            if plain and not (settings.provider.api_key or "").strip():
+                settings.provider.api_key = plain
+        settings.provider.api_key_encrypted = ""
+
+
 def _migrate_legacy_feishu_json(raw: dict, settings_path: Path) -> bool:
     """Merge legacy config/feishu.json into settings.feishu when needed."""
     legacy_path = settings_path.parent / "feishu.json"
@@ -249,11 +292,13 @@ def load_settings(path: Path | None = None) -> "Settings":
     provider.pop("pricing", None)
     raw["provider"] = provider
 
-    # Migrate legacy encrypted key: drop it, api_key already in provider dict
+    # Keep any at-rest ``api_key_encrypted`` token; it is decrypted into the
+    # plaintext ``api_key`` field below. Ensure the plaintext key exists.
     raw.setdefault("provider", {}).setdefault("api_key", "")
 
     migrated_feishu = _migrate_legacy_feishu_json(raw, path)
     settings = Settings.model_validate(raw)
+    _decrypt_provider_key_in_place(settings)
     dirty = migrated_feishu
     if settings.pushplus.enabled and not settings.pushplus.token.strip():
         if not (os.environ.get("PUSHPLUS_TOKEN") or "").strip():
@@ -276,5 +321,6 @@ def save_settings(settings: "Settings", path: Path | None = None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
 
     data = settings.model_dump()
+    _encrypt_provider_key_for_disk(data)
 
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")

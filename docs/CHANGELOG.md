@@ -13,6 +13,39 @@
 
 ---
 
+## [Unreleased] — 2026-07-14（第十五轮：实现 API Key 本地至静态加密 Windows DPAPI R-M8）
+
+本轮补齐一处**真实的安全短板**，属后端审查报告（`docs/backend_review_report.md`）路线图 §5.2 的 **M8**（实现真正的本地 API Key 加密）范畴——报告 §7 建议的「补齐安全短板（M8-M10）」组中，M9/M10 已在前两轮完成，M8 为最后一项。此前 `provider.api_key` **以明文写入** `config/settings.json`：模型中虽保留 `api_key_encrypted` 字段，但**从无任何加解密逻辑**，`pa_agent/security/` 包仅是空占位。后果：`settings.json` 一旦泄漏即等于密钥泄漏（此前仅靠 `.gitignore` + pre-commit + 运行时脱敏三层防护，均属"防止外泄"而非"至静态加密"）。
+
+### 安全加固
+
+- **新增 `pa_agent/security/secret_store.py`（本地密钥加密模块）**：提供 `encrypt_secret` / `decrypt_secret` / `is_encryption_available` / `looks_encrypted`。Windows 下经 **DPAPI**（`CryptProtectData` / `CryptUnprotectData`，`ctypes` 直调 `crypt32`，与 `workbuddy_connector.py` 既有 DPAPI 用法同源）把明文加密为**自描述令牌** `dpapi:v1:<base64(blob)>`。DPAPI 将密文绑定到**当前 Windows 用户账户**，密文在他机/他账户下无法解密。`CRYPTPROTECT_UI_FORBIDDEN` 确保 headless 环境不弹窗。
+- **`config/settings.py` 接入至静态加密**：
+  - `save_settings` 落盘前调 `_encrypt_provider_key_for_disk(data)`——**仅改写 `model_dump()` 产生的 dict**（绝不触碰内存态 `Settings`）：把明文 `api_key` 加密进 `api_key_encrypted`、并将磁盘上的 `api_key` 置空。
+  - `load_settings` 校验后调 `_decrypt_provider_key_in_place(settings)`——把 `api_key_encrypted` 令牌解密回内存态 `provider.api_key`，并清空内存中的 `api_key_encrypted`（密文不驻留内存；所有调用方仍统一读明文 `provider.api_key`，零改动）。
+  - **向后兼容**：磁盘上的**旧明文 key**（`api_key` 有值、无令牌）照常加载使用，并在**下次保存时自动加密**（无缝迁移，无需手动干预）。
+- **优雅降级**：非 Windows 平台或 DPAPI 不可用时，`encrypt_secret` 返回 `None`，`save_settings` 回退为**明文至静态**（与改动前行为完全一致，仍受 `.gitignore` + pre-commit + 运行时脱敏保护）——不因缺少加密能力而丢失或损坏 key。
+
+### 明确不改（保持原样）
+
+- **运行时脱敏三层（`mask_secret` / `MaskingFormatter` / `PendingWriter._sanitize`）**：本轮只加"至静态加密"，不改"运行时脱敏"；内存态 `api_key` 仍是明文，脱敏读取路径与 provider 降级 key 同步（M9）逻辑均零改动。
+- **所有 `save_settings` 调用点**（GUI 各设置对话框、`main_window`、`two_stage` provider 降级、qclaw/workbuddy `sync_*_on_load`）：全部经由统一的 `save_settings`，加密在函数内部生效，调用点无需感知，逐一核实无绕过直接写盘的路径。
+- **`.githooks/pre-commit`**：已扫描 `api_key_encrypted` 大 base64 令牌与 `sk-...` 模式，DPAPI 令牌命中既有规则，无需新增。
+
+### 验证
+
+- `py_compile` 通过（`security/secret_store.py`、`config/settings.py`）。
+- **真实 pytest 通过**（本机 `config.settings` 不经 PyQt6 链，可直接跑）：`tests/unit/test_settings_round_trip.py`、新增 `tests/unit/test_secret_store.py`、`tests/unit/test_data_source_factory.py` 合计 **28 passed**。
+  - 新增 `test_secret_store.py`：DPAPI 往返还原、中文/emoji unicode 往返、**密文不含明文**、空串→`None`、未知 scheme→`None`、损坏 base64→`None`、**篡改密文→`None`**、`looks_encrypted` 判定。
+  - 改写 `test_api_key_present_on_disk`→`test_api_key_encrypted_at_rest`（平台感知：Windows 断言磁盘 `api_key` 为空、`api_key_encrypted` 为 `dpapi:` 令牌、**全文不含明文**、且 load 能解密还原；非 Windows 走明文回退分支）。
+  - 新增 `test_legacy_plaintext_key_reencrypted_on_next_save`（旧明文 key 加载可用、再保存后被加密）。
+  - **DPAPI 实机验证**：`CryptProtectData`/`CryptUnprotectData` 往返还原成功、密文 246B 且不含明文（win32 实测）。
+- `ruff check` 对比基线：`config/settings.py` 改动前 **37** 条 → 改动后 **37** 条（既有 RUF003/E402/UP037/I001/SIM102，逐类别一致，无新增）；新增 `secret_store.py` / `test_secret_store.py` **All checks passed**；`test_settings_round_trip.py` **3→3**（既有 F401/I001）。四文件合计 **40→40**，零新增告警。
+- `git diff` 密钥扫描（`sk-...` / `"api_key":` / `Bearer` / `secret=` / `token=`）无命中明文密钥（测试固定串如 `sk-super-secret-key` 用连字符分段，不匹配 12+ 连续字母数字的 pre-commit 规则）。
+- 建议在项目 venv 运行 `pytest tests/unit/test_secret_store.py tests/unit/test_settings_round_trip.py -q` 回归。
+
+---
+
 ## [Unreleased] — 2026-07-14（第十四轮：数据源工厂配置注入，移除工厂对 settings.json 的直接读取 R-M6）
 
 本轮为一处**分层依赖倒置**清理，属后端审查报告（`docs/backend_review_report.md`）路线图 §5.2 的 **M6**（统一数据源配置注入——「移除工厂对 `settings.json` 的直接读取」）范畴。`data/factory.py` 的 `create_data_source(kind)` 在构造 Tushare 源时，会在函数体内 `from pa_agent.config.settings import load_settings` 并直接 `load_settings(SETTINGS_JSON_PATH)` 读盘取配置。问题有二：① **数据层反向依赖配置层并触发磁盘 IO**——工厂本应是纯构造器，却隐藏了一次读盘副作用（数据源切换属 GUI 交互热路径，`main_window._switch_data_source` 每次切到 Tushare 都会多一次 `settings.json` 读盘）；② **配置来源不一致**——`app_context.bootstrap` 与 `main_window._switch_data_source` 两个调用点**手上已持有** `Settings` 实例（前者局部 `settings`、后者 `self._ctx.settings`），工厂却无视调用方的内存态、另起一次读盘，理论上可能拿到与调用方不同步的磁盘内容。
