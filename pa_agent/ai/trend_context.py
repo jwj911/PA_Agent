@@ -4,15 +4,17 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from pa_agent.ai.decision_nodes import (
+from pa_agent.ai.bar_geometry import (
+    _count_trend_bars,
+    _find_swings,
+    _mean_overlap_ratio,
+)
+from pa_agent.ai.decision_thresholds import (
     DIRECTION_BEAR_THRESHOLD,
     DIRECTION_BULL_THRESHOLD,
     EMA_SLOPE_LOOKBACK,
     OVERLAP_LOW_THRESHOLD,
     TREND_BAR_DOMINANCE_RATIO,
-    _count_trend_bars,
-    _find_swings,
-    _mean_overlap_ratio,
 )
 
 # K41+ = background (major) structure; K40-K1 = recent; K8-K1 = inertia/spike

@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-14（第十八轮：继续拆分 decision_nodes，提取 bar_geometry 几何原语模块 R-M3-2）
+
+本轮为**大文件拆分 M3 的第二刀**（第十七轮已提取 `decision_thresholds.py` 常量模块），继续把 `pa_agent/ai/decision_nodes.py`（AI 层最大单文件）中**与决策语义无关的纯 K 线几何原语**剥离。目标是 3 个 stdlib-only、无项目依赖的底层计算函数：`_count_trend_bars`（趋势棒计数：body/close-position 阈值分类）、`_mean_overlap_ratio`（相邻棒重叠比均值）、`_find_swings`（左右各 2 根枢轴的波段高低点检测）。这些函数：① **纯几何计算**（仅依赖 builtins 与 `typing.Any`，无 `math`/`logging`/无任何模块级常量）；② 同时被 `decision_nodes.py`（`judge_market_chaos`/`judge_direction`/`_eval_always_in_gates`/`judge_momentum_strength` 等）与 `trend_context.py` 引用；③ 与常量一样，是后续把各 section-judge 拆成独立子模块的**共享底层依赖**——先抽到无环依赖的独立模块，section-judge 才能各自 import 而不循环。
+
+### 代码清理
+
+- **新增 `pa_agent/ai/bar_geometry.py`（纯 K 线几何原语模块）**：把上述 3 个函数**逐字节搬迁**至新模块（保留全部 docstring 与分类阈值），仅 `from __future__ import annotations` 与 `from typing import Any`，无项目 import、无副作用。模块 docstring 说明其来源、stdlib-only 定位与「行为须与原文一致」的约束。
+- **`decision_nodes.py` 改为从 `bar_geometry` 导入这 3 个原语**：删除原函数定义块，在文件顶部 import 组新增 `from pa_agent.ai.bar_geometry import (...)`（字母序排在 `decision_thresholds` 之前）。这 3 个函数在 `decision_nodes.py` 函数体内**确有引用**（正常 import，非需 `# noqa: F401` 的纯重导出）；因既有 `from pa_agent.ai.decision_nodes import <原语>` 站点仍能从 `decision_nodes` 命名空间取到同一对象，**跨模块 import 逐字节兼容**。文件进一步收缩约 110 行。
+- **`trend_context.py` 改为直接从源模块导入**：把原先 `from pa_agent.ai.decision_nodes import (..., _count_trend_bars, _find_swings, _mean_overlap_ratio)` 拆为两条——常量仍从 `decision_thresholds` 取（第十七轮已迁移），3 个几何原语改从 `bar_geometry` 取。直连源模块，减少对 `decision_nodes` 命名空间的重导出耦合，取到的仍是同一对象。
+
+### 验证
+
+- `py_compile` 通过（`bar_geometry.py`、`decision_nodes.py`、`trend_context.py`，EXIT=0）。
+- **重导出等价性**：`python -c` 断言 `decision_nodes`、`bar_geometry`、`trend_context` 三个命名空间下的 `_count_trend_bars`/`_find_swings`/`_mean_overlap_ratio` 均 `is` **同一对象**（"re-export OK, 3 geom names identical"、"tc uses bg objects: True"）。
+- **运行时行为对比**（本机不经 PyQt6 链可直接跑）：搬迁前后用同一组构造 K 线断言三函数输出**逐字节一致**——`_count_trend_bars` 窗口 8/10 → `(5,3)`/`(6,4)`、`_mean_overlap_ratio` 窗口 8 → `0.440693`、`_find_swings` 窗口 10 → `([113.0],[97.0])`、窗口 4（<5 根）→ `([],[])`。
+- `ruff check` 对比基线：基线 `decision_nodes.py`+`trend_context.py` 两文件合计 **254** 条（231×RUF001、6×RUF003、6×RUF100、5×RUF002、1×I001、1×RUF005、1×SIM103、1×SIM105、1×SIM108、1×SIM114）→ 拆分后三文件（含新增 `bar_geometry.py`）合计**逐类别完全一致**，**零净新增告警**；`bar_geometry.py` 单独 `ruff check` **All checks passed**。（既存 1×I001 系 `decision_nodes.py` 头部双空行 import 间距的历史告警，非本轮引入。）
+- `git diff` 密钥扫描（`sk-...` / `"api_key":` / `Bearer` / `secret=` / `token=`）无命中——纯函数搬迁，无密钥。
+
+---
+
 ## [Unreleased] — 2026-07-14（第十七轮：拆分 decision_nodes，提取 decision_thresholds 常量模块 R-M3）
 
 本轮继续**大文件拆分**，属后端审查报告（`docs/backend_review_report.md`）路线图 §5.2 的 **M3**（拆分 `decision_nodes.py`——按 §1/§2/§9/§11/preflight/risk 拆分子模块），是 M1-M4 拆分组的第二刀，紧接第十六轮的 M2。`pa_agent/ai/decision_nodes.py` 是 AI 层**最大的单文件（3073 行）**：文件头部集中了 **28 个模块级调参常量与节点权限集合**（§1.1 数据充分性阈值、§2.3 方向投票窗口/阈值、§2.4 Always-In 窗口/占比、§2.5 动量强度阈值、§1.3 极端混沌阈值、`LOCKED_NODES`/`OVERRIDABLE_NODES`/`AI_PRIMARY_NODES`/`SAFETY_GATE_NODES` 等 override 权限集）。这些常量：① 是**纯数据**（无 import、无副作用），编码了经过调优的 Brooks 价格行为阈值与闸门/override 策略；② 同时被 `decision_nodes.py` 自身与 `trend_context.py` 引用；③ 是后续把各 section-judge（DirectionJudge/AlwaysInJudge/MomentumJudge 等）拆成独立子模块的**共享依赖前提**——必须先把它们抽到一个无环依赖的独立模块，section-judge 才能各自 import 而不产生循环依赖。
