@@ -27,9 +27,11 @@ import copy
 import dataclasses
 import logging
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Callable, Optional
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from pa_agent.ai.deepseek_client import DeepSeekClient
     from pa_agent.ai.json_validator import JsonValidator
     from pa_agent.ai.prompt_assembler import PromptAssembler
@@ -166,7 +168,7 @@ def _emit_buffered_stream(
 
 def _build_empty_record(
     frame: KlineFrame,
-    settings: Optional["Settings"],
+    settings: Settings | None,
 ) -> AnalysisRecord:
     """Build a partial AnalysisRecord with meta populated from the frame."""
     ts_ms = now_local_ms()
@@ -287,7 +289,7 @@ class TwoStageOrchestrator:
         validator: "JsonValidator",
         pending_writer: "PendingWriter",
         exp_reader: "ExperienceReader",
-        settings: Optional["Settings"] = None,
+        settings: Settings | None = None,
     ) -> None:
         self._client = client
         self._assembler = assembler

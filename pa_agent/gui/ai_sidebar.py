@@ -1,7 +1,7 @@
-﻿"""Right-hand sidebar: live stream, raw I/O, prompt files debug, and decision."""
+"""Right-hand sidebar: live stream, raw I/O, prompt files debug, and decision."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from PyQt6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 
@@ -23,7 +23,7 @@ class AISidebar(QWidget):
     def __init__(
         self,
         api_key: str = "",
-        settings: Optional["Settings"] = None,
+        settings: Settings | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -86,6 +86,6 @@ class AISidebar(QWidget):
         """Switch to the raw I/O tab (原始)."""
         self._tabs.setCurrentIndex(self.TAB_RAW)
 
-    def bind_settings(self, settings: Optional["Settings"]) -> None:
+    def bind_settings(self, settings: Settings | None) -> None:
         self.stream.bind_settings(settings)
         self.decision_flow_viz.bind_settings(settings)

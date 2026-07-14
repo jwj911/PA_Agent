@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import logging
 import json
-from typing import TYPE_CHECKING, Callable, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from pa_agent.ai.deepseek_client import DeepSeekClient
     from pa_agent.ai.prompt_assembler import PromptAssembler
     from pa_agent.ai.session_ledger import SessionTokenLedger
@@ -82,8 +84,8 @@ class FreeChatSession:
         assembler: "PromptAssembler",
         pending_writer: "PendingWriter",
         ledger: "SessionTokenLedger",
-        settings: Optional["Settings"] = None,
-        kline_snapshot_fn: Optional[Callable[[], str]] = None,
+        settings: Settings | None = None,
+        kline_snapshot_fn: Callable[[], str] | None = None,
     ) -> None:
         self._base_record = base_record
         self._client = client

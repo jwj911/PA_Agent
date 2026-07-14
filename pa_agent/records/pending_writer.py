@@ -12,7 +12,6 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 from pa_agent.records.schema import AnalysisRecord, FollowupTurn
 from pa_agent.util.mask_secret import mask_secret
@@ -42,9 +41,9 @@ class PendingWriter:
 
     def __init__(
         self,
-        pending_dir: Optional[Path] = None,
+        pending_dir: Path | None = None,
         event_bus=None,
-        logger: Optional[logging.Logger] = None,
+        logger: logging.Logger | None = None,
         api_key: str = "",
     ) -> None:
         if pending_dir is None:

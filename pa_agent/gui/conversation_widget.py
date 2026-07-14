@@ -5,7 +5,7 @@ import logging
 import re
 import time
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import TYPE_CHECKING, Literal
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QObject
 from PyQt6.QtWidgets import (
@@ -122,18 +122,18 @@ class ConversationWidget(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._session: Optional["FreeChatSession"] = None
-        self._cancel_token: Optional["CancelToken"] = None
-        self._worker: Optional[_ChatWorker] = None
+        self._session: FreeChatSession | None = None
+        self._cancel_token: CancelToken | None = None
+        self._worker: _ChatWorker | None = None
         self._sending = False
         self._red_warned = False
 
         self._turns: list[_TurnRecord] = []
         self._selected_row: int = -1
-        self._active_turn: Optional[_TurnRecord] = None
-        self._stage1_turn: Optional[_TurnRecord] = None
-        self._stage2_turn: Optional[_TurnRecord] = None
-        self._chat_turn: Optional[_TurnRecord] = None
+        self._active_turn: _TurnRecord | None = None
+        self._stage1_turn: _TurnRecord | None = None
+        self._stage2_turn: _TurnRecord | None = None
+        self._chat_turn: _TurnRecord | None = None
         self._stage1_t0: float = 0.0
         self._stage2_t0: float = 0.0
 

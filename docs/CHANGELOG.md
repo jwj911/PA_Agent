@@ -13,6 +13,32 @@
 
 ---
 
+## [Unreleased] — 2026-07-14（第九轮：类型现代化 R4）
+
+本轮落实后端审查报告（`docs/backend_review_report.md`）路线图 §5.1 的 **R4**：清理散落在后端各处的旧式 `typing` 注解，统一到 Python 3.11+（PEP 585/604）风格。项目已在 `pyproject.toml` 声明 `target-version = "py311"`，却仍有 36 处 ruff 现代化告警——`Optional[X]`（UP045）、`typing.List`/`typing.Callable` 的过时导入（UP035）、`List[...]`（UP006）。**原则：只换注解写法、不改任何运行时行为与类型语义**——`Optional[X]` 与 `X | None` 完全等价，`list` 与 `typing.List` 同义，仅让代码风格与工具链目标版本一致、消除告警噪音。
+
+### 代码清理
+
+- **`Optional[X]` → `X | None`（UP045，32 处）**：覆盖 `records/schema.py`（8 处 Pydantic 字段）、`records/experience_reader.py`（4 处）、`records/pending_writer.py`（2 处）、`orchestrator/two_stage.py`（2 处）、`orchestrator/free_chat.py`（2 处）、`gui/ai_sidebar.py`（2 处）、`gui/ai_stream_window.py`（5 处）、`gui/conversation_widget.py`（7 处）。其中 8 个模块本就 `from __future__ import annotations`（注解为惰性字符串，零运行期成本）；顺带把这些文件里原本被引号包裹的前置声明（如 `Optional["Settings"]`）解引号为 `Settings | None`，一并消除 12 处 UP037 引号注解告警。
+- **过时 `typing` 导入清理（UP035，3 处）**：`util/logging.py` 删除 `from typing import List`；`orchestrator/two_stage.py`、`orchestrator/free_chat.py` 把 `Callable` 从 `typing` 迁到 `collections.abc`（放入各自的 `if TYPE_CHECKING:` 块，因两文件均已启用延迟注解、`Callable` 仅用于注解）。
+- **`List[...]` → `list[...]`（UP006，1 处）**：`util/logging.py` 的 `_active_formatters: list[MaskingFormatter]`（PEP 585 内置泛型；该文件已启用延迟注解，运行期不求值）。
+
+### 明确不改（保持原样）
+
+- **`schema.py` 未加 `from __future__ import annotations`**：Pydantic v2 需在类定义时**求值**字段注解以构建模型，惰性注解会干扰其 schema 生成，故此文件保留即时注解；`X | None` 在 Python ≥3.11 可直接运行期求值，无需 `__future__`。
+- **`Any`、`Literal`、`TYPE_CHECKING` 等仍来自 `typing`**：这些并非过时符号（无 UP 告警），保持从 `typing` 导入。
+- **其余既有告警**（RUF001 中文标点、E402、RUF100、I001、SIM 等）：属全仓既有噪音，不在 R4 范围内，未改动。
+
+### 验证
+
+- `py_compile` 通过（全部 9 个改动文件）。
+- **运行时验证**：`schema.py` 为 Pydantic 即时求值风险点——`python -c` 实测 `ValidationError(category='a', raw_text='x').parse_position is None`、`FollowupTurn(..., ai_reasoning=None)` 构造成功，证明 `X | None` 字段在运行期正确建模；其余 8 个文件因 `from __future__ import annotations` 注解不求值，仅需语法正确。含 PyQt6 依赖的模块（经 `util/__init__`→`event_bus`）与既往各轮一致无法本机导入，非本次改动引入。
+- `ruff check` 对比基线（9 个文件）：改动前 **211** 条 → 改动后 **163** 条，减少的 48 条全部为目标类别——UP045 32→0、UP037 31→19（解引号）、UP035 3→0、UP006 1→0；其余类别（RUF001:110、E402:11、RUF100:11、I001:5、SIM108:2、UP017:2、F821:1、RUF002:1、SIM114:1）与改动前**逐项一致，零新增**。
+- `git diff` 密钥扫描（`sk-...` / `api_key=...`）0 命中。
+- 改动为纯注解现代化、类型语义不变，建议在项目 venv 运行 `pytest -m "not e2e" -q` 回归记录序列化与两阶段编排相关用例（`test_schema_*`、`test_pending_writer_*`、`test_experience_reader_*`）。
+
+---
+
 ## [Unreleased] — 2026-07-14（第八轮：类型完善 R5）
 
 本轮落实后端审查报告（`docs/backend_review_report.md`）§2.1 与路线图 §5.1 的 **R5**：给依赖注入容器 `AppContext` 的字段补全真实类型。此前 10 个字段（`settings`/`event_bus`/`data_source`/`client`/`assembler`/`router`/`validator`/`pending_writer`/`exp_reader`/`ledger`）全部标注为 `Any`，仅靠行尾注释（如 `# DeepSeekClient`）说明实际类型，静态类型检查与 IDE 补全完全失效。**原则：只补类型、不改运行时行为**——`AppContext` 仍是 `@dataclass(slots=True)`，字段默认值、构造签名、`bootstrap()` 装配逻辑一律不变。

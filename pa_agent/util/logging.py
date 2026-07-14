@@ -12,14 +12,13 @@ import logging
 import logging.handlers
 import threading
 from pathlib import Path
-from typing import List
 
 from pa_agent.config.paths import LOG_FILE_PATH
 from pa_agent.util.mask_secret import mask_secret
 
 # ── Module-level state ────────────────────────────────────────────────────────
 
-_active_formatters: List["MaskingFormatter"] = []
+_active_formatters: list[MaskingFormatter] = []
 _configured: bool = False
 # Reentrant: configure_logging() may call update_api_key() while holding it.
 _STATE_LOCK = threading.RLock()

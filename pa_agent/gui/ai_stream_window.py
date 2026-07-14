@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QThread, pyqtSignal, QObject
 from PyQt6.QtGui import QColor, QFont, QTextCharFormat, QTextCursor
@@ -71,12 +71,12 @@ class AIStreamPanel(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._session: Optional["FreeChatSession"] = None
-        self._cancel_token: Optional["CancelToken"] = None
-        self._worker: Optional[_ChatWorker] = None
+        self._session: FreeChatSession | None = None
+        self._cancel_token: CancelToken | None = None
+        self._worker: _ChatWorker | None = None
         self._sending = False
         self._red_warned = False
-        self._settings: Optional["Settings"] = None
+        self._settings: Settings | None = None
 
         self._stage: str = ""
         self._reasoning_chars = 0
@@ -225,7 +225,7 @@ class AIStreamPanel(QWidget):
         row.addLayout(button_col)
         return box
 
-    def bind_settings(self, settings: Optional["Settings"]) -> None:
+    def bind_settings(self, settings: Settings | None) -> None:
         self._settings = settings
         self._apply_stream_font()
         self._refresh_mode_label()
