@@ -205,7 +205,7 @@ make run
 - **格式化**：Black，行宽 100（`pyproject.toml` 配置）。
 - **Lint**：Ruff，启用规则 `E, F, I, UP, B, SIM, RUF`，忽略 `E501`。
 - **导入排序**：由 Ruff `I` rule 管理，通常不需要手动调整。
-- **类型注解**：全面使用，文件开头通常写 `from __future__ import annotations`。
+- **类型注解**：全面使用，文件开头通常写 `from __future__ import annotations`。统一采用 Python 3.11+（PEP 585/604）风格：用 `X | None` 而非 `Optional[X]`、内置泛型 `list[...]`/`dict[...]` 而非 `typing.List`/`Dict`、`Callable` 从 `collections.abc` 导入（仅注解用途可置于 `TYPE_CHECKING` 块）。例外：`records/schema.py` 因 Pydantic v2 需即时求值字段注解，不加 `from __future__ import annotations`，但仍用 `X | None`。
 - **命名**：模块/函数/变量使用小写下划线；类使用 CamelCase。
 - **注释/文档字符串**：模块级和重要函数多为英文注释；用户可见字符串、日志、prompt、GUI 标签大量使用中文。
 - **异常处理**：常见 `except Exception` 并标注 `# noqa: BLE001`。
