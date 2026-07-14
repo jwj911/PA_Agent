@@ -1072,8 +1072,9 @@ class TwoStageOrchestrator:
         (so their connector imports stay call-time and remain patchable in tests);
         this handles the identical remainder — abort on ``err``, push the new
         provider into the live client, best-effort persist settings + refresh the
-        log masking key, and log the switch. Callers only reach here with
-        ``self._settings`` already confirmed non-None.
+        log masking key, keep the record writer's masking key in sync, and log
+        the switch. Callers only reach here with ``self._settings`` already
+        confirmed non-None.
         """
         from pa_agent.config.paths import SETTINGS_JSON_PATH
         from pa_agent.config.settings import save_settings
@@ -1084,13 +1085,22 @@ class TwoStageOrchestrator:
             return False
 
         self._client.update_provider(self._settings.provider)
+        new_key = self._settings.provider.api_key
         try:
             save_settings(self._settings, SETTINGS_JSON_PATH)
-            update_api_key(self._settings.provider.api_key)
+            update_api_key(new_key)
         except Exception as save_exc:  # noqa: BLE001
             logger.warning(
                 "%s fallback applied but settings save failed: %s", provider_name, save_exc
             )
+
+        # Keep the record writer's masking key aligned with the rotated provider
+        # key so records saved after this auto-fallback mask the *new* plaintext
+        # key rather than the stale original. Mirrors the GUI settings-save path
+        # (main_window._open_ai_model_settings_dialog), which pairs
+        # update_api_key() with pending_writer.set_api_key().
+        if hasattr(self._pending_writer, "set_api_key"):
+            self._pending_writer.set_api_key(new_key)
 
         logger.info(
             "%s auto-fallback: model=%s base_url=%s",

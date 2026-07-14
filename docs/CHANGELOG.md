@@ -13,6 +13,34 @@
 
 ---
 
+## [Unreleased] — 2026-07-14（第十三轮：provider 自动降级后同步刷新记录写入器脱敏 key R-M9）
+
+本轮为一处**真实的密钥脱敏失效**修复，属后端审查报告（`docs/backend_review_report.md`）路线图 §5.2 的 **M9**（`PendingWriter` 动态 key 脱敏失效——「key 修改后同步更新 writer」）范畴。`PendingWriter` 在序列化每条 `AnalysisRecord` 前，会用**构造时传入的 `api_key`** 递归扫描并把明文 key 替换为掩码（`_sanitize`）。运行时若用户在 GUI「AI 模型」对话框改 key，`main_window._open_ai_model_settings_dialog` 已配套调用 `pending_writer.set_api_key(new_key)`（M9 命名的 `gui/settings_dialog.py` 实为**未被实例化的死代码**，真正生效的是 `AIModelSettingsDialog` 分支），脱敏能跟上。**但另一条运行时改 key 的路径——`orchestrator/two_stage.py` 的 provider 自动降级（`_finish_provider_fallback`，WorkBuddy→Cursor→QClaw）——在切换 provider 时会 `update_api_key(...)` 刷新日志脱敏 formatter，却从未刷新 `PendingWriter` 的脱敏 key**。后果：同一次 `submit()` 内发生网络降级并切换到新 provider（新 key）后，后续 `save_full`/`save_partial` 落盘的记录仍用**旧 key** 做脱敏——**新 provider 的明文 API key 会原样写进记录 JSON 未被掩码**（记录目录虽被 gitignore，但明文密钥落盘仍是安全隐患，且违反项目「持久化记录中不出现明文 key」的安全边界）。
+
+### 安全加固
+
+- **`_finish_provider_fallback` 补齐记录写入器 key 同步**：在既有「`update_provider` → best-effort `save_settings` + `update_api_key`（刷新日志脱敏）」之后，新增 `if hasattr(self._pending_writer, "set_api_key"): self._pending_writer.set_api_key(new_key)`，使记录写入器的脱敏 key 与降级后的 provider key 对齐。**与 GUI 设置保存路径（`main_window._open_ai_model_settings_dialog` 中 `update_api_key(key)` 后紧跟 `pending_writer.set_api_key(key)`）行为一致**，两条运行时改 key 路径的脱敏语义从此统一。
+- **`hasattr` 守卫**：兼容注入了不带 `set_api_key` 的 writer（如测试 double/旧实现），缺失时静默跳过、不影响降级主流程。
+- 把 `self._settings.provider.api_key` 提取为局部 `new_key` 复用于 `update_api_key` 与 `set_api_key`，避免二次属性读取、语义不变。
+
+### 明确不改（保持原样）
+
+- **降级链调用点 `_stream_chat_resilient` 与三个 `_try_*_fallback` 包装器**：尝试顺序、`tried_*` 标志、连接器 call-time 导入与 patch 点、返回语义全部零改动；本轮只在共享尾部 `_finish_provider_fallback` 追加一行同步。
+- **`err` 非空（降级不可用）路径**：仍在 `update_provider` 之前提前 `return False`，**不触碰** writer/formatter，与原逻辑一致。
+- **`gui/settings_dialog.py`（死代码）**：既未被任何处实例化（仅 `AIModelSettingsDialog`/`FeishuSettingsDialog`/`GeneralSettingsDialog` 被 `main_window` 使用），本轮不改动亦不删除（清理死代码另属独立范畴，避免扩大本轮 diff）。
+- **`app_context.bootstrap()`**：构造 `PendingWriter` 时传入的初始 `api_key` 逻辑正确（启动期 key 即当时的 provider key），无需改动。
+- **既有告警**（RUF001 中文标点、E402 等）：不在本轮范围内，未改动。
+
+### 验证
+
+- `py_compile` 通过（`two_stage.py`）。
+- **行为验证**：因本机缺 `PyQt6`（经 `util/__init__`→`event_bus` 链，与既往各轮一致），用等价脚本 stub `PyQt6.QtCore` 后断言 `_finish_provider_fallback`：① 成功降级时以**新 key** 调用 `pending_writer.set_api_key` 恰一次；② 同时仍以新 key 调用 `update_api_key`（日志脱敏不回退）；③ writer 缺 `set_api_key` 时（`hasattr` 守卫）不崩溃、仍返回 `True`；④ `err` 非空时提前返回 `False` 且**不触碰** writer 与 formatter——全部 PASS。
+- `ruff check` 对比基线（`two_stage.py`）：改动前 **40** 条 → 改动后 **40** 条，逐类别一致（RUF001 22 / E402 11 / UP037 5 / I001 1 / RUF100 1），无新增告警。
+- `git diff` 密钥扫描（`sk-...` / `api_key=...` / `Bearer` / `secret` / `token=`）仅命中 `self._settings.provider.api_key` 与 `set_api_key`/`update_api_key` 标识符引用，无明文密钥。
+- 建议在项目 venv 运行 `pytest tests/unit/test_qclaw_auto_fallback.py tests/unit/test_pending_writer_no_plaintext_key.py -q` 回归降级与脱敏路径。
+
+---
+
 ## [Unreleased] — 2026-07-14（第十二轮：修正分析记录文件名分钟字段 + 统一 basename R-M10）
 
 本轮为一处**真实的记录文件名缺陷**修复，属后端审查报告（`docs/backend_review_report.md`）路线图 §5.2 的 **M10**（记录/日志文件名安全与正确性）范畴——§5.1（R1–R8）近期低风险项已全部完成。`records/pending_writer.py` 头部注释声明的记录文件命名约定是 `{YYYY-MM-DD_HH-mm-ss}_{symbol}_{timeframe}.json`，但实现用 `strftime("%Y-%m-%d_%H-%m-%S")`——**中间的 `%m` 是「月」而非「分钟」（应为 `%M`）**。后果：每个记录文件名的「分钟」位实际写成了月份，**同一天同一小时同一秒生成的两次分析会得到相同文件名并静默互相覆盖**（增量/持续跟踪同一分钟内多次触发时尤甚）。此外 `orchestrator/free_chat.py` 的 `_derive_record_id` **复制了同一段逻辑并带同样的 `%m` 错误**，还**跳过了 `sanitize_filename_component`**——导致 followup 侧车文件（`.followups.jsonl`）的 basename 既可能与记录文件不一致（分钟位错），又缺少路径安全过滤（symbol 含 `/` 时）。
