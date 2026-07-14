@@ -111,7 +111,8 @@ price_action_agent/
   - `prompt_assembler.py`：阶段一/阶段二 prompt 组装（超大文件，含中文术语表与 schema 示例）。进程级 `_SYSTEM_PROMPT_CACHE` 由 `_SYSTEM_PROMPT_LOCK` 双检锁保护（构建放锁外，保证跨 worker 拿到同一 byte-identical 前缀）。
   - `router.py`：根据阶段一诊断路由策略 `.txt` 文件。文件名字面量统一引用 `ai/strategy_files.py` 注册表（`strategy_files as sf`），常量名/聚合结构/输出顺序不变。
   - `strategy_files.py`：策略/提示 `.txt` 文件名的**单一事实来源**（27 个模块级常量）。`router.py` 与 `prompt_assembler.py` 共同引用，新增/重命名策略文件只改此处。纯数据模块（仅 `from __future__ import annotations`，无第三方依赖）；取值须与既有文件名逐字节一致（阶段二前缀 KV 缓存敏感）。`pattern_routing.py` 因文件名嵌在 KV 敏感 prompt 散文中，**不**纳入注册表。
-  - `json_validator.py`：阶段一/阶段二 JSON 校验与错误分类（category a-e）。
+  - `json_validator.py`：阶段一/阶段二 JSON 校验与错误分类（category a-e）。原为 1023 行大文件，已将纯 JSON 文本提取/修复函数区拆出至 `json_repair.py`（报告 §5.2 M2），本文件保留 `JsonValidator` 类、`Ok`/`ValidationError`/`Result` 结果类型与 `_EXPLICIT_S9_TRADABLE_TOKENS`，并从 `json_repair` **重导出**这些修复函数（`# noqa: E402, F401`），使 29 处既有 `from pa_agent.ai.json_validator import ...` 站点逐字节兼容。
+  - `json_repair.py`：JSON 提取与修复的**纯函数模块**（stdlib-only，仅依赖 `json`/`logging`/`re`，零依赖 `JsonValidator` 及任何项目模块）。含去 markdown fence（`_strip_fences`）、修不转义引号（`_repair_unescaped_quotes`）、修分号分隔符、补截断括号（`_balance_json_brackets`）、注入 stage1 缺失尾部、闭合未完结字符串、语法修复（`_try_repair_json_syntax`）等，以及 `coalesce_model_json_text` / `format_model_json_for_context`。被 `validation_retry.py`、`prompt_assembler.py`、`tools/debug_stage2_json.py`、测试等跨模块 import；新增/修改修复逻辑改此处，`json_validator.py` 的重导出块须同步名单。
   - `stage1_normalizer.py` / `stage2_normalizer.py` / `trace_normalize.py`：LLM 输出归一化。
   - `decision_tree.py` / `decision_nodes.py` / `decision_stance.py`：决策树、立场、节点逻辑。
   - `session_ledger.py`：Token 用量与上下文窗口追踪。
