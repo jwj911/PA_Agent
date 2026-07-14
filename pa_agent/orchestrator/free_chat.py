@@ -31,16 +31,14 @@ logger = logging.getLogger(__name__)
 def _derive_record_id(record: AnalysisRecord) -> str:
     """Derive the record basename (without extension) from an AnalysisRecord.
 
-    Uses the same logic as ``_build_basename`` in pending_writer.py.
+    Delegates to ``pending_writer.build_record_basename`` so the followup
+    sidecar (``{basename}.followups.jsonl``) always matches the record file
+    written by ``PendingWriter`` — including the shared timestamp format and
+    filename-component sanitization.
     """
-    from datetime import datetime, timezone
+    from pa_agent.records.pending_writer import build_record_basename
 
-    ms = record.meta.timestamp_local_ms
-    dt = datetime.fromtimestamp(ms / 1000, tz=timezone.utc).astimezone()
-    ts_str = dt.strftime("%Y-%m-%d_%H-%m-%S")
-    symbol = record.meta.symbol
-    timeframe = record.meta.timeframe
-    return f"{ts_str}_{symbol}_{timeframe}"
+    return build_record_basename(record)
 
 
 def _strip_reasoning(message: dict) -> dict:

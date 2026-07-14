@@ -71,7 +71,7 @@ def find_latest_successful_record(
 
     result: AnalysisRecord | None = None
     # Records are saved as ``{ts}_{symbol}_{timeframe}.json`` (see
-    # PendingWriter._build_basename). Prefilter on the sanitized tokens so we
+    # PendingWriter.build_record_basename). Prefilter on the sanitized tokens so we
     # only parse candidate files instead of every pending record. The exact
     # meta.symbol / meta.timeframe check below remains authoritative.
     from pa_agent.util.safe_filename import sanitize_filename_component

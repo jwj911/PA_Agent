@@ -27,10 +27,18 @@ def _ms_to_local_datetime(ms: int) -> datetime:
     return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).astimezone()
 
 
-def _build_basename(record: AnalysisRecord) -> str:
-    """Build the filename stem (without extension) for a record."""
+def build_record_basename(record: AnalysisRecord) -> str:
+    """Build the filename stem (without extension) for a record.
+
+    Convention: ``{YYYY-MM-DD_HH-mm-ss}_{symbol}_{timeframe}`` with the
+    ``symbol``/``timeframe`` components sanitized for safe filesystem use.
+    This is the single source of truth for the record basename; both
+    ``PendingWriter`` (record + partial files) and ``FreeChatSession``
+    (the ``.followups.jsonl`` sidecar) must derive the same stem so a
+    followup file always pairs with its record.
+    """
     dt = _ms_to_local_datetime(record.meta.timestamp_local_ms)
-    ts_str = dt.strftime("%Y-%m-%d_%H-%m-%S")
+    ts_str = dt.strftime("%Y-%m-%d_%H-%M-%S")
     symbol = sanitize_filename_component(record.meta.symbol, fallback="symbol")
     timeframe = sanitize_filename_component(record.meta.timeframe, fallback="tf")
     return f"{ts_str}_{symbol}_{timeframe}"
@@ -81,7 +89,7 @@ class PendingWriter:
 
         Returns the path written to, or a best-effort path on failure.
         """
-        basename = _build_basename(record)
+        basename = build_record_basename(record)
         path = self._pending_dir / f"{basename}.json"
         data = record.model_dump()
         data = self._sanitize(data, self._api_key)
@@ -104,7 +112,7 @@ class PendingWriter:
 
         Returns the path written to, or a best-effort path on failure.
         """
-        basename = _build_basename(record)
+        basename = build_record_basename(record)
         path = self._pending_dir / f"{basename}.json"
         data = record.model_dump()
         data["_partial_reason"] = reason

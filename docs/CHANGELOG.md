@@ -13,6 +13,33 @@
 
 ---
 
+## [Unreleased] — 2026-07-14（第十二轮：修正分析记录文件名分钟字段 + 统一 basename R-M10）
+
+本轮为一处**真实的记录文件名缺陷**修复，属后端审查报告（`docs/backend_review_report.md`）路线图 §5.2 的 **M10**（记录/日志文件名安全与正确性）范畴——§5.1（R1–R8）近期低风险项已全部完成。`records/pending_writer.py` 头部注释声明的记录文件命名约定是 `{YYYY-MM-DD_HH-mm-ss}_{symbol}_{timeframe}.json`，但实现用 `strftime("%Y-%m-%d_%H-%m-%S")`——**中间的 `%m` 是「月」而非「分钟」（应为 `%M`）**。后果：每个记录文件名的「分钟」位实际写成了月份，**同一天同一小时同一秒生成的两次分析会得到相同文件名并静默互相覆盖**（增量/持续跟踪同一分钟内多次触发时尤甚）。此外 `orchestrator/free_chat.py` 的 `_derive_record_id` **复制了同一段逻辑并带同样的 `%m` 错误**，还**跳过了 `sanitize_filename_component`**——导致 followup 侧车文件（`.followups.jsonl`）的 basename 既可能与记录文件不一致（分钟位错），又缺少路径安全过滤（symbol 含 `/` 时）。
+
+### 崩溃修复 / 安全加固
+
+- **修正分钟字段 `%m`→`%M`**：记录 basename 现正确输出分钟（如 `2026-07-14_09-38-05`，中间 `38` 为分钟而非月份 `07`），消除同小时同秒不同分钟的文件名碰撞与静默覆盖风险。
+- **提升为单一事实来源 `build_record_basename(record)`**：把原私有 `_build_basename` 改名为公开函数（补全 docstring 说明命名约定与「PendingWriter 与 FreeChatSession 必须派生同一 stem」的约束），`save_full`/`save_partial` 两处调用同步更新。
+- **`free_chat._derive_record_id` 改为委托**：删除其重复且有缺陷（`%m` 错误 + 未 sanitize）的内联实现，改为 `from pa_agent.records.pending_writer import build_record_basename` 后直接调用（call-time 导入避免 orchestrator↔records 顶层循环导入）。这样 followup 侧车 basename **必然**与记录文件一致，且复用同一套 symbol/timeframe 文件名过滤。
+- 同步更新 `analysis_history.py` 中引用旧私有名 `_build_basename` 的注释为 `build_record_basename`。
+
+### 明确不改（保持原样）
+
+- **`trade_logger.py` 的时间戳格式**：其用 `strftime("%Y%m%d_%H%M%S")`（`%M` 正确），无此缺陷，本轮不动。
+- **历史已落盘的旧文件名**：不做迁移/重命名（记录目录被 gitignore 忽略、且旧文件的 `meta` 内含真实时间戳，`analysis_history` 以 `meta.symbol/meta.timeframe` 与内容为权威匹配，不依赖文件名分钟位）；本轮只修正**新写入**文件名的正确性。
+- **既有告警**（RUF001/RUF100 等）：不在本轮范围内，未改动。
+
+### 验证
+
+- `py_compile` 通过（`pending_writer.py`、`free_chat.py`、`analysis_history.py`）。
+- **行为验证**：因本机缺 `PyQt6`（经 `util/__init__`→`event_bus` 链，与既往各轮一致），用等价脚本 stub `PyQt6.QtCore` 后断言：① 分钟位输出为「分钟」而非「月」（`09-38-05` 中 `38`）；② 同小时同秒但分钟不同（00 vs 45）的两条记录 basename 不再相同（碰撞消除）；③ `BTC/USD` 被 sanitize 为 `BTC-USD`（stem 中无路径分隔符）；④ `free_chat._derive_record_id(rec) == build_record_basename(rec)`——全部 PASS。
+- `ruff check` 对比基线（三文件）：改动前 **67** 条 → 改动后 **66** 条，减少的 1 条源于删除 `free_chat` 重复实现；无新增告警。
+- `git diff` 密钥扫描（`sk-...` / `api_key=...` / `Bearer` / `secret`）仅命中 `self._api_key` 标识符引用，无明文密钥。
+- 建议在项目 venv 运行 `pytest tests/unit/test_pending_writer_sanitize.py tests/unit/test_pending_writer_no_plaintext_key.py -q` 回归记录写入路径。
+
+---
+
 ## [Unreleased] — 2026-07-14（第十一轮：统一 provider fallback R3）
 
 本轮落实后端审查报告（`docs/backend_review_report.md`）路线图 §5.1 的 **R3**：统一 provider 自动降级逻辑。`orchestrator/two_stage.py` 中的三个网络降级方法 `_try_qclaw_fallback` / `_try_cursor_fallback` / `_try_workbuddy_fallback` 各约 33 行、结构近乎完全相同，仅在「连接器 `apply_*` 函数、`is_openclaw_*_model` 守卫、provider 名称字符串、Cursor 多一个 `preferred_model` 入参」四点上不同；三者尾部（`err` 判空 → `update_provider` → best-effort `save_settings` + `update_api_key` → 记录切换日志）逐行重复，任一处改动都要同步改三遍、极易偏移。**原则：抽出单一共享尾部方法，消除重复；外部行为、返回值、日志输出文本、连接器 patch 点与改动前逐字节一致**——降级链的调用点 `_stream_chat_resilient` 依赖三方法的返回语义（`True` 表示已切换可重试、`False` 表示不适用/失败），且 `tests/unit/test_qclaw_auto_fallback.py` 依赖连接器函数为 call-time 导入方可 patch。
