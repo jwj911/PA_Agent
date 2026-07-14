@@ -411,10 +411,33 @@ class DeepSeekClient:
     def __init__(self, settings: AIProviderSettings, logger_: logging.Logger | None = None) -> None:
         self._settings = settings
         self._log = logger_ or logger
+        self._client: Any = None
+        self._client_key: tuple[str, str] | None = None
 
     def update_provider(self, settings: AIProviderSettings) -> None:
         """Replace in-memory provider settings (e.g. after QClaw auto-fallback)."""
         self._settings = settings
+        # Drop the cached HTTP client so the next call rebuilds it against the
+        # new base_url / api_key.
+        self._client = None
+        self._client_key = None
+
+    def _get_client(self) -> Any:
+        """Return a cached OpenAI client, rebuilding only when base_url/api_key change.
+
+        Reusing the client keeps the underlying HTTP connection pool warm across
+        Stage 1/Stage 2 calls instead of opening a fresh session every request.
+        """
+        if _OpenAI is None:
+            raise RuntimeError("openai package is not installed") from _OPENAI_IMPORT_ERROR
+        key = (self._settings.base_url, self._settings.api_key)
+        if self._client is None or self._client_key != key:
+            self._client = _OpenAI(
+                base_url=self._settings.base_url,
+                api_key=self._settings.api_key,
+            )
+            self._client_key = key
+        return self._client
 
     def chat(
         self,
@@ -463,10 +486,7 @@ class DeepSeekClient:
         if _OpenAI is None:
             raise RuntimeError("openai package is not installed") from _OPENAI_IMPORT_ERROR
 
-        client = _OpenAI(
-            base_url=self._settings.base_url,
-            api_key=self._settings.api_key,
-        )
+        client = self._get_client()
 
         t0 = time.monotonic()
         create_kwargs: dict[str, Any] = {
@@ -637,10 +657,7 @@ class DeepSeekClient:
         if _OpenAI is None:
             raise RuntimeError("openai package is not installed") from _OPENAI_IMPORT_ERROR
 
-        client = _OpenAI(
-            base_url=self._settings.base_url,
-            api_key=self._settings.api_key,
-        )
+        client = self._get_client()
 
         t0 = time.monotonic()
         reasoning_content = ""

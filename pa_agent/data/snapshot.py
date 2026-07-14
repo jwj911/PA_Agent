@@ -77,20 +77,25 @@ def _newest_closed_slice(
     timeframe: str = "",
     symbol: str = "",
     now_ms: int | None = None,
+    forming: bool | None = None,
 ) -> list[KlineBar] | None:
     """Return *n* newest closed bars from a newest-first list.
 
     Skips index 0 only when it is still forming. Stale ``closed=False`` after
     halt (e.g. TradingView) is kept as K1.
+
+    *forming* may be passed by callers that already computed
+    ``has_forming_bar_at_head`` to avoid recomputing it here.
     """
     if not bars_raw or n < 1:
         return None
-    forming = has_forming_bar_at_head(
-        bars_raw,
-        timeframe or None,
-        symbol=symbol or None,
-        now_ms=now_ms,
-    )
+    if forming is None:
+        forming = has_forming_bar_at_head(
+            bars_raw,
+            timeframe or None,
+            symbol=symbol or None,
+            now_ms=now_ms,
+        )
 
     if forming:
         if len(bars_raw) < n + 1:
@@ -251,6 +256,7 @@ def build_analysis_frame(
         timeframe=timeframe,
         symbol=symbol,
         now_ms=now_ms,
+        forming=forming,
     )
     if closed_raw is None or len(closed_raw) < n:
         return None

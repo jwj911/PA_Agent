@@ -53,6 +53,8 @@ def compute_kline_geometry_features(
     previous-bar context; only the newest *limit* rows are returned.
     """
     bars = frame.bars
+    ema_values = frame.indicators.ema20
+    ema_gap_counts = _ema_gap_counts(bars, ema_values)
     features: list[KlineGeometryFeature] = []
     for idx, bar in enumerate(bars):
         atr = frame.indicators.atr14[idx] if idx < len(frame.indicators.atr14) else math.nan
@@ -70,7 +72,7 @@ def compute_kline_geometry_features(
                 idx=idx,
                 atr=atr,
                 ema=ema,
-                ema_values=frame.indicators.ema20,
+                ema_gap_count=ema_gap_counts[idx],
             )
         )
     if limit is not None:
@@ -88,7 +90,7 @@ def _feature_for_bar(
     idx: int,
     atr: float,
     ema: float,
-    ema_values: tuple[float, ...],
+    ema_gap_count: int,
 ) -> KlineGeometryFeature:
     high = max(bar.high, bar.low)
     low = min(bar.high, bar.low)
@@ -127,7 +129,6 @@ def _feature_for_bar(
     ioi_pattern = _is_ioi(bar, prev, prev2, prev3)
     micro_double = _micro_double(bar, prev, atr=atr)
     gap_bar = _gap_bar(bar, ema)
-    ema_gap_count = _ema_gap_count(bars, idx, ema_values)
     breakout_prev = _breakout_prev_range(bars, idx)
     follow_through_1_2 = _follow_through_1_2(bars, idx)
 
@@ -233,27 +234,34 @@ def _gap_bar(bar: KlineBar, ema: float) -> str:
     return "none"
 
 
-def _ema_gap_count(
+def _ema_gap_counts(
     bars: tuple[KlineBar, ...],
-    idx: int,
     ema_values: tuple[float, ...],
-) -> int:
-    if idx >= len(ema_values):
-        return 0
-    ema = ema_values[idx]
-    if math.isnan(ema):
-        return 0
-    side = _gap_bar(bars[idx], ema)
-    if side == "none":
-        return 0
-    count = 0
-    for j in range(idx, len(bars)):
+) -> list[int]:
+    """Consecutive same-side EMA-gap run length starting at each bar (newest-first).
+
+    O(n) replacement for the former per-bar O(n) scan: the run length at ``idx``
+    is one longer than the run at ``idx + 1`` whenever their gap sides match, so a
+    single reverse pass fills every count. Invalid EMA (out of range / NaN) acts
+    as a run break, matching the original loop semantics exactly.
+    """
+    n = len(bars)
+    counts = [0] * n
+    sides: list[str | None] = [None] * n
+    for j in range(n):
         if j >= len(ema_values) or math.isnan(ema_values[j]):
-            break
-        if _gap_bar(bars[j], ema_values[j]) != side:
-            break
-        count += 1
-    return count
+            sides[j] = None
+        else:
+            sides[j] = _gap_bar(bars[j], ema_values[j])
+    for idx in range(n - 1, -1, -1):
+        side = sides[idx]
+        if side is None or side == "none":
+            continue
+        if idx + 1 < n and sides[idx + 1] == side:
+            counts[idx] = 1 + counts[idx + 1]
+        else:
+            counts[idx] = 1
+    return counts
 
 
 def _breakout_prev_range(

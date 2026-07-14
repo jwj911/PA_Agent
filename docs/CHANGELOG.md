@@ -13,6 +13,38 @@
 
 ---
 
+## [Unreleased] — 2026-07-14（第五轮：性能优化 L4）
+
+本轮落实后端审查报告（`docs/backend_review_report.md`）路线图中的 **L4 性能优化**，针对 §8「性能热点」清单里在**热路径**（每次 RefreshLoop tick / 每次分析 / 每次 API 调用）重复付出的开销做减法。**原则：只降开销、不改语义与外部行为**——每处改动都保持输出与原实现逐位一致，仅避免重复计算或提前短路。
+
+### 性能优化
+
+- **每次 API 调用都新建 OpenAI 客户端，连接池无法复用（热点 `ai/deepseek_client.py:466`）**：`chat()` 与 `stream_chat()` 每次都 `_OpenAI(base_url=..., api_key=...)` 新建实例，Stage 1/Stage 2 两次调用各开一次全新 HTTP 会话。改为按 `(base_url, api_key)` 缓存客户端：新增 `DeepSeekClient._get_client()`，仅当 base_url/api_key 变化时重建；`update_provider()`（QClaw 自动 fallback 后切换 provider）时主动失效缓存。同一 provider 下 Stage 1→Stage 2 复用同一连接池，减少握手开销。
+  - 涉及：`pa_agent/ai/deepseek_client.py`（`__init__` 新增 `_client`/`_client_key`、新增 `_get_client()`、`update_provider` 失效缓存、`chat`/`stream_chat` 两处改用 `_get_client()`）。
+- **Stage 1/2 无条件把完整 prompt 逐条写 DEBUG 日志（热点 `orchestrator/two_stage.py:423-430,715-721`）**：即便日志级别高于 DEBUG，仍会执行 `for msg in messages:` 循环、`role.upper()` 与大段 prompt 字符串拼接，只是最终被丢弃。用 `if logger.isEnabledFor(logging.DEBUG):` 包裹两处循环，DEBUG 关闭时直接跳过，省去每次分析的无用字符串处理。
+  - 涉及：`pa_agent/orchestrator/two_stage.py`（Stage 1、Stage 2 两处 prompt DEBUG 日志块）。
+- **`build_analysis_frame` 重复计算 forming-bar 判定（热点 `data/snapshot.py`）**：函数先调用一次 `has_forming_bar_at_head` 求 `forming`，随后 `_newest_closed_slice` 内部又独立算了一遍（含 A 股日线交易时段判断等分支）。为 `_newest_closed_slice` 增加可选参数 `forming`，由调用方把已算好的结果传入，消除每次分析帧构建时的重复判定；参数缺省时行为不变（其他潜在调用方安全）。
+  - 涉及：`pa_agent/data/snapshot.py`（`_newest_closed_slice` 新增 `forming` 参数、`build_analysis_frame` 复用 `forming`）。
+- **几何特征 `_ema_gap_count` 为 O(n²)（热点 `ai/kline_features.py:250`）**：原实现对每根 K 线都从当前位置向老方向扫到「同侧 EMA 缺口」中断，逐棒 O(n) → 整帧 O(n²)。改为单次反向传递的 O(n) 批量函数 `_ema_gap_counts`：先算每根的缺口侧，再从最老一根反向累加（同侧则 `run[idx]=1+run[idx+1]`，否则重置），一次填满全部计数。缺口侧计算与 EMA 无效（越界 / NaN）作为「中断」的语义与原实现完全一致，已用 400 组随机数据（含空数组、NaN、短 EMA 序列）逐位比对验证等价。
+  - 涉及：`pa_agent/ai/kline_features.py`（删除 `_ema_gap_count`、新增 `_ema_gap_counts`；`compute_kline_geometry_features` 预计算后按 idx 取值、`_feature_for_bar` 改收 `ema_gap_count` 参数）。
+- **查找上次成功记录时全量加载 pending 目录（热点 `records/analysis_history.py:49-82`）**：`find_latest_successful_record` 在缓存未命中时会 `load_record()` 解析 `records/pending/*.json` 里**每一个**文件（含 JSON parse + Pydantic 校验），再按 symbol/timeframe 过滤。由于记录文件名格式固定为 `{时间戳}_{symbol}_{timeframe}.json`（见 `PendingWriter._build_basename`），改为先按 basename 中 `sanitize_filename_component(symbol)` / `sanitize_filename_component(timeframe)` 两个子串预过滤，只解析候选文件；`record.meta.symbol/timeframe` 的精确比对仍保留为最终权威判断，预过滤只做「安全收窄」不改变结果。
+  - 涉及：`pa_agent/records/analysis_history.py`（`find_latest_successful_record` 增加文件名预过滤）。
+
+### 明确不改（保持原样）
+
+- **`records/pending_writer.py:133-154` 递归遍历做 API key 替换**：`_sanitize` 已有 `if not api_key: return data` 快速返回，且掩码是安全正确性所必需，遍历范围就是待落盘记录本身；改成增量/浅层替换会带来密钥泄漏风险，收益不抵风险，保持不动。
+- **`records/trade_logger.py:607-624` 每次全量重写 CSV**：该「读入全部行→追加→带统一表头重写」是**刻意的 schema 迁移设计**（旧记录自动补齐新列）；改成纯追加会破坏历史 CSV 的列迁移能力。交易记录写入频率低（仅在产生订单时），全量重写开销可接受，保持不动。
+
+### 验证
+
+- `py_compile` 通过（全部 5 个改动文件）。
+- `ruff check` 对比基线：改动前后同为 74 条既有告警（全为全仓既有的 I001 导入排序 / RUF002 中文标点 / UP035 等噪音），**未新增任何告警**。
+- `_ema_gap_counts` 等价性：400 组随机 K 线（覆盖空数组、NaN EMA、短 EMA 序列）与原 O(n²) 实现逐 idx 比对，0 处不一致。
+- `pa_agent.ai.kline_features` 可独立导入（无 PyQt6 依赖）；`git diff` 密钥扫描（`sk-...` / `api_key=...`）0 命中。
+- 未实机运行完整 GUI 测试（本机所有 Python 解释器均无 PyQt6/hypothesis）；改动为纯性能优化、不改语义，建议在项目 venv 运行 `pytest -m "not e2e" -q` 回归，重点 `test_deepseek_client`、`test_build_analysis_frame`、`test_snapshot_*`、`test_kline_features`、`test_qclaw_auto_fallback`。
+
+---
+
 ## [Unreleased] — 2026-07-14（第四轮：异常可观测性）
 
 本轮聚焦排障能力，落实后端审查报告（`docs/backend_review_report.md`）路线图中的 **R6**：把散落在基础设施、数据源、GUI 与决策逻辑里、被裸 `except Exception:` 直接 `pass`/`return` 静默吞掉的失败，统一补上 `logger.debug(..., exc_info=True)` 诊断日志。**原则：只加日志、不改控制流**——保留原有兜底行为（返回默认值 / 跳过 / 继续），仅让失败在需要排障时可见（DEBUG 级，不污染正常运行输出）。

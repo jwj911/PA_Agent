@@ -420,14 +420,15 @@ class TwoStageOrchestrator:
             messages_s1 = self._assembler.build_stage1(frame, analysis_mode=analysis_mode)
 
         # ── Step 5: Call AI for Stage 1 ───────────────────────────────────────
-        logger.debug("\n" + "="*80)
-        logger.debug("【Stage 1 发送的完整 Prompt】")
-        logger.debug("="*80)
-        for msg in messages_s1:
-            role = msg.get("role", "?").upper()
-            content = msg.get("content", "")
-            logger.debug("\n--- [%s] ---\n%s", role, content)
-        logger.debug("="*80 + "\n")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("\n" + "="*80)
+            logger.debug("【Stage 1 发送的完整 Prompt】")
+            logger.debug("="*80)
+            for msg in messages_s1:
+                role = msg.get("role", "?").upper()
+                content = msg.get("content", "")
+                logger.debug("\n--- [%s] ---\n%s", role, content)
+            logger.debug("="*80 + "\n")
 
         # Notify conversation tab of the prompt being sent
         if on_stage_prompt is not None:
@@ -711,14 +712,15 @@ class TwoStageOrchestrator:
         )
 
         # ── Step 15: Call AI for Stage 2 ──────────────────────────────────────
-        logger.debug("\n" + "="*80)
-        logger.debug("【Stage 2 发送的完整 Prompt】")
-        logger.debug("="*80)
-        for msg in messages_s2:
-            role = msg.get("role", "?").upper()
-            content = msg.get("content", "")
-            logger.debug("\n--- [%s] ---\n%s", role, content)
-        logger.debug("="*80 + "\n")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("\n" + "="*80)
+            logger.debug("【Stage 2 发送的完整 Prompt】")
+            logger.debug("="*80)
+            for msg in messages_s2:
+                role = msg.get("role", "?").upper()
+                content = msg.get("content", "")
+                logger.debug("\n--- [%s] ---\n%s", role, content)
+            logger.debug("="*80 + "\n")
 
         # Notify conversation tab of the prompt being sent
         if on_stage_prompt is not None:
