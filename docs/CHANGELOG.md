@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-14（第十六轮：拆分 JsonValidator，提取 json_repair 模块 R-M2）
+
+本轮为一次**大文件拆分**，属后端审查报告（`docs/backend_review_report.md`）路线图 §5.2 的 **M2**（拆分 `json_validator.py`）范畴——报告 §7 建议的迭代顺序为「R1-R8 → M1-M4 大文件拆分 → 安全 M8-M10 → 性能 L1-L7」，本项是 M1-M4 拆分组的第一刀。`pa_agent/ai/json_validator.py` 原为 **1023 行**的单一大文件，其中**前半段（原 65-427 行，约 360 行）是一组自足的纯 JSON 文本提取/修复函数**（去 markdown fence、修不转义引号、补截断括号、闭合未完结字符串等），**与后半段的 `JsonValidator` 校验器类混杂在同一文件**。这组修复函数：① 仅依赖 stdlib（`json`/`logging`/`re`），零依赖 `JsonValidator` 类及任何项目模块；② 被 `validation_retry.py`、`prompt_assembler.py`、`tools/debug_stage2_json.py`、多个测试等**跨模块直接 import**（关注点独立）。两者混居导致文件臃肿、职责不清、修改修复逻辑时需在千行文件中定位。
+
+### 代码清理
+
+- **新增 `pa_agent/ai/json_repair.py`（JSON 提取与修复模块）**：把上述纯函数块**逐字节搬迁**至新模块——含 4 个模块级常量（`_FENCE_RE` / `_TRAILING_FENCE_RE` / `_LEADING_FENCE_RE` / `_STRING_END_CHARS`）与 11 个函数（`_extract_outer_json_object` / `_strip_fences` / `_escape_control_chars_in_json_strings` / `coalesce_model_json_text` / `format_model_json_for_context` / `_repair_unescaped_quotes` / `_repair_semicolon_separator` / `_balance_json_brackets` / `_inject_stage1_missing_tail` / `_repair_unclosed_string_before_brace` / `_try_repair_json_syntax`）。模块 docstring 说明其来源与 stdlib-only 定位。
+- **`json_validator.py` 改为从 `json_repair` 重导出**：删除原 65-427 行的函数实现，替换为单个 `from pa_agent.ai.json_repair import (...)` 平铺分组 import（15 个名），并以 `# noqa: E402, F401` 声明「这是**故意的重导出**」。**29 处既有 import 站点全部逐字节兼容**（外部只 import `JsonValidator`/`Ok`/`ValidationError`/`coalesce_model_json_text`/`format_model_json_for_context`/`_strip_fences`/`_repair_unclosed_string_before_brace`/`_repair_unescaped_quotes` 等，均从 `json_validator` 原路径仍可取到同一对象）。
+- **保留在 `json_validator.py`**：`Ok`/`ValidationError`/`Result` 结果类型、`_EXPLICIT_S9_TRADABLE_TOKENS` 常量、`JsonValidator` 校验器类（含全部 `_check_*` 方法）及其辅助 `_parse_k_seq`/`_bar_by_seq`/`_all_stage2_reasons`；文件从 1023 行降至约 660 行。
+
+### 验证
+
+- `py_compile` 通过（`json_repair.py`、`json_validator.py`，EXIT=0）。
+- **重导出等价性**：`python -c` 逐一断言 `json_validator` 与 `json_repair` 的 **15 个重导出名 `is` 同一对象**（"re-export OK, all 15 names identical"）——保证跨模块调用行为逐字节不变。
+- **真实 pytest 回归**（本机 `json_validator`/`json_repair` 不经 PyQt6 链，可直接跑）：`tests/unit/test_json_validator.py` + `tests/property/test_json_validator_categories.py` 合计 26 项 → **16 passed / 10 failed**；逐一比对 `git stash` 后的**基线**，确认这 **10 项失败在基线上以完全相同的原因失败**（5 项 `ModuleNotFoundError: PyQt6`、2 项 `tools/stage2_raw_sample.txt` 缺文件、2 项既有 `test_truncated_stage1_*` 断言、1 项 fence 相关），均属**本机环境缺失/既有失败，非本轮回归——拆分引入零新增失败**。
+- `ruff check` 对比基线：基线 `json_validator.py` 单文件 **9** 条（2×RUF003、2×RUF001、2×I001、1×SIM108、1×SIM114、1×RUF005）→ 拆分后两文件合计 **9** 条（错误码逐类别一致，仅在两文件间重新分布），**零净新增告警**。
+- `git diff` 密钥扫描（`sk-...` / `"api_key":` / `Bearer` / `secret=` / `token=`）无命中——纯代码搬迁，无密钥。
+
+---
+
 ## [Unreleased] — 2026-07-14（第十五轮：实现 API Key 本地至静态加密 Windows DPAPI R-M8）
 
 本轮补齐一处**真实的安全短板**，属后端审查报告（`docs/backend_review_report.md`）路线图 §5.2 的 **M8**（实现真正的本地 API Key 加密）范畴——报告 §7 建议的「补齐安全短板（M8-M10）」组中，M9/M10 已在前两轮完成，M8 为最后一项。此前 `provider.api_key` **以明文写入** `config/settings.json`：模型中虽保留 `api_key_encrypted` 字段，但**从无任何加解密逻辑**，`pa_agent/security/` 包仅是空占位。后果：`settings.json` 一旦泄漏即等于密钥泄漏（此前仅靠 `.gitignore` + pre-commit + 运行时脱敏三层防护，均属"防止外泄"而非"至静态加密"）。
