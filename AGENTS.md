@@ -140,11 +140,11 @@ price_action_agent/
   - `theme/`：QSS 主题与 token。
   - `ai_stream_window.py` / `conversation_widget.py`：实时推理流与会话管理。
 - **`pa_agent/orchestrator/`**：业务编排。
-  - `two_stage.py`：两阶段分析主流程。Stage1/Stage2 的校验错误富化由单一 `_enrich_validation_message(err, reply, *, stage)` 完成（`stage="stage1"|"stage2"` 仅切换少量中文提示串，输出与原分函数逐字节一致）。网络降级链（`_stream_chat_resilient` 内 WorkBuddy→Cursor→QClaw）的三个 `_try_*_fallback` 是薄包装器（各自 call-time 导入连接器 `apply_*`/`is_openclaw_*_model` 以保持测试可 patch、守卫、调用 `apply_*`），相同尾部（`update_provider`+`save_settings`+`update_api_key`+切换日志）合并到共享 `_finish_provider_fallback(provider_name, err)`；返回语义与日志文本与拆分前一致。
+  - `two_stage.py`：两阶段分析主流程。Stage1/Stage2 的校验错误富化由单一 `_enrich_validation_message(err, reply, *, stage)` 完成（`stage="stage1"|"stage2"` 仅切换少量中文提示串，输出与原分函数逐字节一致）。网络降级链（`_stream_chat_resilient` 内 WorkBuddy→Cursor→QClaw）的三个 `_try_*_fallback` 是薄包装器（各自 call-time 导入连接器 `apply_*`/`is_openclaw_*_model` 以保持测试可 patch、守卫、调用 `apply_*`），相同尾部（`update_provider`+`save_settings`+`update_api_key`+**`pending_writer.set_api_key`**+切换日志）合并到共享 `_finish_provider_fallback(provider_name, err)`；返回语义与日志文本与拆分前一致。降级切换 provider（新 key）时，尾部除刷新日志脱敏 formatter（`update_api_key`）外，还须 `set_api_key` 刷新记录写入器的脱敏 key（`hasattr` 守卫），否则同一 `submit()` 内降级后落盘的记录会用旧 key 脱敏、泄漏新 key 明文——与 GUI「AI 模型」设置保存路径的脱敏语义一致。
   - `free_chat.py`：分析后自由追问与会话管理。
   - `validation_retry.py`：校验失败后的重试策略。
 - **`pa_agent/records/`**：持久化。
-  - `pending_writer.py`：分析记录写入（会自动对明文 API Key 脱敏）。记录/分片/followup 侧车的文件名 stem 由**单一事实来源** `build_record_basename(record)` 统一生成，格式 `{YYYY-MM-DD_HH-mm-ss}_{symbol}_{timeframe}`（`strftime("%Y-%m-%d_%H-%M-%S")`，`%M` 为分钟；`symbol`/`timeframe` 经 `sanitize_filename_component` 过滤）。`orchestrator/free_chat.py` 的 `_derive_record_id` 必须委托本函数（call-time 导入），保证 followup `.followups.jsonl` 侧车与记录同名。
+  - `pending_writer.py`：分析记录写入（会自动对明文 API Key 脱敏——用构造时传入的 `api_key` 递归掩码；运行时改 key 后须调 `set_api_key` 同步，否则记录仍用旧 key 脱敏。当前所有运行时改 key 路径均已配套：GUI「AI 模型」保存（`main_window._open_ai_model_settings_dialog`）与 orchestrator provider 降级（`two_stage._finish_provider_fallback`）都在 `update_api_key` 后调 `pending_writer.set_api_key`）。记录/分片/followup 侧车的文件名 stem 由**单一事实来源** `build_record_basename(record)` 统一生成，格式 `{YYYY-MM-DD_HH-mm-ss}_{symbol}_{timeframe}`（`strftime("%Y-%m-%d_%H-%M-%S")`，`%M` 为分钟；`symbol`/`timeframe` 经 `sanitize_filename_component` 过滤）。`orchestrator/free_chat.py` 的 `_derive_record_id` 必须委托本函数（call-time 导入），保证 followup `.followups.jsonl` 侧车与记录同名。
   - `experience_reader.py`：经验库读取。
   - `trade_logger.py`：交易 CSV/截图日志。
   - `analysis_history.py`：历史记录管理。`find_latest_successful_record` 带 `_LATEST_RECORD_CACHE`（按 dir mtime 失效，`_LATEST_RECORD_LOCK` 保护并发读写），缓存未命中时按 basename 的 `symbol`/`timeframe` 子串预过滤，只解析候选文件。
