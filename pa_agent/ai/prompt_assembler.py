@@ -9,6 +9,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
+from pa_agent.ai import strategy_files as sf
 from pa_agent.ai.decision_stance import build_decision_stance_guidance, normalize_stance
 from pa_agent.ai.pattern_routing import (
     STAGE1_DETECTED_PATTERNS_GUIDE,
@@ -744,12 +745,12 @@ spike | micro_channel | tight_channel | normal_channel | broad_channel | trendin
 
 # txt files merged into each stage prompt (order preserved)
 COMMON_SYSTEM_STAGE1_TXT_FILES: tuple[str, ...] = (
-    "提示词大纲_人设与思维方式.txt",
-    "二元决策.txt",           # unified with Stage 2 for prefix caching; §0–§2 gate subset is included
+    sf.PERSONA,
+    sf.BINARY_DECISION,       # unified with Stage 2 for prefix caching; §0–§2 gate subset is included
 )
 COMMON_SYSTEM_STAGE2_TXT_FILES: tuple[str, ...] = (
-    "提示词大纲_人设与思维方式.txt",
-    "二元决策.txt",
+    sf.PERSONA,
+    sf.BINARY_DECISION,
 )
 # Back-compat alias for UI helpers that list “common” files (Stage 2 full tree).
 COMMON_SYSTEM_PROMPT_TXT_FILES: tuple[str, ...] = COMMON_SYSTEM_STAGE2_TXT_FILES
@@ -760,61 +761,61 @@ _SYSTEM_PROMPT_CACHE: dict[str, str] = {}
 _SYSTEM_PROMPT_LOCK = threading.Lock()
 
 STAGE1_TASK_PROMPT_TXT_FILES: tuple[str, ...] = (
-    "市场诊断框架.txt",
-    "文件16-K线信号识别.txt",
+    sf.MARKET_DIAGNOSIS,
+    sf.KLINE_SIGNAL,
 )
 
 _CHANNEL_FILE_GROUPS: dict[str, tuple[str, ...]] = {
     "bullish": (
-        "上涨通道分析识别.txt",
-        "上涨通道交易策略.txt",
+        sf.BULLISH_CHANNEL_ID,
+        sf.BULLISH_CHANNEL_STRATEGY,
     ),
     "bearish": (
-        "下跌通道分析识别.txt",
-        "下跌通道交易策略.txt",
+        sf.BEARISH_CHANNEL_ID,
+        sf.BEARISH_CHANNEL_STRATEGY,
     ),
 }
 _SPIKE_FILE_GROUPS: dict[str, tuple[str, ...]] = {
     "bullish": (
-        "极速上涨分析识别.txt",
-        "极速上涨交易策略.txt",
+        sf.BULLISH_SPIKE_ID,
+        sf.BULLISH_SPIKE_STRATEGY,
     ),
     "bearish": (
-        "极速下跌分析识别.txt",
-        "极速下跌交易策略.txt",
+        sf.BEARISH_SPIKE_ID,
+        sf.BEARISH_SPIKE_STRATEGY,
     ),
 }
 
 STAGE2_BASE_PROMPT_TXT_FILES: tuple[str, ...] = (
-    "逐棒分析检查单.txt",
-    "文件16-K线信号识别.txt",
-    "文件17-止损和止盈与仓位管理.txt",
-    "文件23-MeasuredMove与结构目标.txt",
+    sf.BAR_CHECKLIST,
+    sf.KLINE_SIGNAL,
+    sf.STOP_TARGET_POSITION,
+    sf.MEASURED_MOVE,
 )
 
 STAGE2_FULL_STRATEGY_PROMPT_TXT_FILES: tuple[str, ...] = (
-    "上涨通道分析识别.txt",
-    "上涨通道交易策略.txt",
-    "下跌通道分析识别.txt",
-    "下跌通道交易策略.txt",
-    "极速上涨分析识别.txt",
-    "极速上涨交易策略.txt",
-    "极速下跌分析识别.txt",
-    "极速下跌交易策略.txt",
-    "震荡区间分析识别.txt",
-    "震荡区间交易策略.txt",
-    "文件13-窄通道与宽通道策略.txt",
-    "文件14-楔形形态分析交易.txt",
-    "文件15-二次入场机会.txt",
-    "文件18-突破失败与突破测试.txt",
-    "文件19-H1H2-L1L2计数.txt",
-    "文件20-AlwaysIn与20GB.txt",
-    "文件21-铁丝网与无交易环境.txt",
-    "文件22-信号失败后的磁力位.txt",
-    "文件24-最终旗形与趋势末端.txt",
-    "文件25-主要趋势反转MTR.txt",
-    "文件27-三角形与收敛形态.txt",
-    "文件28-双重顶底与微型结构.txt",
+    sf.BULLISH_CHANNEL_ID,
+    sf.BULLISH_CHANNEL_STRATEGY,
+    sf.BEARISH_CHANNEL_ID,
+    sf.BEARISH_CHANNEL_STRATEGY,
+    sf.BULLISH_SPIKE_ID,
+    sf.BULLISH_SPIKE_STRATEGY,
+    sf.BEARISH_SPIKE_ID,
+    sf.BEARISH_SPIKE_STRATEGY,
+    sf.RANGE_ID,
+    sf.RANGE_STRATEGY,
+    sf.CHANNEL_WIDTH,
+    sf.WEDGE,
+    sf.REVERSAL,
+    sf.BREAKOUT_FAILURE,
+    sf.H1H2,
+    sf.ALWAYS_IN,
+    sf.BARBWIRE,
+    sf.MAGNET,
+    sf.FINAL_FLAG,
+    sf.MTR,
+    sf.TRIANGLE,
+    sf.DOUBLE_TOP_BOTTOM,
 )
 
 

@@ -13,6 +13,31 @@
 
 ---
 
+## [Unreleased] — 2026-07-14（第十轮：策略文件注册表 R1）
+
+本轮落实后端审查报告（`docs/backend_review_report.md`）§4.3/§10「代码重复」与路线图 §5.1 的 **R1**：提取策略文件注册表。此前同一批策略/提示 `.txt` 文件名字面量在 `ai/router.py`（阶段一→阶段二文件路由）与 `ai/prompt_assembler.py`（提示词组装）中各写一遍，新增或重命名策略文件需同步改两处、极易漏改或写错中文文件名。**原则：抽出单一权威文件名常量，消除重复；文件名取值与顺序逐字节不变**——阶段二提示前缀命中 DeepSeek KV 缓存依赖 byte-identical 前缀，故所有消费方构建的文件列表必须与改动前完全一致。
+
+### 代码清理
+
+- **新增 `pa_agent/ai/strategy_files.py`（单一事实来源）**：把 27 个策略/提示 `.txt` 文件名各定义一次为模块级常量（`PERSONA`/`BINARY_DECISION`/`MARKET_DIAGNOSIS`/`BULLISH_CHANNEL_ID` 等）。纯数据模块，仅 `from __future__ import annotations`，无第三方依赖，可安全被 `router.py`（运行期可导入）与 `prompt_assembler.py` 共同引用。
+- **`ai/router.py` 引用注册表**：17 组文件名常量（`_BULLISH_CHANNEL_FILES`、`_WEDGE_FILE`…）与 `_ALL_VALID_FILES`（27 文件 frozenset）的字面量改为引用 `strategy_files as sf` 的常量；常量名、聚合结构、`route_strategy_files` 及其分支逻辑全部保持不变。
+- **`ai/prompt_assembler.py` 引用注册表**：`COMMON_SYSTEM_STAGE1_TXT_FILES`、`COMMON_SYSTEM_STAGE2_TXT_FILES`、`STAGE1_TASK_PROMPT_TXT_FILES`、`STAGE2_BASE_PROMPT_TXT_FILES`、`STAGE2_FULL_STRATEGY_PROMPT_TXT_FILES`、`_CHANNEL_FILE_GROUPS`、`_SPIKE_FILE_GROUPS` 内的文件名字面量改为引用 `sf.*`；**导出符号名、元组元素顺序、行尾注释一律不变**，消费函数（`stage1_prompt_txt_files`、`stage2_user_task_txt_files`、`stage2_prompt_txt_files`）零改动。
+
+### 明确不改（保持原样）
+
+- **`ai/pattern_routing.py` 不纳入本轮**：该文件的策略文件名嵌在 `STAGE1_DETECTED_PATTERNS_GUIDE` / `STAGE1_PATTERN_BRIEFS_BLOCK` 两段**提示词 markdown 表格散文**里（如 `| wedge | … | 文件14-楔形形态分析交易.txt |`），属 KV 缓存敏感的提示正文；用字符串插值替换会带来逐字节差异风险且无功能收益，故本轮不动，保留为提示内容。
+- **既有告警**（RUF001 中文标点等）：不在 R1 范围内，未改动。
+
+### 验证
+
+- `py_compile` 通过（`strategy_files.py`、`router.py`、`prompt_assembler.py`）。
+- **等价性验证**：`router.py` 常量与 `_ALL_VALID_FILES`（27 文件）实测与改动前字面量逐一相等；`prompt_assembler.py` 五个导出元组从 git `HEAD` 提取旧字面量后与新值逐元素比对，全部 byte-identical（长度 2/2/2/4/22）。`route_strategy_files` 对 property 测试 4 个精确用例（spike-transitioning、alternative-cycle、broad-channel-neutral、pattern-overlays）输出与断言一致；复刻 `test_prompt_txt_files.py` 全部 4 个用例（stage1 列表、bullish 路由过滤、full-library、stage2 顺序）对新常量断言通过。
+- `ruff check` 对比基线：`strategy_files.py`/`router.py` **All checks passed**；`prompt_assembler.py` 1384 条、`pattern_routing.py` 54 条**与改动前逐项一致、零新增**。
+- `git diff` 密钥扫描（`sk-...` / `api_key=...`）0 命中；新增文件同样无敏感内容。
+- 本机 `PyQt6` / `hypothesis` 缺失（与既往各轮一致），无法直接跑 `pytest`；已用等价脚本复刻两测试文件的全部断言逻辑对新常量验证通过，建议在项目 venv 运行 `pytest tests/property/test_router_determinism.py tests/unit/test_prompt_txt_files.py -q` 回归。
+
+---
+
 ## [Unreleased] — 2026-07-14（第九轮：类型现代化 R4）
 
 本轮落实后端审查报告（`docs/backend_review_report.md`）路线图 §5.1 的 **R4**：清理散落在后端各处的旧式 `typing` 注解，统一到 Python 3.11+（PEP 585/604）风格。项目已在 `pyproject.toml` 声明 `target-version = "py311"`，却仍有 36 处 ruff 现代化告警——`Optional[X]`（UP045）、`typing.List`/`typing.Callable` 的过时导入（UP035）、`List[...]`（UP006）。**原则：只换注解写法、不改任何运行时行为与类型语义**——`Optional[X]` 与 `X | None` 完全等价，`list` 与 `typing.List` 同义，仅让代码风格与工具链目标版本一致、消除告警噪音。

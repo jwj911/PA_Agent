@@ -8,77 +8,78 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from pa_agent.ai import strategy_files as sf
 from pa_agent.ai.pattern_routing import merge_detected_patterns
 
 logger = logging.getLogger(__name__)
 
-# ── File name constants ────────────────────────────────────────────────────────
+# ── File name constants (names sourced from ai/strategy_files registry) ─────────
 
 _BULLISH_CHANNEL_FILES = [
-    "上涨通道分析识别.txt",
-    "上涨通道交易策略.txt",
+    sf.BULLISH_CHANNEL_ID,
+    sf.BULLISH_CHANNEL_STRATEGY,
 ]
 _BEARISH_CHANNEL_FILES = [
-    "下跌通道分析识别.txt",
-    "下跌通道交易策略.txt",
+    sf.BEARISH_CHANNEL_ID,
+    sf.BEARISH_CHANNEL_STRATEGY,
 ]
-_CHANNEL_WIDTH_FILE = "文件13-窄通道与宽通道策略.txt"
+_CHANNEL_WIDTH_FILE = sf.CHANNEL_WIDTH
 
 _BULLISH_SPIKE_FILES = [
-    "极速上涨分析识别.txt",
-    "极速上涨交易策略.txt",
+    sf.BULLISH_SPIKE_ID,
+    sf.BULLISH_SPIKE_STRATEGY,
 ]
 _BEARISH_SPIKE_FILES = [
-    "极速下跌分析识别.txt",
-    "极速下跌交易策略.txt",
+    sf.BEARISH_SPIKE_ID,
+    sf.BEARISH_SPIKE_STRATEGY,
 ]
 
 _RANGE_FILES = [
-    "震荡区间分析识别.txt",
-    "震荡区间交易策略.txt",
+    sf.RANGE_ID,
+    sf.RANGE_STRATEGY,
 ]
 
-_WEDGE_FILE = "文件14-楔形形态分析交易.txt"
-_REVERSAL_FILE = "文件15-二次入场机会.txt"
-_BREAKOUT_FAILURE_FILE = "文件18-突破失败与突破测试.txt"
-_H1H2_FILE = "文件19-H1H2-L1L2计数.txt"
-_ALWAYS_IN_FILE = "文件20-AlwaysIn与20GB.txt"
-_BARBWIRE_FILE = "文件21-铁丝网与无交易环境.txt"
-_MAGNET_FILE = "文件22-信号失败后的磁力位.txt"
-_MTR_FILE = "文件25-主要趋势反转MTR.txt"
-_FINAL_FLAG_FILE = "文件24-最终旗形与趋势末端.txt"
-_TRIANGLE_FILE = "文件27-三角形与收敛形态.txt"
-_DOUBLE_TOP_BOTTOM_FILE = "文件28-双重顶底与微型结构.txt"
+_WEDGE_FILE = sf.WEDGE
+_REVERSAL_FILE = sf.REVERSAL
+_BREAKOUT_FAILURE_FILE = sf.BREAKOUT_FAILURE
+_H1H2_FILE = sf.H1H2
+_ALWAYS_IN_FILE = sf.ALWAYS_IN
+_BARBWIRE_FILE = sf.BARBWIRE
+_MAGNET_FILE = sf.MAGNET
+_MTR_FILE = sf.MTR
+_FINAL_FLAG_FILE = sf.FINAL_FLAG
+_TRIANGLE_FILE = sf.TRIANGLE
+_DOUBLE_TOP_BOTTOM_FILE = sf.DOUBLE_TOP_BOTTOM
 
 # All valid file names (used for dedup validation)
 _ALL_VALID_FILES: frozenset[str] = frozenset([
-    "提示词大纲_人设与思维方式.txt",
-    "市场诊断框架.txt",
-    "文件16-K线信号识别.txt",
-    "文件17-止损和止盈与仓位管理.txt",
-    "文件23-MeasuredMove与结构目标.txt",
-    "上涨通道分析识别.txt",
-    "上涨通道交易策略.txt",
-    "文件13-窄通道与宽通道策略.txt",
-    "下跌通道分析识别.txt",
-    "下跌通道交易策略.txt",
-    "极速上涨分析识别.txt",
-    "极速上涨交易策略.txt",
-    "极速下跌分析识别.txt",
-    "极速下跌交易策略.txt",
-    "震荡区间分析识别.txt",
-    "震荡区间交易策略.txt",
-    "文件14-楔形形态分析交易.txt",
-    "文件15-二次入场机会.txt",
-    "文件18-突破失败与突破测试.txt",
-    "文件19-H1H2-L1L2计数.txt",
-    "文件20-AlwaysIn与20GB.txt",
-    "文件21-铁丝网与无交易环境.txt",
-    "文件22-信号失败后的磁力位.txt",
-    "文件24-最终旗形与趋势末端.txt",
-    "文件25-主要趋势反转MTR.txt",
-    "文件27-三角形与收敛形态.txt",
-    "文件28-双重顶底与微型结构.txt",
+    sf.PERSONA,
+    sf.MARKET_DIAGNOSIS,
+    sf.KLINE_SIGNAL,
+    sf.STOP_TARGET_POSITION,
+    sf.MEASURED_MOVE,
+    sf.BULLISH_CHANNEL_ID,
+    sf.BULLISH_CHANNEL_STRATEGY,
+    sf.CHANNEL_WIDTH,
+    sf.BEARISH_CHANNEL_ID,
+    sf.BEARISH_CHANNEL_STRATEGY,
+    sf.BULLISH_SPIKE_ID,
+    sf.BULLISH_SPIKE_STRATEGY,
+    sf.BEARISH_SPIKE_ID,
+    sf.BEARISH_SPIKE_STRATEGY,
+    sf.RANGE_ID,
+    sf.RANGE_STRATEGY,
+    sf.WEDGE,
+    sf.REVERSAL,
+    sf.BREAKOUT_FAILURE,
+    sf.H1H2,
+    sf.ALWAYS_IN,
+    sf.BARBWIRE,
+    sf.MAGNET,
+    sf.FINAL_FLAG,
+    sf.MTR,
+    sf.TRIANGLE,
+    sf.DOUBLE_TOP_BOTTOM,
 ])
 
 _CHANNEL_STATES = frozenset(["micro_channel", "tight_channel", "normal_channel", "broad_channel"])
