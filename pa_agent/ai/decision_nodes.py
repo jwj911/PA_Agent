@@ -394,6 +394,8 @@ def _node_label(node_id: str) -> str:
 
     except Exception:  # noqa: BLE001
 
+        logger.debug("node_label lookup failed for %s", node_id, exc_info=True)
+
         return node_id
 
 
@@ -1467,7 +1469,7 @@ def _get_signal_seq(out: dict[str, Any], bars: Any) -> int:
 
     except Exception:  # noqa: BLE001
 
-        pass
+        logger.debug("signal bar seq parse failed", exc_info=True)
 
     return 1  # default to K1
 
@@ -2927,7 +2929,7 @@ class DecisionNodeEngine:
 
         except Exception:  # noqa: BLE001
 
-            pass
+            logger.debug("kline geometry feature computation failed", exc_info=True)
 
 
 

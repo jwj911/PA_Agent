@@ -92,7 +92,7 @@ class PendingWriter:
 
             invalidate_latest_record_cache()
         except Exception:  # noqa: BLE001
-            pass
+            self._logger.debug("Failed to invalidate latest-record cache", exc_info=True)
         return path
 
     def save_partial(self, record: AnalysisRecord, reason: str) -> Path:
@@ -118,7 +118,7 @@ class PendingWriter:
 
             invalidate_latest_record_cache()
         except Exception:  # noqa: BLE001
-            pass
+            self._logger.debug("Failed to invalidate latest-record cache", exc_info=True)
         return path
 
     def append_followup(self, record_id: str, turn: FollowupTurn) -> None:

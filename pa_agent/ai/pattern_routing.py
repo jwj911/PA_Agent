@@ -1,8 +1,11 @@
 """Stage-1 pattern tags, entry_setup overlays, and stage-1 briefs for routing."""
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # H1/H2/L1/L2 count setup — avoid bare「计数」(e.g. EMA缺口计数) false positives.
 _HL_COUNT_SETUP_RE = re.compile(
@@ -124,7 +127,7 @@ def _barbwire_candidate(stage1_json: dict[str, Any], kline_frame: Any = None) ->
 
             return compute_simple_market_features(kline_frame).barbwire_candidate
         except Exception:
-            pass
+            logger.debug("barbwire_candidate feature computation failed", exc_info=True)
     return False
 
 

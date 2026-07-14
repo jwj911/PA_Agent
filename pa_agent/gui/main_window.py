@@ -326,7 +326,7 @@ class MainWindow(QMainWindow):
                 Qt.ConnectionType.UniqueConnection,
             )
         except Exception:  # noqa: BLE001
-            pass
+            logger.debug("Failed to connect demo flow playback_finished signal", exc_info=True)
 
         self._central = self._build_workbench()
         self.setCentralWidget(self._central)
@@ -471,7 +471,7 @@ class MainWindow(QMainWindow):
             _s = load_settings(SETTINGS_JSON_PATH)
             saved_ex = getattr(_s.general, 'last_tradingview_exchange', '') or ''
         except Exception:
-            pass
+            logger.debug("Failed to restore last TradingView exchange from settings", exc_info=True)
         idx_ex = self._tv_exchange_combo.findData(saved_ex)
         if idx_ex < 0:
             idx_ex = self._tv_exchange_combo.findData("")
@@ -571,7 +571,7 @@ class MainWindow(QMainWindow):
             try:
                 _settings.general.keep_analysis = False
             except Exception:  # noqa: BLE001
-                pass
+                logger.debug("Failed to reset persisted keep_analysis flag", exc_info=True)
 
         self._resume_chart_btn = QPushButton("图表实时更新")
         self._resume_chart_btn.setEnabled(False)
@@ -779,7 +779,7 @@ class MainWindow(QMainWindow):
                 try:
                     close_ws()
                 except Exception:  # noqa: BLE001
-                    pass
+                    logger.debug("Failed to close TradingView socket before join", exc_info=True)
         if loop.isRunning():
             loop.wait(_WORKER_JOIN_TIMEOUT_MS)
             if loop.isRunning():
@@ -1856,7 +1856,7 @@ class MainWindow(QMainWindow):
                     try:
                         pending_writer.save_partial(None, reason="user_switched")
                     except Exception:  # noqa: BLE001
-                        pass
+                        logger.debug("save_partial failed during symbol switch", exc_info=True)
                 self._analysis_in_progress = False
                 self._update_submit_button_state()
 
@@ -2219,7 +2219,7 @@ class MainWindow(QMainWindow):
                 from pa_agent.config.paths import SETTINGS_JSON_PATH
                 save_settings(settings, SETTINGS_JSON_PATH)
             except Exception:  # noqa: BLE001
-                pass
+                logger.debug("Failed to persist keep_analysis preference", exc_info=True)
 
         wait_cb = getattr(self, "_wait_close_checkbox", None)
         if wait_cb is None:
@@ -3328,7 +3328,7 @@ class MainWindow(QMainWindow):
                     chart_levels = chart_levels_from_stage1_diagnosis(stage1_diag)
                     self._chart_widget.set_support_resistance(chart_levels)
                 except Exception:  # noqa: BLE001
-                    pass
+                    logger.debug("Failed to render support/resistance from Stage 1 diagnosis", exc_info=True)
                 strip.set_metrics(metrics)
         else:
             self._chart_widget.clear_decision_overlay()
@@ -3538,6 +3538,7 @@ class MainWindow(QMainWindow):
         try:
             cancel_on_retry = getattr(settings.general, "cancel_keep_analysis_on_retry", False)
         except Exception:  # noqa: BLE001
+            logger.debug("Failed to read cancel_keep_analysis_on_retry setting", exc_info=True)
             return
         if not cancel_on_retry:
             return
@@ -3554,7 +3555,7 @@ class MainWindow(QMainWindow):
                     "持续跟踪分析已因 %s 重试自动关闭", stage
                 )
             except Exception:  # noqa: BLE001
-                pass
+                logger.debug("Failed to persist keep_analysis=False on retry", exc_info=True)
 
     def _on_record_ready(self, record: Any) -> None:
         """Push the full AnalysisRecord to the conversation and debug tabs."""
@@ -4311,7 +4312,7 @@ class MainWindow(QMainWindow):
                 self._submit_btn.setText("增量分析")
                 return
         except Exception:  # noqa: BLE001
-            pass
+            logger.debug("Incremental bar delta probe failed; falling back to full analysis", exc_info=True)
 
         self._incremental_available = False
         self._submit_btn.setText("提交分析")

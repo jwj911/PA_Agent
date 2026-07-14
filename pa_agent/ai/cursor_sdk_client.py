@@ -77,6 +77,7 @@ def _patch_cursor_sdk_bridge_auth_tokens() -> None:
         import cursor_sdk._store_callback as store_cb  # type: ignore
         import cursor_sdk._tool_callback as tool_cb  # type: ignore
     except Exception:
+        logger.debug("cursor-sdk auth-token patch skipped: import failed", exc_info=True)
         return
     tool_cb._new_auth_token = _safe_bridge_auth_token  # type: ignore[attr-defined]
     store_cb._new_auth_token = _safe_bridge_auth_token  # type: ignore[attr-defined]
@@ -92,6 +93,7 @@ def _patch_cursor_sdk_bridge_argv() -> None:
         import cursor_sdk._store_callback as store_cb  # type: ignore
         import cursor_sdk._tool_callback as tool_cb  # type: ignore
     except Exception:
+        logger.debug("cursor-sdk bridge-argv patch skipped: import failed", exc_info=True)
         return
 
     _orig_tool = tool_cb.tool_callback_bridge_argv
@@ -118,6 +120,7 @@ def _patch_cursor_sdk_subprocess_popen() -> None:
 
         import cursor_sdk._bridge as bridge_mod  # type: ignore
     except Exception:
+        logger.debug("cursor-sdk Popen patch skipped: import failed", exc_info=True)
         return
 
     _orig_popen = subprocess.Popen
@@ -162,6 +165,7 @@ def _patch_cursor_sdk_bridge_windows() -> None:
         from cursor_sdk.errors import CursorSDKError  # type: ignore
     except Exception:
         # If cursor_sdk can't import, we'll fail later with a clearer message.
+        logger.debug("cursor-sdk discovery patch skipped: import failed", exc_info=True)
         return
 
     ready_prefix = getattr(bridge_mod, "READY_LINE_PREFIX", "cursor-sdk-bridge ready ")

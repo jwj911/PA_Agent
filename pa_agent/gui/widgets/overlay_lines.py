@@ -1,6 +1,7 @@
 """Overlay horizontal lines for entry / TP / SL on a pyqtgraph PlotWidget."""
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import pyqtgraph as pg
@@ -8,6 +9,8 @@ from PyQt6.QtGui import QColor
 
 if TYPE_CHECKING:
     from pyqtgraph import PlotItem
+
+logger = logging.getLogger(__name__)
 
 # Line colors
 _COLOR_ENTRY = QColor(30, 144, 255)   # dodger blue
@@ -97,7 +100,7 @@ class OverlayLines:
             try:
                 plot.getViewBox().sigRangeChanged.disconnect(self._range_conn)
             except Exception:  # noqa: BLE001
-                pass
+                logger.debug("OverlayLines: sigRangeChanged disconnect failed", exc_info=True)
             self._range_conn = None
 
         for item in self._items:
@@ -115,6 +118,7 @@ class OverlayLines:
         try:
             x_min = self._plot.getViewBox().viewRange()[0][0]
         except Exception:  # noqa: BLE001
+            logger.debug("OverlayLines: viewRange read failed", exc_info=True)
             return
         for label, price in self._labels:
             label.setPos(x_min, price)

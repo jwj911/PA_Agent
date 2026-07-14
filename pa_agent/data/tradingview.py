@@ -159,7 +159,7 @@ class TradingViewSource(DataSource):
             try:
                 tv.ws = None
             except Exception:  # noqa: BLE001
-                pass
+                logger.debug("tvDatafeed socket reference reset failed", exc_info=True)
 
     # ── Discovery ─────────────────────────────────────────────────────────────
 
@@ -280,7 +280,9 @@ class TradingViewSource(DataSource):
                 try:
                     self.on_probe_status(symbol, exchange, label)
                 except Exception:  # noqa: BLE001
-                    pass
+                    logger.debug(
+                        "on_probe_status callback failed for %s", label, exc_info=True
+                    )
             try:
                 df = self._fetch_hist_with_retry(
                     symbol=code,

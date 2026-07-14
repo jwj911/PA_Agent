@@ -181,7 +181,7 @@ class _BaostockSession:
                 try:
                     sock.close()
                 except Exception:  # noqa: BLE001
-                    pass
+                    logger.debug("Baostock force reset: socket close failed", exc_info=True)
                 setattr(ctx, "default_socket", None)
             with contextlib.redirect_stdout(io.StringIO()):
                 bs.logout()

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -9,6 +10,8 @@ from pa_agent.config.paths import RECORDS_PENDING_DIR
 from pa_agent.data.datetime_ts import format_epoch_for_display, ts_open_to_ms
 from pa_agent.data.base import KlineFrame
 from pa_agent.records.schema import AnalysisRecord
+
+logger = logging.getLogger(__name__)
 
 _TS_EPS_MS = 1.0  # milliseconds tolerance for bar open time matching
 
@@ -43,6 +46,7 @@ def load_record(path: Path) -> AnalysisRecord | None:
         raw = json.loads(path.read_text(encoding="utf-8"))
         return AnalysisRecord.model_validate(raw)
     except Exception:
+        logger.debug("Skipping unreadable analysis record: %s", path, exc_info=True)
         return None
 
 

@@ -7,6 +7,7 @@ Tasks 14.2 + 14.5:
 """
 from __future__ import annotations
 
+import logging
 import math
 from typing import TYPE_CHECKING
 
@@ -21,6 +22,8 @@ from pa_agent.util.trade_metrics import is_long_direction
 
 if TYPE_CHECKING:
     from pa_agent.data.base import KlineFrame
+
+logger = logging.getLogger(__name__)
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -269,7 +272,7 @@ class ChartWidget(pg.PlotWidget):
                         if p is not None:
                             item.setPos(x_min, float(p))
             except Exception:  # noqa: BLE001
-                pass
+                logger.debug("ChartWidget: S/R label positioning failed", exc_info=True)
 
     def clear_support_resistance(self) -> None:
         """Remove all support/resistance lines from the chart."""

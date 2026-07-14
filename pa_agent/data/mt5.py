@@ -145,7 +145,10 @@ class MT5Source(DataSource):
                 import MetaTrader5 as mt5  # type: ignore[import]
                 mt5.symbol_select(symbol, True)
             except Exception:  # noqa: BLE001
-                pass
+                logger.debug(
+                    "MT5 symbol_select failed on subscribe: %s %s", symbol, timeframe,
+                    exc_info=True,
+                )
         logger.info("MT5Source subscribed: %s %s", symbol, timeframe)
 
     def unsubscribe(self) -> None:
@@ -211,7 +214,9 @@ class MT5Source(DataSource):
         try:
             mt5.symbol_select(self._symbol, True)
         except Exception:  # noqa: BLE001
-            pass  # Non-fatal; proceed with fetch
+            logger.debug(
+                "MT5 symbol_select failed before fetch: %s", self._symbol, exc_info=True
+            )  # Non-fatal; proceed with fetch
 
         # Fetch n+1 bars starting from position 0 (current forming bar)
         rates = mt5.copy_rates_from_pos(self._symbol, tf_const, 0, n + 1)

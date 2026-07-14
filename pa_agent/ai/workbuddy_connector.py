@@ -222,7 +222,9 @@ def _extract_workbuddy_token() -> str | None:
                 logger.debug("Using token from %s", _WORKBUDDY_TOKEN_FILE)
                 return token
         except OSError:
-            pass
+            logger.debug(
+                "Failed to read WorkBuddy token file %s", _WORKBUDDY_TOKEN_FILE, exc_info=True
+            )
 
     # ── Layer 3: Environment variables ────────────────────────────────────
     for env_name in (
@@ -270,6 +272,7 @@ def _decrypt_electron_token() -> str | None:
         import base64
         encrypted_key = base64.b64decode(encrypted_key_b64)
     except Exception:
+        logger.debug("WorkBuddy DPAPI: failed to base64-decode encrypted key", exc_info=True)
         return None
 
     if not encrypted_key.startswith(b"DPAPI"):
@@ -349,7 +352,9 @@ def _decrypt_electron_token() -> str | None:
                                         pass
                                 return plain_str.strip("\x00").strip()
                         except Exception:
-                            pass
+                            logger.debug(
+                                "WorkBuddy DPAPI: token candidate parse failed", exc_info=True
+                            )
                     idx += 1
 
     return None

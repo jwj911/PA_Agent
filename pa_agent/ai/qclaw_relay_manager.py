@@ -57,6 +57,7 @@ def _probe_relay_health(port: int, *, timeout: float = 1.5) -> bool:
         data = resp.json()
         return bool(data.get("ok"))
     except Exception:
+        logger.debug("QClaw relay health probe failed on port %s", port, exc_info=True)
         return False
 
 
