@@ -1,9 +1,10 @@
 <!-- From: d:\Code\price_action_agent\AGENTS.md -->
+
 # PA Agent — AI 编码代理须知
 
 > 本文件面向不熟悉本项目的 AI 编码代理。阅读本文件后，你应该对项目目标、技术栈、模块划分、构建/测试流程、安全约束有清晰了解，再开始修改代码。
 
----
+***
 
 ## 1. 项目概述
 
@@ -24,28 +25,28 @@
 - 安全策略：[`SECURITY.md`](./SECURITY.md)
 - 迭代记录：[`docs/CHANGELOG.md`](./docs/CHANGELOG.md)
 
----
+***
 
 ## 2. 技术栈与运行环境
 
-| 项目 | 说明 |
-|------|------|
-| 语言 | Python >= 3.11 |
-| 主操作系统 | Windows 10 / 11（MT5 数据源仅 Windows） |
-| GUI 框架 | PyQt6 + pyqtgraph |
-| 数据处理 | numpy、pandas |
-| LLM 客户端 | openai（OpenAI 兼容协议）+ cursor-sdk |
-| 配置校验 | Pydantic v2 |
-| JSON Schema | jsonschema |
-| Token 计数 | tiktoken |
-| A 股数据源 | akshare、baostock、tushare、东方财富客户端 |
-| 国际市场 | MetaTrader5（Windows）、TradingView（tvdatafeed）、yfinance |
-| 通知 | 飞书机器人、PushPlus |
-| 加解密 | cryptography（仅用于 WorkBuddy DPAPI 解密等少数场景） |
+| 项目          | 说明                                                    |
+| ----------- | ----------------------------------------------------- |
+| 语言          | Python >= 3.11                                        |
+| 主操作系统       | Windows 10 / 11（MT5 数据源仅 Windows）                     |
+| GUI 框架      | PyQt6 + pyqtgraph                                     |
+| 数据处理        | numpy、pandas                                          |
+| LLM 客户端     | openai（OpenAI 兼容协议）+ cursor-sdk                       |
+| 配置校验        | Pydantic v2                                           |
+| JSON Schema | jsonschema                                            |
+| Token 计数    | tiktoken                                              |
+| A 股数据源      | akshare、baostock、tushare、东方财富客户端                      |
+| 国际市场        | MetaTrader5（Windows）、TradingView（tvdatafeed）、yfinance |
+| 通知          | 飞书机器人、PushPlus                                        |
+| 加解密         | cryptography（仅用于 WorkBuddy DPAPI 解密等少数场景）             |
 
 完整依赖见 [`pyproject.toml`](./pyproject.toml)。
 
----
+***
 
 ## 3. 项目结构与模块划分
 
@@ -102,7 +103,7 @@ price_action_agent/
 
 - **`pa_agent/ai/`**：项目核心算法层。
   - `client_factory.py`：根据模型选择客户端（DeepSeekClient / CursorSdkClient）。
-  - `deepseek_client.py`：OpenAI 兼容通用客户端，支持流式、reasoning_content、KV cache，并内置 MiMo、QClaw、WorkBuddy、PackyAPI、KKAI、MiniMax 等网关适配逻辑。
+  - `deepseek_client.py`：OpenAI 兼容通用客户端，支持流式、reasoning\_content、KV cache，并内置 MiMo、QClaw、WorkBuddy、PackyAPI、KKAI、MiniMax 等网关适配逻辑。
   - `cursor_sdk_client.py` / `cursor_connector.py`：Cursor SDK 路由。
   - `qclaw_connector.py` / `qclaw_relay.py` / `qclaw_relay_manager.py`：QClaw 本地网关。
   - `workbuddy_connector.py`：WorkBuddy / CodeBuddy 环境检测与 DPAPI 解密取 token。
@@ -119,11 +120,9 @@ price_action_agent/
   - `pattern_routing.py`：模式识别与路由辅助。
   - `structure_levels.py`：结构位管理。
   - `response_extract.py` / `retry_feedback.py` / `retry_policy.py`：响应提取与重试策略。
-
 - **`pa_agent/config/`**：配置与路径。
   - `settings.py`：Pydantic v2 配置模型与读写；支持旧字段迁移。
   - `paths.py`：集中管理项目根目录、配置、日志、记录、prompt 目录等路径常量。
-
 - **`pa_agent/data/`**：市场数据层。
   - `factory.py`：数据源工厂，返回 MT5 / TradingView / AkShare / EastMoney / Tushare / YFinance 源。
   - `mt5.py`：MetaTrader5 连接。
@@ -132,7 +131,6 @@ price_action_agent/
   - `base.py`：通用数据模型 `KlineFrame`、`KlineBar`、`IndicatorBundle`。
   - `refresh_loop.py` / `bar_close_wait.py`：实时刷新与 K 线收盘等待。
   - `kline_adjust.py` / `market_defaults.py`：复权调整与市场默认值。
-
 - **`pa_agent/gui/`**：PyQt6 GUI。
   - `main_window.py`：主窗口（近 200KB，功能高度集中）。
   - `settings_dialog.py` / `ai_model_settings_dialog.py` / `general_settings_dialog.py` / `feishu_settings_dialog.py`：设置对话框。
@@ -140,19 +138,16 @@ price_action_agent/
   - `chart_widget.py` / `widgets/`：K 线图表与自定义 widgets。
   - `theme/`：QSS 主题与 token。
   - `ai_stream_window.py` / `conversation_widget.py`：实时推理流与会话管理。
-
 - **`pa_agent/orchestrator/`**：业务编排。
   - `two_stage.py`：两阶段分析主流程。
   - `free_chat.py`：分析后自由追问与会话管理。
   - `validation_retry.py`：校验失败后的重试策略。
-
 - **`pa_agent/records/`**：持久化。
   - `pending_writer.py`：分析记录写入（会自动对明文 API Key 脱敏）。
   - `experience_reader.py`：经验库读取。
   - `trade_logger.py`：交易 CSV/截图日志。
   - `analysis_history.py`：历史记录管理。
   - `schema.py`：记录数据结构定义。
-
 - **`pa_agent/util/`**：通用工具。
   - `logging.py`：日志配置与 API Key 掩码格式化。
   - `mask_secret.py`：密钥掩码函数。
@@ -161,7 +156,7 @@ price_action_agent/
   - `crash_diagnostics.py`：崩溃诊断与启动信息记录。
   - `threading.py`：取消令牌、worker 事件等并发原语。
 
----
+***
 
 ## 4. 构建与运行命令
 
@@ -195,14 +190,14 @@ make run
 
 ### 4.1 常用 Makefile 命令
 
-| 命令 | 作用 |
-|------|------|
-| `make run` | 启动 GUI |
-| `make test` | 运行全部测试（`pytest -q`） |
-| `make lint` | 代码检查（`ruff check . && black --check .`） |
-| `make setup-secrets` | 启用 pre-commit 钩子 |
+| 命令                   | 作用                                      |
+| -------------------- | --------------------------------------- |
+| `make run`           | 启动 GUI                                  |
+| `make test`          | 运行全部测试（`pytest -q`）                     |
+| `make lint`          | 代码检查（`ruff check . && black --check .`） |
+| `make setup-secrets` | 启用 pre-commit 钩子                        |
 
----
+***
 
 ## 5. 代码风格规范
 
@@ -229,22 +224,22 @@ black .
 ruff check --fix .
 ```
 
----
+***
 
 ## 6. 测试策略与运行方式
 
 测试位于 `tests/`，分为四层：
 
-| 目录 | 说明 | 标记 |
-|------|------|------|
-| `tests/unit/` | 80+ 单元测试，覆盖数据源、AI 组件、GUI widgets、校验器、记录器等 | `unit` |
-| `tests/integration/` | 两阶段流水线集成测试，使用共享 `conftest.py` | `integration` |
-| `tests/property/` | 基于 Hypothesis 的属性测试 | `property` |
-| `tests/e2e/` | 使用 `pytest-qt` 驱动真实 `MainWindow` 的冒烟测试 | `e2e` |
+| 目录                   | 说明                                        | 标记            |
+| -------------------- | ----------------------------------------- | ------------- |
+| `tests/unit/`        | 80+ 单元测试，覆盖数据源、AI 组件、GUI widgets、校验器、记录器等 | `unit`        |
+| `tests/integration/` | 两阶段流水线集成测试，使用共享 `conftest.py`             | `integration` |
+| `tests/property/`    | 基于 Hypothesis 的属性测试                       | `property`    |
+| `tests/e2e/`         | 使用 `pytest-qt` 驱动真实 `MainWindow` 的冒烟测试    | `e2e`         |
 
 特殊标记：
 
-- `live`：需要真实网络或 API Key（如 `test_akshare_live.py`、`test_kkai_thinking_live.py`），**绝不读取 `config/settings.json`**，仅通过环境变量获取密钥。
+- `live`：需要真实网络或 API Key（如 `test_akshare_live.py`、`test_kkai_thinking_live.py`），**绝不读取** **`config/settings.json`**，仅通过环境变量获取密钥。
 
 运行方式：
 
@@ -272,7 +267,7 @@ pytest -m live
 - CI（`.github/workflows/ci.yml`）目前只在 Windows + Python 3.11 下做安装验证，不运行完整测试套件。
 - 提交前建议至少运行 `pytest -m "not e2e"`。
 
----
+***
 
 ## 7. 安全配置与密钥处理
 
@@ -313,7 +308,7 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
 - `pa_agent/util/safe_filename.py` 提供 `sanitize_filename_component`，用于把 `symbol`/`timeframe` 等用户输入转换为安全的文件路径组件，防止路径遍历与 Windows 保留名问题。
 - 任何把用户输入拼入文件名的场景，都应优先使用该工具，而不是直接 `replace('/', '-')`。
 
----
+***
 
 ## 8. 外部集成
 
@@ -321,7 +316,7 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
 
 支持多种 OpenAI 兼容网关与专用 SDK：
 
-- **DeepSeek**：原生 OpenAI 兼容（`api.deepseek.com`），支持 thinking / reasoning_effort / KV cache。
+- **DeepSeek**：原生 OpenAI 兼容（`api.deepseek.com`），支持 thinking / reasoning\_effort / KV cache。
 - **QClaw**：本地网关（`~/.qclaw/openclaw.json`），模型别名 `openclaw` / `openclaw/*`。
 - **Cursor**：`cursor-sdk`，模型别名 `openclaw_cs` / `openclaw_cs/*`。
 - **WorkBuddy / CodeBuddy**：`copilot.tencent.com/v2`，模型别名 `openclaw_wb`，支持从 Windows DPAPI 解密 Electron Local Storage 取 token。
@@ -342,27 +337,27 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
 
 ### 8.3 通知
 
-- **飞书（Feishu）**：自定义机器人 webhook，支持签名、tenant_access_token、图片上传、交互卡片。
+- **飞书（Feishu）**：自定义机器人 webhook，支持签名、tenant\_access\_token、图片上传、交互卡片。
 - **PushPlus**：简单 HTTP 推送。
 
----
+***
 
 ## 9. 部署与发布
 
-- 当前项目**没有**构建独立可执行文件（如 PyInstaller / Nuitka / cx_Freeze）的流程。
+- 当前项目**没有**构建独立可执行文件（如 PyInstaller / Nuitka / cx\_Freeze）的流程。
 - 部署方式以源码运行或 `pip install -e .` 为主：
   - Windows 用户：直接双击 `run.py` 或在终端执行 `python run.py`。
   - 开发者：`pip install -e ".[dev]"` 后使用 `make run` / `python -m pa_agent.main`。
 - CI（`.github/workflows/ci.yml`）仅做安装与 import 验证，不运行完整测试套件。
 - `tools/` 目录包含大量一次性诊断脚本（网关探测、stage2 JSON 调试、MT5 时钟偏移检测等），不属于正式发布流程。
 
----
+***
 
 ## 10. 给 AI 代理的实用提示
 
 1. **先读配置再改代码**：很多行为由 `config/settings.json` 与 `pa_agent/config/settings.py` 中的 Pydantic 模型控制。新增配置字段时，同步更新 example 文件、GUI 设置对话框、相关测试。
-2. **Prompt 文本在 `prompt_engineering/`**：策略路由、阶段一/阶段二的 prompt 片段多为中文 `.txt` 文件。修改这些文件可能改变模型输出格式，需要同步更新 `tests/` 中的 JSON fixture 与校验用例。
-3. **JSON schema 在 `pa_agent/ai/prompts/schemas.py`**：阶段一/阶段二的输出结构严格受 schema 约束，改动需同步更新 `json_validator.py` 与 normalizer。
+2. **Prompt 文本在** **`prompt_engineering/`**：策略路由、阶段一/阶段二的 prompt 片段多为中文 `.txt` 文件。修改这些文件可能改变模型输出格式，需要同步更新 `tests/` 中的 JSON fixture 与校验用例。
+3. **JSON schema 在** **`pa_agent/ai/prompts/schemas.py`**：阶段一/阶段二的输出结构严格受 schema 约束，改动需同步更新 `json_validator.py` 与 normalizer。
 4. **MainWindow 是巨型文件**：`pa_agent/gui/main_window.py` 接近 200KB、4000+ 行。做小改动时优先定位到具体方法；做大重构时建议与维护者沟通。
 5. **不要假设 API Key 已加密**：当前实现为明文存储在 gitignored 的 `settings.json` 中。任何涉及密钥持久化的新功能都要保持这一安全边界（或明确引入加密方案并更新本文件）。
 6. **优先用测试验证**：本项目测试覆盖较全，改动后请运行相关分层测试；涉及 LLM 输出解析的改动建议同时跑 `unit` 与 `integration`。
@@ -370,6 +365,6 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
 8. **每次迭代必须更新变更日志**：任何代码更新/修复/优化完成后，都要在 [`docs/CHANGELOG.md`](./docs/CHANGELOG.md) 追加或更新对应条目（问题/动机 → 修复/改动 → 涉及文件 → 验证方式），不得只改代码而不记录。
 9. **新增文件/字段时注意更新本文件**：如果你新增了模块、数据源、AI 提供商、安全机制、构建流程等，请同步更新本 `AGENTS.md` 中的对应章节，保持文档与代码一致。
 
----
+***
 
 *本文件基于项目当前实际代码生成。若后续引入本地加密、新增数据源/提供商、调整构建或测试流程，请同步更新本文件。*
