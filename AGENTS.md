@@ -103,7 +103,7 @@ price_action_agent/
 
 - **`pa_agent/ai/`**：项目核心算法层。
   - `client_factory.py`：根据模型选择客户端（DeepSeekClient / CursorSdkClient）。
-  - `deepseek_client.py`：OpenAI 兼容通用客户端，支持流式、reasoning\_content、KV cache，并内置 MiMo、QClaw、WorkBuddy、PackyAPI、KKAI、MiniMax 等网关适配逻辑。
+  - `deepseek_client.py`：OpenAI 兼容通用客户端，支持流式、reasoning\_content、KV cache，并内置 MiMo、QClaw、WorkBuddy、PackyAPI、KKAI、MiniMax 等网关适配逻辑。按 `(base_url, api_key)` 缓存 `_OpenAI` 实例（`_get_client()`），`chat`/`stream_chat` 复用连接池；`update_provider()` 会失效缓存。
   - `cursor_sdk_client.py` / `cursor_connector.py`：Cursor SDK 路由。
   - `qclaw_connector.py` / `qclaw_relay.py` / `qclaw_relay_manager.py`：QClaw 本地网关。
   - `workbuddy_connector.py`：WorkBuddy / CodeBuddy 环境检测与 DPAPI 解密取 token。
@@ -116,7 +116,7 @@ price_action_agent/
   - `session_ledger.py`：Token 用量与上下文窗口追踪。
   - `prompts/schemas.py`：JSON schema 定义。
   - `coherence_checks.py` / `trace_semantic_checks.py`：阶段一/阶段二一致性检查。
-  - `kline_features.py` / `market_features.py`：K 线几何特征与市场特征预计算。
+  - `kline_features.py` / `market_features.py`：K 线几何特征与市场特征预计算。EMA 缺口计数用 `_ema_gap_counts` 单次反向传递（O(n)）批量算好后按 idx 取用，避免逐棒 O(n²) 扫描。
   - `pattern_routing.py`：模式识别与路由辅助。
   - `structure_levels.py`：结构位管理。
   - `response_extract.py` / `retry_feedback.py` / `retry_policy.py`：响应提取与重试策略。
@@ -146,7 +146,7 @@ price_action_agent/
   - `pending_writer.py`：分析记录写入（会自动对明文 API Key 脱敏）。
   - `experience_reader.py`：经验库读取。
   - `trade_logger.py`：交易 CSV/截图日志。
-  - `analysis_history.py`：历史记录管理。
+  - `analysis_history.py`：历史记录管理。`find_latest_successful_record` 带 `_LATEST_RECORD_CACHE`（按 dir mtime 失效），缓存未命中时按 basename 的 `symbol`/`timeframe` 子串预过滤，只解析候选文件。
   - `schema.py`：记录数据结构定义。
 - **`pa_agent/util/`**：通用工具。
   - `logging.py`：日志配置与 API Key 掩码格式化。
@@ -364,6 +364,7 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
 7. **保持中文用户界面**：新增用户可见字符串、日志、提示信息时，默认使用简体中文，与项目现有风格保持一致。
 8. **每次迭代必须更新变更日志**：任何代码更新/修复/优化完成后，都要在 [`docs/CHANGELOG.md`](./docs/CHANGELOG.md) 追加或更新对应条目（问题/动机 → 修复/改动 → 涉及文件 → 验证方式），不得只改代码而不记录。
 9. **新增文件/字段时注意更新本文件**：如果你新增了模块、数据源、AI 提供商、安全机制、构建流程等，请同步更新本 `AGENTS.md` 中的对应章节，保持文档与代码一致。
+10. **热路径注意性能，但不牺牲语义**：`data/snapshot.py`（RefreshLoop tick）、`ai/kline_features.py`（逐棒特征）、`records/analysis_history.py`（增量分析找上次记录）、`ai/deepseek_client.py`（每次 API 调用）等属于高频路径，改动时避免重复计算、无谓遍历与无条件构造大字符串（如把 prompt DEBUG 日志用 `logger.isEnabledFor(logging.DEBUG)` 守卫）。任何性能优化都必须保持输出与原实现一致，替换算法时应给出等价性验证；性能热点清单见 `docs/backend_review_report.md` §8。
 
 ***
 
