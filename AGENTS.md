@@ -144,7 +144,7 @@ price_action_agent/
   - `free_chat.py`：分析后自由追问与会话管理。
   - `validation_retry.py`：校验失败后的重试策略。
 - **`pa_agent/records/`**：持久化。
-  - `pending_writer.py`：分析记录写入（会自动对明文 API Key 脱敏）。
+  - `pending_writer.py`：分析记录写入（会自动对明文 API Key 脱敏）。记录/分片/followup 侧车的文件名 stem 由**单一事实来源** `build_record_basename(record)` 统一生成，格式 `{YYYY-MM-DD_HH-mm-ss}_{symbol}_{timeframe}`（`strftime("%Y-%m-%d_%H-%M-%S")`，`%M` 为分钟；`symbol`/`timeframe` 经 `sanitize_filename_component` 过滤）。`orchestrator/free_chat.py` 的 `_derive_record_id` 必须委托本函数（call-time 导入），保证 followup `.followups.jsonl` 侧车与记录同名。
   - `experience_reader.py`：经验库读取。
   - `trade_logger.py`：交易 CSV/截图日志。
   - `analysis_history.py`：历史记录管理。`find_latest_successful_record` 带 `_LATEST_RECORD_CACHE`（按 dir mtime 失效，`_LATEST_RECORD_LOCK` 保护并发读写），缓存未命中时按 basename 的 `symbol`/`timeframe` 子串预过滤，只解析候选文件。
