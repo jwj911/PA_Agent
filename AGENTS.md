@@ -140,7 +140,7 @@ price_action_agent/
   - `theme/`：QSS 主题与 token。
   - `ai_stream_window.py` / `conversation_widget.py`：实时推理流与会话管理。
 - **`pa_agent/orchestrator/`**：业务编排。
-  - `two_stage.py`：两阶段分析主流程。Stage1/Stage2 的校验错误富化由单一 `_enrich_validation_message(err, reply, *, stage)` 完成（`stage="stage1"|"stage2"` 仅切换少量中文提示串，输出与原分函数逐字节一致）。
+  - `two_stage.py`：两阶段分析主流程。Stage1/Stage2 的校验错误富化由单一 `_enrich_validation_message(err, reply, *, stage)` 完成（`stage="stage1"|"stage2"` 仅切换少量中文提示串，输出与原分函数逐字节一致）。网络降级链（`_stream_chat_resilient` 内 WorkBuddy→Cursor→QClaw）的三个 `_try_*_fallback` 是薄包装器（各自 call-time 导入连接器 `apply_*`/`is_openclaw_*_model` 以保持测试可 patch、守卫、调用 `apply_*`），相同尾部（`update_provider`+`save_settings`+`update_api_key`+切换日志）合并到共享 `_finish_provider_fallback(provider_name, err)`；返回语义与日志文本与拆分前一致。
   - `free_chat.py`：分析后自由追问与会话管理。
   - `validation_retry.py`：校验失败后的重试策略。
 - **`pa_agent/records/`**：持久化。
