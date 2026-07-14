@@ -1,7 +1,7 @@
 """Construct :class:`DataSource` implementations by kind id."""
 from __future__ import annotations
 
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from pa_agent.data.base import DataSource
 from pa_agent.data.market_defaults import (
@@ -9,6 +9,9 @@ from pa_agent.data.market_defaults import (
     GOLD_MT5_SYMBOL,
     GOLD_TV_SYMBOL,
 )
+
+if TYPE_CHECKING:
+    from pa_agent.config.settings import Settings
 
 DataSourceKind = Literal[
     "mt5",
@@ -73,8 +76,17 @@ def default_symbol_for_kind(kind: str | None) -> str:
     return _DEFAULT_SYMBOLS[normalize_data_source_kind(kind)]
 
 
-def create_data_source(kind: str | None) -> DataSource:
-    """Instantiate a fresh data source for *kind* (not connected)."""
+def create_data_source(
+    kind: str | None, settings: Settings | None = None
+) -> DataSource:
+    """Instantiate a fresh data source for *kind* (not connected).
+
+    ``settings`` is injected by callers that already hold the loaded
+    :class:`Settings` (``app_context.bootstrap`` and the GUI data-source
+    switch). Only the Tushare source needs it (for its API token); when a
+    caller omits it, the Tushare branch lazily loads ``settings.json`` as a
+    fallback so standalone/programmatic construction still works.
+    """
     normalized = normalize_data_source_kind(kind)
     if normalized == "tradingview":
         from pa_agent.data.tradingview import TradingViewSource
@@ -85,11 +97,14 @@ def create_data_source(kind: str | None) -> DataSource:
 
         return EastMoneySource()
     if normalized == "tushare":
-        from pa_agent.config.paths import SETTINGS_JSON_PATH
-        from pa_agent.config.settings import load_settings
         from pa_agent.data.tushare_source import TushareSource
 
-        return TushareSource(settings=load_settings(SETTINGS_JSON_PATH))
+        if settings is None:
+            from pa_agent.config.paths import SETTINGS_JSON_PATH
+            from pa_agent.config.settings import load_settings
+
+            settings = load_settings(SETTINGS_JSON_PATH)
+        return TushareSource(settings=settings)
     if normalized == "akshare":
         from pa_agent.data.akshare_source import AkShareSource
 

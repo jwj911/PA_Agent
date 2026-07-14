@@ -13,6 +13,33 @@
 
 ---
 
+## [Unreleased] — 2026-07-14（第十四轮：数据源工厂配置注入，移除工厂对 settings.json 的直接读取 R-M6）
+
+本轮为一处**分层依赖倒置**清理，属后端审查报告（`docs/backend_review_report.md`）路线图 §5.2 的 **M6**（统一数据源配置注入——「移除工厂对 `settings.json` 的直接读取」）范畴。`data/factory.py` 的 `create_data_source(kind)` 在构造 Tushare 源时，会在函数体内 `from pa_agent.config.settings import load_settings` 并直接 `load_settings(SETTINGS_JSON_PATH)` 读盘取配置。问题有二：① **数据层反向依赖配置层并触发磁盘 IO**——工厂本应是纯构造器，却隐藏了一次读盘副作用（数据源切换属 GUI 交互热路径，`main_window._switch_data_source` 每次切到 Tushare 都会多一次 `settings.json` 读盘）；② **配置来源不一致**——`app_context.bootstrap` 与 `main_window._switch_data_source` 两个调用点**手上已持有** `Settings` 实例（前者局部 `settings`、后者 `self._ctx.settings`），工厂却无视调用方的内存态、另起一次读盘，理论上可能拿到与调用方不同步的磁盘内容。
+
+### 代码清理
+
+- **`create_data_source(kind, settings=None)` 增加注入形参**：调用方可把已加载的 `Settings` 注入工厂；仅 Tushare 分支需要它（取 API token）。签名向后兼容（`settings` 默认 `None`）。
+- **保留惰性回退**：当调用方省略 `settings` 时（如现有单测 `test_create_data_source_returns_expected_types` 直接 `create_data_source("tushare")`、或未来独立/脚本化构造），Tushare 分支仍惰性 `load_settings(SETTINGS_JSON_PATH)` 兜底，行为与改动前完全一致。
+- **两个调用点改为注入**：`app_context.bootstrap` 传入局部 `settings`（`create_data_source(ds_kind, settings)`）；`main_window._switch_data_source` 传入 `getattr(self._ctx, "settings", None)`。注入路径下工厂**不再读盘**，直接复用调用方的内存态配置，消除热路径中的冗余 IO 与潜在配置不一致。
+- **类型注解**：`Settings` 仅用于注解，置于 `TYPE_CHECKING` 块导入（`data/factory.py` 无第三方依赖、导入开销为零），符合项目 3.11+ typing 约定。
+
+### 明确不改（保持原样）
+
+- **`TushareSource.__init__(settings=None)` 与 `_configured_token()`**：仍支持「注入 settings → 读 `tushare.token`；否则回退环境变量 `TUSHARE_TOKEN`」的既有取值优先级，零改动。
+- **非 Tushare 分支**（mt5 / tradingview / eastmoney / akshare / yfinance）：从不接触 `settings`，注入形参对其无副作用，构造逻辑逐字节不变。
+- **`normalize_data_source_kind` / `default_symbol_for_kind` / `data_source_label`** 等工厂内其余函数：不涉及 settings 读取，未改动。
+
+### 验证
+
+- `py_compile` 通过（`data/factory.py`、`app_context.py`、`gui/main_window.py`）。
+- **行为验证**：用 `unittest.mock.patch` 断言 `create_data_source`：① 注入 `settings` 时**不调用** `load_settings`（零读盘）且注入实例被原样转发给 `TushareSource._settings`；② 省略 `settings` 时惰性调用 `load_settings` 恰一次（回退兜底）且回退实例被转发；③ 非 Tushare 分支（含注入/不注入）**从不调用** `load_settings`——全部 PASS。另复刻现有单测逻辑（`create_data_source` 对 mt5/tradingview/eastmoney/tushare 返回预期类型）通过，向后兼容无破坏。
+- `ruff check` 对比基线：`data/factory.py` 改动前 **2** 条 → 改动后 **2** 条（均为既有 RUF002 中文标点，位于新增/原有 docstring）；三文件合计 **325** 条 → **325** 条，逐类别一致，无新增告警。
+- `git diff` 密钥扫描（`sk-...` / `api_key=...` / `Bearer` / `secret` / `token=`）无命中明文密钥。
+- 建议在项目 venv 运行 `pytest tests/unit/test_data_source_factory.py -q` 回归工厂路径。
+
+---
+
 ## [Unreleased] — 2026-07-14（第十三轮：provider 自动降级后同步刷新记录写入器脱敏 key R-M9）
 
 本轮为一处**真实的密钥脱敏失效**修复，属后端审查报告（`docs/backend_review_report.md`）路线图 §5.2 的 **M9**（`PendingWriter` 动态 key 脱敏失效——「key 修改后同步更新 writer」）范畴。`PendingWriter` 在序列化每条 `AnalysisRecord` 前，会用**构造时传入的 `api_key`** 递归扫描并把明文 key 替换为掩码（`_sanitize`）。运行时若用户在 GUI「AI 模型」对话框改 key，`main_window._open_ai_model_settings_dialog` 已配套调用 `pending_writer.set_api_key(new_key)`（M9 命名的 `gui/settings_dialog.py` 实为**未被实例化的死代码**，真正生效的是 `AIModelSettingsDialog` 分支），脱敏能跟上。**但另一条运行时改 key 的路径——`orchestrator/two_stage.py` 的 provider 自动降级（`_finish_provider_fallback`，WorkBuddy→Cursor→QClaw）——在切换 provider 时会 `update_api_key(...)` 刷新日志脱敏 formatter，却从未刷新 `PendingWriter` 的脱敏 key**。后果：同一次 `submit()` 内发生网络降级并切换到新 provider（新 key）后，后续 `save_full`/`save_partial` 落盘的记录仍用**旧 key** 做脱敏——**新 provider 的明文 API key 会原样写进记录 JSON 未被掩码**（记录目录虽被 gitignore，但明文密钥落盘仍是安全隐患，且违反项目「持久化记录中不出现明文 key」的安全边界）。

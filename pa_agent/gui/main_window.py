@@ -1225,7 +1225,7 @@ class MainWindow(QMainWindow):
             symbol = self._symbol_combo.currentText().strip()
             timeframe = self._tf_combo.currentText()
 
-            new_source = create_data_source(kind)
+            new_source = create_data_source(kind, getattr(self._ctx, "settings", None))
             # Wire auto-probe status callback for TV
             from pa_agent.data.tradingview import TradingViewSource
             if isinstance(new_source, TradingViewSource):
