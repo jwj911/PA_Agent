@@ -125,7 +125,7 @@ price_action_agent/
   - `settings.py`：Pydantic v2 配置模型与读写；支持旧字段迁移。
   - `paths.py`：集中管理项目根目录、配置、日志、记录、prompt 目录等路径常量。
 - **`pa_agent/data/`**：市场数据层。
-  - `factory.py`：数据源工厂，返回 MT5 / TradingView / AkShare / EastMoney / Tushare / YFinance 源。
+  - `factory.py`：数据源工厂，返回 MT5 / TradingView / AkShare / EastMoney / Tushare / YFinance 源。`create_data_source(kind, settings=None)` 为纯构造器；仅 Tushare 分支需 `settings`（取 API token）。调用方（`app_context.bootstrap`、`main_window._switch_data_source`）已持有 `Settings`，应**注入**而非让工厂读盘；`settings` 省略时 Tushare 分支才惰性 `load_settings(SETTINGS_JSON_PATH)` 兜底（向后兼容独立/脚本化构造与既有单测）。`Settings` 仅注解用途，置于 `TYPE_CHECKING` 块导入。
   - `mt5.py`：MetaTrader5 连接。
   - `tradingview.py` / `tradingview_connectivity.py`：TradingView WebSocket/HTTP 数据。
   - `akshare_source.py` / `eastmoney_source.py` / `tushare_source.py` / `yfinance_source.py`：A 股/期货数据源。
