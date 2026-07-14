@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-14（第二十二轮：继续拆分 decision_nodes，提取 direction_judge §2.3 方向判定器 R-M3-6）
+
+本轮为**大文件拆分 M3 的第六刀**（第十七轮 `decision_thresholds.py` 常量、第十八轮 `bar_geometry.py` 几何原语、第十九轮 `preflight.py` 数据闸门、第二十轮 `trace_nodes.py` 结果层、第二十一轮 `signal_bar_judges.py` §9 信号棒判定器簇），是**第二个被剥离的 section-judge**。本刀选 **§2.3「方向」判定器** `judge_direction`——它是一个**完全自足的单函数**：五信号投票（EMA 斜率、加权收盘重心、波段结构 HH/HL vs LL/LH、趋势棒占优、K 线重叠比）+ 中窗口确认过滤，输出 `(direction, NodeFill)` 填充 §2.3 节点。选它作为下一刀的关键动机：① 它是**单函数、无跨 judge 共享的私有辅助**（内部 `_weighted_avg`/`_weighted_avg_med` 为函数内嵌套定义，随函数整体迁出，不影响其他 judge）；② 依赖全部为**叶子模块**——`NodeFill`（来自 `trace_nodes`）、几何原语 `_count_trend_bars`/`_find_swings`/`_mean_overlap_ratio`（来自 `bar_geometry`）、方向阈值常量（来自 `decision_thresholds`），**不引用任何其他 judge、不回依赖 `decision_nodes`**（无环前提：`direction_judge` ← `decision_nodes`），故可一刀干净剥离而不触发循环导入。（注：AlwaysIn 判定器簇因其私有辅助 `_max_pullback_atr` 被 §2.5 `judge_momentum_strength` 共享引用，尚未构成干净单刀，留待后续先抽共享辅助再拆。）
+
+### 代码清理
+
+- **新增 `pa_agent/ai/direction_judge.py`（§2.3 方向判定器模块）**：把 `judge_direction` **逐字节搬迁**至新模块（保留全部 docstring、中文 reason 串、`score` 算术、`answer`/`branch`/`bar_range` 取值与嵌套 `_weighted_avg`/`_weighted_avg_med` 辅助），import 仅 `from __future__ import annotations` + `math` + `typing.Any` + `from pa_agent.ai.bar_geometry import (_count_trend_bars, _find_swings, _mean_overlap_ratio)` + `from pa_agent.ai.decision_thresholds import (...9 个方向/重叠/斜率/趋势棒阈值...)` + `from pa_agent.ai.trace_nodes import NodeFill`，无其他项目依赖、无副作用。模块 docstring 说明其「第二个被剥离的 section-judge」定位、叶子依赖与「行为须与原文一致」的约束。
+- **`decision_nodes.py` 改为从 `direction_judge` 导入 `judge_direction`**：删除原 `judge_direction` 定义块（含 `# ── DirectionJudge` 分隔头），在文件顶部 import 组新增 `from pa_agent.ai.direction_judge import judge_direction`（字母序排在 `decision_thresholds` 之后、`preflight` 之前，单一 import 块内，避免新增 I001 区块）。该名字在 `decision_nodes.py` 函数体内**确有引用**（`apply_stage2` 链 `direction, fill_23 = judge_direction(frame)`），属**正常 import**（非纯重导出，无需 `# noqa: F401`）。因 `from pa_agent.ai.decision_nodes import judge_direction` 站点仍从 `decision_nodes` 命名空间取到同一对象，**跨模块 import 逐字节兼容**（`tests/unit/test_decision_nodes_judges.py`、`test_trend_context.py`、`prompt_assembler.py` 均无需改动）。
+- **7 个 DIRECTION_*/OVERLAP_* 常量从 `decision_nodes` import 块剪除**：`DIRECTION_BEAR_THRESHOLD`/`DIRECTION_BULL_THRESHOLD`/`DIRECTION_STRONG_SHORT_SCORE`/`DIRECTION_WINDOW`/`DIRECTION_WINDOW_MED`/`OVERLAP_HIGH_THRESHOLD`/`OVERLAP_LOW_THRESHOLD` 随 `judge_direction` 迁出后在 `decision_nodes.py` 内**已无任何引用点**，且全仓库**无任何站点**从 `decision_nodes` 命名空间 import 这些常量（其他消费方如 `trend_context.py` 直接从 `decision_thresholds` import），故直接剪除、不做重导出（无兼容风险）。`EMA_SLOPE_LOOKBACK`（仍被 `judge_market_chaos`/AlwaysIn 引用）与 `TREND_BAR_DOMINANCE_RATIO`（仍被 `judge_market_chaos` 引用）**保留**。文件进一步收缩 307 行（74588→61701 字节）。
+
+### 验证
+
+- `py_compile` 通过（`direction_judge.py`、`decision_nodes.py`，EXIT=0）。
+- **重导出/迁移等价性**：`python` 断言 `decision_nodes.judge_direction is direction_judge.judge_direction`（**同一对象**）、`decision_nodes.NodeFill is direction_judge.NodeFill`、`inspect.getmodule(decision_nodes.judge_direction).__name__ == "pa_agent.ai.direction_judge"`，且 7 个已剪除常量 `hasattr(decision_nodes, name) is False`、保留的 `EMA_SLOPE_LOOKBACK`/`TREND_BAR_DOMINANCE_RATIO` `hasattr is True`（"IDENTITY_OK"）。
+- **运行时行为对比**（本机 `decision_nodes`/`direction_judge`/`data.base` 不经 PyQt6 链可直接跑）：从 `git show HEAD:` 取拆分前的 `judge_direction` 源码 `exec` 重建为 `old_judge`，与经**重导出的 `decision_nodes.judge_direction` 路径**在 **36 个可控帧**（`n∈{20,25,30,50}` × `ema_slope∈{up,down,flat}` × `close_pattern∈{up,down,flat}`）上逐例断言 `(direction, NodeFill)` 输出**逐字节一致**（CASES=36 MISMATCHES=0，"RUNTIME_OK"）。
+- `ruff check` 对比基线：基线 `decision_nodes.py` 单文件 **180** 条（161×RUF001、6×RUF003、5×RUF002、3×RUF100、1×I001、1×RUF005、1×SIM103、1×SIM105、1×SIM114）→ 拆分后 `decision_nodes.py`（150：138×RUF001、4×RUF002、3×RUF100、1×I001、1×RUF005、1×SIM103、1×SIM105、1×SIM114）+ 新增 `direction_judge.py`（30：23×RUF001、6×RUF003、1×RUF002）合计 **180**，**逐类别完全一致、零净新增告警**（23×RUF001+6×RUF003+1×RUF002 随中文 reason 串/注释/docstring 迁入新模块；`decision_nodes.py` 的 RUF100 仍为 3——`SIGNAL_BAR_LONG_ATR_RATIO` `# noqa: F401` 生效未被判为冗余，未因剪除 7 常量而产生新冗余 noqa）。全仓库 `ruff check pa_agent` 总数 **3796** 保持不变。
+- `git diff` 密钥扫描（`sk-...` / `api_key` / `Bearer` / `secret=` / `token=`）无命中——纯结构搬迁，无密钥。
+
+---
+
 ## [Unreleased] — 2026-07-14（第二十一轮：继续拆分 decision_nodes，提取 signal_bar_judges §9 判定器簇 R-M3-5）
 
 本轮为**大文件拆分 M3 的第五刀**（第十七轮 `decision_thresholds.py` 常量、第十八轮 `bar_geometry.py` 几何原语、第十九轮 `preflight.py` 数据闸门、第二十轮 `trace_nodes.py` 结果层），是**首次剥离 section-judge 本身**。前四刀已把各 judge 共享的「底层依赖」（常量/几何/闸门/`NodeFill` 结果层）抽成无环叶子模块，为拆 judge 铺好路。本刀选**最自足的 §9「信号棒」判定器簇**作为第一个 judge 模块：`judge_signal_bar_closed`（§9.1 信号棒恒已收盘）、`judge_signal_bar_direction`（§9.2 bar_type 与下单方向一致性，外包棒降级为「弱」集合并告警）、`judge_signal_bar_length`（§9.3 过长棒判定，对比 `SIGNAL_BAR_LONG_ATR_RATIO`）、`judge_follow_through`（§9.5 follow_through_1_2 映射），连同 §9.2 的 4 个 bar-type 常量（`_LONG_BAR_TYPES`/`_SHORT_BAR_TYPES`/`_LONG_BAR_TYPES_WEAK`/`_SHORT_BAR_TYPES_WEAK`）。选它作为第一个 judge 的关键动机：这簇**只依赖叶子模块**——`NodeFill`（来自 `trace_nodes`）与 `SIGNAL_BAR_LONG_ATR_RATIO`（来自 `decision_thresholds`），**不引用任何其他 judge、不回依赖 `decision_nodes`**（无环前提：`signal_bar_judges` ← `decision_nodes`），故能一刀干净剥离而不触发循环导入。
