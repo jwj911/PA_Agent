@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from pa_agent.ai.json_validator import JsonValidator
-from pa_agent.ai.stage2_normalizer import normalize_stage2
 from pa_agent.data.base import IndicatorBundle, KlineBar, KlineFrame
 from pa_agent.util.price_tick import (
     infer_price_tick_from_frame,
@@ -10,9 +9,6 @@ from pa_agent.util.price_tick import (
     normalize_breakout_entry_price,
     round_to_tick,
 )
-from tests.fixtures.validators import schema_test_validator
-
-import json
 
 
 def _frame(high: float = 104.0) -> KlineFrame:
@@ -66,23 +62,20 @@ def test_normalize_short_breakout_extreme_high_to_low() -> None:
     assert decision["entry_basis_extreme"] == "low"
 
 
-def test_stage2_normalizer_passes_breakout_price_check() -> None:
+def test_breakout_price_normalization_passes_extreme_check() -> None:
     frame = _frame(high=104.0)
-    obj = normalize_stage2(
-        {
-            "decision": {
-                "order_type": "突破单",
-                "order_direction": "做多",
-                "entry_basis_bar": "K1",
-                "entry_basis_extreme": "high",
-                "entry_price": 104.0,
-                "take_profit_price": 120.0,
-                "stop_loss_price": 99.0,
-                "estimated_win_rate": 55,
-            },
-        },
-        kline_frame=frame,
-    )
-    assert obj["decision"]["entry_price"] > 104.0
-    msgs = JsonValidator._check_breakout_price_extreme(obj, frame)
+    decision = {
+        "order_type": "突破单",
+        "order_direction": "做多",
+        "entry_basis_bar": "K1",
+        "entry_basis_extreme": "high",
+        "entry_price": 104.0,
+        "take_profit_price": 120.0,
+        "stop_loss_price": 99.0,
+        "estimated_win_rate": 55,
+    }
+
+    assert normalize_breakout_entry_price(decision, kline_frame=frame)
+    assert decision["entry_price"] > 104.0
+    msgs = JsonValidator._check_breakout_price_extreme({"decision": decision}, frame)
     assert msgs == []
