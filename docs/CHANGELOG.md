@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百二十六轮：继续 L7，扩展 Ruff 到 A 股共享工具）
+
+本轮继续推进 **L7：CI 增强**。第一百二十五轮已把 AI validation messages 纳入 focused Ruff；本轮继续评估数据层剩余候选，选择仅有 docstring 标点与 pandas Timestamp 分支机械 lint 的 `pa_agent/data/ashare_common.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/data/ashare_common.py`。
+- **清理 A 股共享工具 lint**：将 A 股交易时段 docstring 中的 en dash 改为 ASCII hyphen，将一处中文 docstring 逗号改为 ASCII，并把 pandas `Timestamp` 时区本地化/转换分支改为等价三元表达式。
+- **保持业务语义不变**：本轮不改 A 股 symbol 归一化、指数判断、交易时段判断、日线 forming bar 补齐、行情 quote 写入、OHLCV 归一化、4h 重采样或 KlineBar 转换逻辑。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 A 股共享工具。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/data/ashare_common.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\data\ashare_common.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_akshare_source.py tests/unit/test_tushare_source.py tests/unit/test_market_defaults.py --tb=line -q -p no:cacheprovider` → **32 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百二十五轮：继续 L7，扩展 Ruff 到 validation messages）
 
 本轮继续推进 **L7：CI 增强**。第一百二十四轮已把数据源工厂纳入 focused Ruff；本轮继续评估 AI 辅助小文件，选择仅有一处中文状态文案分隔符 Ruff 命中的 `pa_agent/ai/validation_messages.py`。
