@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百二十九轮：继续 L7，扩展 Ruff 到 East Money quote API 常量）
+
+本轮继续推进 **L7：CI 增强**。第一百二十八轮已补齐收盘等待与快照 warmup 测试 Ruff 覆盖；本轮继续沿 East Money quote 解析边界推进，选择只包含协议常量和字段说明的 `pa_agent/data/eastmoney_quote_api.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/data/eastmoney_quote_api.py`。
+- **清理协议注释 lint**：将 East Money quote API 注释中的 en dash、全角括号与全角逗号改为 ASCII 标点，消除注释侧 `RUF003`。
+- **保持业务语义不变**：本轮不改 API path、host、字段清单、五档/L2 字段 pair、`TEN_DEPTH_FIELDS` 或逐笔/分时协议常量。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 East Money quote API 常量与解析边界。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/data/eastmoney_quote_api.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\data\eastmoney_quote_api.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_eastmoney_quote.py --tb=line -q -p no:cacheprovider` → **3 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百二十八轮：继续 L7，扩展 Ruff 到收盘等待与快照 warmup 测试）
 
 本轮继续推进 **L7：CI 增强**。第一百二十七轮已把 East Money quote 解析纳入 focused Ruff；本轮转向已经在目标 pytest 中运行、但尚未进入 focused Ruff 的数据框架测试，补齐收盘等待与快照 warmup 相关测试的静态检查覆盖。
