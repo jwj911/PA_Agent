@@ -13,6 +13,24 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百二十三轮：继续 L7，扩展 Ruff 到 EventBus）
+
+本轮继续推进 **L7：CI 增强**。第一百二十二轮已把刷新循环纳入 focused Ruff；本轮继续从 util 基础设施中选择低风险候选，纳入已经 Ruff clean 且由 `util.__init__` 暴露的 `pa_agent/util/event_bus.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/util/event_bus.py`。
+- **保持代码语义不变**：本轮不修改 `EventBus` 信号定义、payload 类型、便利发射方法或 GUI / orchestrator 连接路径，仅扩大 focused Ruff 覆盖面。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 util EventBus。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/util/event_bus.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\util\event_bus.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百二十二轮：继续 L7，扩展 Ruff 到刷新循环）
 
 本轮继续推进 **L7：CI 增强**。第一百二十一轮已把包入口文件纳入 focused Ruff；本轮继续评估数据层剩余小文件，选择已有 warmup 合同测试覆盖、且只需机械 lint 清理的 `pa_agent/data/refresh_loop.py`。
