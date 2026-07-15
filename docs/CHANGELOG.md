@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百三十四轮：继续 L7，扩展 Ruff 到 EastMoney source）
+
+本轮继续推进 **L7：CI 增强**。第一百三十三轮已把 Tushare source 纳入 focused Ruff；本轮继续沿 A 股数据源边界推进，选择已有 forming-bar 与 factory 无网络测试覆盖的 `pa_agent/data/eastmoney_source.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/data/eastmoney_source.py`。
+- **清理 EastMoney source lint**：整理模块级与函数内 import 顺序，并将日线交易日和连续交易时段下的 forming bar 现价刷新分支合并为等价条件。
+- **保留中文用户提示**：A 股代码无效、东方财富网络中断、Baostock 与东方财富均不可用三处中文提示属于用户可见文案，本轮使用行级 `# noqa: RUF001` 保留原显示语义。
+- **保持业务语义不变**：本轮不改 East Money / Baostock 查询参数、缓存 TTL、forming bar 补齐、盘口/现价刷新、指数与股票路径、4h 重采样或 fallback 顺序。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 EastMoney source。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/data/eastmoney_source.py tests/unit/test_data_source_forming_bar.py tests/unit/test_data_source_factory.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\data\eastmoney_source.py tests\unit\test_data_source_forming_bar.py tests\unit\test_data_source_factory.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_data_source_forming_bar.py tests/unit/test_data_source_factory.py --tb=line -q -p no:cacheprovider` → **18 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百三十三轮：继续 L7，扩展 Ruff 到 Tushare source）
 
 本轮继续推进 **L7：CI 增强**。第一百三十二轮已把 AkShare source 纳入 focused Ruff；本轮继续沿 A 股数据源边界推进，选择已有 fake `tushare` 无网络测试覆盖、lint 面很小的 `pa_agent/data/tushare_source.py`。
