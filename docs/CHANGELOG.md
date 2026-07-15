@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第五十九轮：继续 L7，扩展 CI 到 K 线几何特征测试）
+
+本轮继续推进 **L7：CI 增强**。第五十八轮已把 AI 小模块纯函数测试纳入目标 CI；本轮继续评估后端特征计算测试。候选集中 `market_features.py` 仍有大量面向 prompt 的中文文案 RUF001 历史噪声，不适合直接纳入 Ruff 门禁；因此本轮收窄到稳定且可清理的 ATR true range、K 线方向标签与 `kline_features` 几何特征测试。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_atr_true_range.py`、`test_kline_candle_direction.py`、`test_kline_features.py`。目标测试数量从 **131** 扩展到 **141**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `pa_agent/ai/kline_features.py` 以及上述三组测试文件，使 K 线几何特征路径进入 lint 门禁。
+- **清理目标注释 lint**：将 `kline_features.py` 与 `test_kline_features.py` 中少量注释/docstring 的中文全角标点改为 ASCII 标点；不改运行时代码、不改 prompt 文案、不改变 follow-through 判定语义。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 ATR true range、K 线方向与 K 线几何特征。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_atr_true_range.py tests/unit/test_kline_candle_direction.py tests/unit/test_kline_features.py --tb=line -q -p no:cacheprovider` → **10 passed**。
+- 扩展后目标集：`py -3.12 -m pytest tests/unit/test_data_source_forming_bar.py tests/unit/test_bar_close_wait.py tests/unit/test_snapshot_closed_only_buffer.py tests/unit/test_build_analysis_frame.py tests/unit/test_snapshot_indicator_warmup.py tests/unit/test_data_source_factory.py tests/unit/test_mt5_clock_skew.py tests/unit/test_order_method_router.py tests/unit/test_trend_context.py tests/unit/test_decision_nodes_orchestrator.py tests/unit/test_provider_sync_service.py tests/unit/test_qclaw_auto_fallback.py tests/unit/test_secret_store.py tests/unit/test_settings_round_trip.py tests/unit/test_pending_writer_sanitize.py tests/unit/test_pending_writer_no_plaintext_key.py tests/unit/test_datetime_ts.py tests/unit/test_kline_bar_normalize.py tests/unit/test_atr_true_range.py tests/unit/test_kline_candle_direction.py tests/unit/test_kline_features.py tests/unit/test_cycle_enums.py tests/unit/test_response_extract.py tests/unit/test_mimo_compat.py --tb=line -q -p no:cacheprovider` → **141 passed**。
+- 扩展后 Ruff：`py -3.12 -m ruff check pa_agent/data/base.py pa_agent/data/snapshot.py pa_agent/data/mt5.py pa_agent/data/yfinance_source.py pa_agent/data/datetime_ts.py pa_agent/ai/provider_sync_service.py pa_agent/ai/cycle_enums.py pa_agent/ai/response_extract.py pa_agent/ai/mimo_compat.py pa_agent/ai/kline_features.py pa_agent/security/secret_store.py pa_agent/records/pending_writer.py tests/unit/test_data_source_forming_bar.py tests/unit/test_mt5_clock_skew.py tests/unit/test_order_method_router.py tests/unit/test_trend_context.py tests/unit/test_decision_nodes_orchestrator.py tests/unit/test_provider_sync_service.py tests/unit/test_qclaw_auto_fallback.py tests/unit/test_secret_store.py tests/unit/test_settings_round_trip.py tests/unit/test_pending_writer_sanitize.py tests/unit/test_pending_writer_no_plaintext_key.py tests/unit/test_datetime_ts.py tests/unit/test_kline_bar_normalize.py tests/unit/test_atr_true_range.py tests/unit/test_kline_candle_direction.py tests/unit/test_kline_features.py tests/unit/test_cycle_enums.py tests/unit/test_response_extract.py tests/unit/test_mimo_compat.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\ai\kline_features.py tests\unit\test_atr_true_range.py tests\unit\test_kline_candle_direction.py tests\unit\test_kline_features.py` → 通过。
+
+---
+
 ## [Unreleased] — 2026-07-15（第五十八轮：继续 L7，扩展 CI 到 AI 小模块纯函数测试）
 
 本轮继续推进 **L7：CI 增强**。第五十七轮已把时间戳与 KlineBar 归一化工具测试纳入目标 CI；本轮继续评估 AI 层小模块测试。候选集中 `decision_stance.py` 与 `session_ledger.py` 仍有大量历史 Ruff 噪声，不适合直接纳入 lint 门禁；因此本轮收窄到稳定且 Ruff 干净的 `cycle_enums`、`response_extract` 与 `mimo_compat` 三组纯函数/兼容性测试。
