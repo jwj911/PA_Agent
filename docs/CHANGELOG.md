@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第七十七轮：继续 L7，扩展 CI 到 provider override 测试）
+
+本轮继续推进 **L7：CI 增强**。第七十六轮已把 Stage 1 pattern routing 测试纳入目标 CI；本轮继续筛选 Ruff 干净、纯后端的 provider 路由测试。`test_provider_override_by_model.py` 覆盖 QClaw、WorkBuddy 与 Cursor SDK route 在保存设置时对 `base_url`、`api_key`、thinking/reasoning preference 与子模型名的处理，适合进入目标 CI。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_provider_override_by_model.py`。目标测试数量从 **294** 扩展到 **300**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `tests/unit/test_provider_override_by_model.py`。
+- **修正过期测试期望**：`test_openclaw_cs_overrides_user_url_and_key` 更新为 `test_openclaw_cs_clears_url_and_keeps_cursor_key`。当前 `openclaw_cs` 是 Cursor SDK route，合同是清空 `base_url` 并保留用户填写的 `crsr_...` Cursor key，而不是复用 QClaw token；测试据此改为验证当前实现合同。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 provider override by model。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_provider_override_by_model.py --tb=line -q -p no:cacheprovider` → **6 passed**。
+- `py -3.12 -m ruff check tests/unit/test_provider_override_by_model.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests\unit\test_provider_override_by_model.py` → 通过。
+- 扩展后目标集：从 `.github/workflows/ci.yml` 解析 `Run targeted unit tests` 清单并执行 `py -3.12 -m pytest @tests --tb=line -q -p no:cacheprovider` → **300 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单并执行 `py -3.12 -m ruff check @argsList` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第七十六轮：继续 L7，扩展 CI 到 Stage 1 pattern routing 测试）
 
 本轮继续推进 **L7：CI 增强**。第七十五轮已把 chart decision overlay 测试纳入目标 CI；本轮继续筛选纯后端、低依赖的 Stage 1 路由测试。`test_pattern_routing.py` 覆盖 `detected_patterns` 与 `entry_setup_type` 的同步、特殊形态策略文件路由、H1/H2/L1/L2 计数误判防护，以及铁丝网/区间中部标签的保守补全逻辑。该测试不启动 GUI，也不访问真实网络。
