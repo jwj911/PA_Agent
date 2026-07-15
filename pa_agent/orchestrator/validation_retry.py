@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Literal
+from typing import Any, Literal
 
 from pa_agent.ai.json_validator import Ok, ValidationError, coalesce_model_json_text
 from pa_agent.ai.retry_feedback import build_retry_feedback, parse_previous_for_cheat
@@ -33,9 +34,12 @@ def append_assistant_turn(
     content = getattr(reply, "content", None) or ""
     if not content.strip():
         return messages
-    if messages and messages[-1].get("role") == "assistant":
-        if (messages[-1].get("content") or "").strip() == content.strip():
-            return messages
+    if (
+        messages
+        and messages[-1].get("role") == "assistant"
+        and (messages[-1].get("content") or "").strip() == content.strip()
+    ):
+        return messages
     preserve_mimo = False
     if provider_settings is not None:
         from pa_agent.ai.mimo_compat import (
@@ -55,7 +59,7 @@ def append_assistant_turn(
         )
     else:
         assistant_msg = {"role": "assistant", "content": content}
-    return messages + [assistant_msg]
+    return [*messages, assistant_msg]
 
 
 def validate_with_retry(
@@ -194,7 +198,8 @@ def validate_with_retry(
             )
         else:
             assistant_msg = {"role": "assistant", "content": content}
-        current_messages = current_messages + [
+        current_messages = [
+            *current_messages,
             assistant_msg,
             {"role": "user", "content": feedback},
         ]
