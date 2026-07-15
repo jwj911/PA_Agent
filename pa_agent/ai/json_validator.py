@@ -74,6 +74,7 @@ from pa_agent.ai.json_repair import (  # noqa: E402, F401
     coalesce_model_json_text,
     format_model_json_for_context,
 )
+from pa_agent.ai.schema_validator import collect_schema_errors  # noqa: E402
 
 # ── JsonValidator ─────────────────────────────────────────────────────────────
 
@@ -251,28 +252,13 @@ class JsonValidator:
         norm_mode = getattr(self._validation, "normalization_mode", "strict")
 
         # ── Schema validation (b and c) ───────────────────────────────────────
-        try:
-            import jsonschema  # type: ignore[import]
-        except ImportError:
-            logger.warning("jsonschema not installed; skipping schema validation")
+        schema_result = collect_schema_errors(obj, schema)
+        if schema_result is None:
             return Ok(obj=obj)
 
-        errors = list(jsonschema.Draft7Validator(schema).iter_errors(obj))
-
-        # Classify errors
-        missing: list[str] = []
-        invalid: list[str] = []
-        allowed: dict[str, list] = {}
-
-        for err in errors:
-            path = ".".join(str(p) for p in err.absolute_path) or err.schema_path[-1]
-            if err.validator == "required":
-                # Extract the missing property name from the message
-                missing.append(err.message.split("'")[1] if "'" in err.message else str(path))
-            else:
-                invalid.append(str(path) or err.message[:80])
-                if "enum" in err.schema:
-                    allowed[str(path)] = err.schema["enum"]
+        missing: list[str] = list(schema_result.missing_fields)
+        invalid: list[str] = list(schema_result.invalid_fields)
+        allowed: dict[str, list] = dict(schema_result.allowed_values)
 
         # ── Explicit cross-field checks ───────────────────────────────────────
         if stage == "stage1":
@@ -384,18 +370,22 @@ class JsonValidator:
                 for msg in validate_stage2_order_trace_semantics(obj):
                     invalid.append(f"trace_semantic:{msg}")
 
-        if not errors and not missing and not invalid:
+        if not schema_result.has_errors and not missing and not invalid:
             return Ok(obj=obj)
 
         # Determine category: b if only missing fields, c otherwise
-        if invalid or (missing and errors[0].validator not in ("required",)):
+        if invalid or (missing and schema_result.first_validator not in ("required",)):
             category: Literal["b", "c"] = "c"
         elif missing:
             category = "b"
         else:
             category = "c"
 
-        first_message = errors[0].message[:120] if errors else (invalid[0] if invalid else "custom validation failed")
+        first_message = (
+            schema_result.first_message
+            if schema_result.has_errors
+            else (invalid[0] if invalid else "custom validation failed")
+        )
         return ValidationError(
             category=category,
             stage=stage,
@@ -403,7 +393,7 @@ class JsonValidator:
             missing_fields=missing,
             invalid_fields=invalid,
             allowed_values=allowed,
-            message=f"{len(errors)} schema error(s): {first_message}",
+            message=f"{schema_result.error_count} schema error(s): {first_message}",
         )
 
     _check_no_order_invariant = staticmethod(business_rules.check_no_order_invariant)
