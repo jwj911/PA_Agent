@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第六十轮：继续 L7，扩展 CI 到 provider quota 检测）
+
+本轮继续推进 **L7：CI 增强**。第五十九轮已把 K 线几何特征测试纳入目标 CI；本轮继续评估 provider 与连续性相关小模块。候选集中 `decision_continuity.py` 仍有既有测试失败和大量 prompt 文案 Ruff 噪声，`provider_override_by_model` 受 connector/环境状态影响仍不适合直接纳入 CI；因此本轮收窄到稳定的 provider quota/402 检测路径。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_provider_errors.py`。目标测试数量从 **141** 扩展到 **146**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `pa_agent/ai/provider_errors.py` 与 `tests/unit/test_provider_errors.py`，使 provider quota/402 识别与 category e 非重试路径进入 lint 门禁。
+- **保留网关原文与用户提示语义**：`PROVIDER_QUOTA_USER_MESSAGE` 和测试里的 OpenClaw 402 中文响应样例需要保留真实中文标点，本轮用行级 `# noqa: RUF001` 标注保留原因，而不是改写用户可见文案或网关样例。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 provider quota/402 检测。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_provider_errors.py --tb=line -q -p no:cacheprovider` → **5 passed**。
+- 扩展后目标集：`py -3.12 -m pytest tests/unit/test_data_source_forming_bar.py tests/unit/test_bar_close_wait.py tests/unit/test_snapshot_closed_only_buffer.py tests/unit/test_build_analysis_frame.py tests/unit/test_snapshot_indicator_warmup.py tests/unit/test_data_source_factory.py tests/unit/test_mt5_clock_skew.py tests/unit/test_order_method_router.py tests/unit/test_trend_context.py tests/unit/test_decision_nodes_orchestrator.py tests/unit/test_provider_sync_service.py tests/unit/test_qclaw_auto_fallback.py tests/unit/test_secret_store.py tests/unit/test_settings_round_trip.py tests/unit/test_pending_writer_sanitize.py tests/unit/test_pending_writer_no_plaintext_key.py tests/unit/test_datetime_ts.py tests/unit/test_kline_bar_normalize.py tests/unit/test_atr_true_range.py tests/unit/test_kline_candle_direction.py tests/unit/test_kline_features.py tests/unit/test_cycle_enums.py tests/unit/test_response_extract.py tests/unit/test_mimo_compat.py tests/unit/test_provider_errors.py --tb=line -q -p no:cacheprovider` → **146 passed**。
+- 扩展后 Ruff：`py -3.12 -m ruff check pa_agent/data/base.py pa_agent/data/snapshot.py pa_agent/data/mt5.py pa_agent/data/yfinance_source.py pa_agent/data/datetime_ts.py pa_agent/ai/provider_sync_service.py pa_agent/ai/cycle_enums.py pa_agent/ai/response_extract.py pa_agent/ai/mimo_compat.py pa_agent/ai/kline_features.py pa_agent/ai/provider_errors.py pa_agent/security/secret_store.py pa_agent/records/pending_writer.py tests/unit/test_data_source_forming_bar.py tests/unit/test_mt5_clock_skew.py tests/unit/test_order_method_router.py tests/unit/test_trend_context.py tests/unit/test_decision_nodes_orchestrator.py tests/unit/test_provider_sync_service.py tests/unit/test_qclaw_auto_fallback.py tests/unit/test_secret_store.py tests/unit/test_settings_round_trip.py tests/unit/test_pending_writer_sanitize.py tests/unit/test_pending_writer_no_plaintext_key.py tests/unit/test_datetime_ts.py tests/unit/test_kline_bar_normalize.py tests/unit/test_atr_true_range.py tests/unit/test_kline_candle_direction.py tests/unit/test_kline_features.py tests/unit/test_cycle_enums.py tests/unit/test_response_extract.py tests/unit/test_mimo_compat.py tests/unit/test_provider_errors.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\ai\provider_errors.py tests\unit\test_provider_errors.py` → 通过。
+
+---
+
 ## [Unreleased] — 2026-07-15（第五十九轮：继续 L7，扩展 CI 到 K 线几何特征测试）
 
 本轮继续推进 **L7：CI 增强**。第五十八轮已把 AI 小模块纯函数测试纳入目标 CI；本轮继续评估后端特征计算测试。候选集中 `market_features.py` 仍有大量面向 prompt 的中文文案 RUF001 历史噪声，不适合直接纳入 Ruff 门禁；因此本轮收窄到稳定且可清理的 ATR true range、K 线方向标签与 `kline_features` 几何特征测试。
