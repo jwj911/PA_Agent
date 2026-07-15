@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第四十五轮：启动 M7，统一 forming bar 判定入口）
+
+本轮启动后端审查报告 §5.2 的 **M7：统一 forming bar 判定**。此前 `DataSource` ABC 只约定 `latest_snapshot()` 返回 newest-first K 线，forming-bar 是否存在由各数据源自行设置 `KlineBar.closed`，而 `snapshot.py` 直接散用 `bar_close_wait.has_forming_bar_at_head()`。这让后续为特定交易所/数据源处理 session、server time、停牌或周末 stale tick 时缺少统一覆写点。本轮第一刀不改变 `KlineBar.closed` 含义，也不改各数据源产出；先在 ABC 上提供默认判定入口，并把 GUI snapshot 构建迁移到该入口。
+
+### 代码清理
+
+- **`DataSource` ABC 新增 `has_forming_bar_at_head(...) -> bool` 默认方法**：参数接收 newest-first bars、`timeframe`、`now_ms`、`symbol`，默认委托 `bar_close_wait.has_forming_bar_at_head()`。当调用方未显式传入 `now_ms` 时，通过 `reference_now_ms(data_source=self)` 优先复用数据源可提供的 broker/server time，继续保留 stale `closed=False` bar 在周期结束后视为已收盘的既有语义。各具体数据源以后可 override 该方法承接交易所/session 特例。
+- **`snapshot.py` 统一 forming-bar 调用入口**：新增内部 `_head_is_forming(...)`，优先调用传入 `data_source.has_forming_bar_at_head(...)`，缺省时回退原 helper；`take_snapshot_from_bars()`、`build_display_frame()`、`build_live_frame()`、`build_analysis_frame()` 和 `_newest_closed_slice()` 均新增兼容性可选参数 `data_source`，旧调用不受影响。
+- **GUI 图表/分析快照传入当前数据源**：`MainWindow._build_chart_frame_from_bars()` 在已有 `now_ms = self._reference_now_ms()` 的基础上，把 `self._ctx.data_source` 传给 `build_live_frame()` / `build_display_frame()`，使实时图和分析图都进入 ABC 统一判定入口。
+- **新增 `tests/unit/test_data_source_forming_bar.py`**：覆盖 ABC 默认方法与共享 helper 的等价性、活动 intraday bar 仍判定为 forming、以及 `build_analysis_frame(..., data_source=...)` 会尊重子类 override。
+
+### 验证
+
+- `py_compile` 通过（`base.py`、`snapshot.py`、`main_window.py`、`test_data_source_forming_bar.py`，EXIT=0）。
+- `py -3.12 -m pytest tests/unit/test_data_source_forming_bar.py tests/unit/test_bar_close_wait.py tests/unit/test_snapshot_closed_only_buffer.py tests/unit/test_build_analysis_frame.py tests/unit/test_snapshot_indicator_warmup.py --tb=line -q -p no:cacheprovider` → **22 passed**。
+- `py -3.12 -m ruff check pa_agent/data/base.py pa_agent/data/snapshot.py tests/unit/test_data_source_forming_bar.py` → **All checks passed**。
+- `pa_agent/gui/main_window.py` 全文件 ruff 基线仍存在大量既有 RUF/SIM/I001 告警，本轮未做大文件顺手清理；本轮对该文件仅新增 `data_source` 变量并作为关键字参数传入 snapshot 构建函数，已通过 `py_compile` 与目标测试覆盖。
+- `git diff --check` 通过；仅提示 Windows 工作树 LF/CRLF 规范化 warning，无 whitespace error。
+
+---
+
 ## [Unreleased] — 2026-07-15（第四十四轮：继续 M5，下沉 provider fallback 共享尾部到 ProviderSyncService）
 
 本轮继续推进 **M5：提取 `ProviderSyncService`**。第四十三轮已把启动期 QClaw / WorkBuddy / Cursor provider 同步编排从 `AppContext.bootstrap()` 下沉到 `ProviderSyncService.sync_on_load()`；本轮处理 M5 的另一半职责——`TwoStageOrchestrator._finish_provider_fallback()` 中的 provider fallback 共享尾部。三个 per-provider 包装器（`_try_workbuddy_fallback` / `_try_cursor_fallback` / `_try_qclaw_fallback`）继续保留 call-time connector import、route guard 与 `apply_*_provider_to_settings()` 调用，确保测试 patch 点与尝试顺序不变；成功 apply 之后的通用副作用（`update_provider`、`save_settings`、`update_api_key`、`pending_writer.set_api_key`、切换日志）统一委托服务层执行。
