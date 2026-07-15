@@ -3,8 +3,6 @@ from __future__ import annotations
 
 import json
 
-import pytest
-
 from pa_agent.ai.coherence_checks import (
     validate_bar_by_bar_vs_features,
     validate_incremental_stage1_coherence,
@@ -12,9 +10,12 @@ from pa_agent.ai.coherence_checks import (
     validate_stage2_coherence,
 )
 from pa_agent.ai.json_validator import Ok
-from tests.fixtures.validators import schema_test_validator
 from pa_agent.data.base import IndicatorBundle, KlineBar, KlineFrame
-from tests.fixtures.gate_trace import make_bar_by_bar_summary, make_mandatory_gate_trace_proceed
+from tests.fixtures.gate_trace import (
+    make_bar_by_bar_summary,
+    make_mandatory_gate_trace_proceed,
+)
+from tests.fixtures.validators import schema_test_validator
 
 
 def _frame(n: int = 5) -> KlineFrame:
@@ -146,7 +147,7 @@ def test_incremental_requires_delta_language() -> None:
     s1["incremental_delta"] = {
         "new_closed_bars": ["K1", "K2", "K3"],
         "changed_fields": [],
-        "summary": "新增K线后结构延续，周期判断不变",
+        "summary": "新增K线后结构延续，周期判断不变",  # noqa: RUF001
     }
     assert not validate_incremental_stage1_coherence(s1, new_bar_count=3)
 
@@ -190,7 +191,7 @@ def test_bar_type_mismatch_near_threshold_does_not_error_in_strict() -> None:
     assert errs == []
 
 
-def test_structural_inside_outside_mismatch_still_errors_in_strict() -> None:
+def test_inside_vs_trend_overlap_does_not_error_in_strict() -> None:
     frame = KlineFrame(
         symbol="XAUUSD",
         timeframe="15m",
@@ -222,6 +223,43 @@ def test_structural_inside_outside_mismatch_still_errors_in_strict() -> None:
     )
     stage1 = {
         "bar_by_bar_summary": [{"bar": "K1", "bar_type": "trend_bull", "reason": "x"}]
+    }
+    errs = validate_bar_by_bar_vs_features(stage1, kline_frame=frame, strict=True)
+    assert errs == []
+
+
+def test_outside_bull_bear_mismatch_still_errors_in_strict() -> None:
+    frame = KlineFrame(
+        symbol="XAUUSD",
+        timeframe="15m",
+        bars=(
+            # K1 is an outside bull bar versus K2.
+            KlineBar(
+                seq=1,
+                ts_open=2,
+                open=100.0,
+                high=112.0,
+                low=99.0,
+                close=111.0,
+                volume=1.0,
+                closed=True,
+            ),
+            KlineBar(
+                seq=2,
+                ts_open=1,
+                open=100.0,
+                high=110.0,
+                low=100.0,
+                close=109.0,
+                volume=1.0,
+                closed=True,
+            ),
+        ),
+        snapshot_ts_local_ms=1,
+        indicators=IndicatorBundle(ema20=(100.0, 100.0), atr14=(10.0, 10.0)),
+    )
+    stage1 = {
+        "bar_by_bar_summary": [{"bar": "K1", "bar_type": "outside_bear", "reason": "x"}]
     }
     errs = validate_bar_by_bar_vs_features(stage1, kline_frame=frame, strict=True)
     assert any("contradicts" in e for e in errs)
