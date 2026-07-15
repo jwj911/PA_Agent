@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百零五轮：继续 L7，扩展 Ruff 到 records 包）
+
+本轮继续推进 **L7：CI 增强**。第一百零四轮已把 focused Ruff 扩展到 `security` 与 `gui/theme`；本轮转向记录持久化包，把此前已覆盖的 `pending_writer.py` / `analysis_history.py` 提升为整个 `pa_agent/records` 包级门禁。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 将 `pa_agent/records/pending_writer.py` 与 `pa_agent/records/analysis_history.py` 合并提升为 `pa_agent/records`。
+- **清理 records lint**：`records/__init__.py` 的 `__all__` 按 Ruff 要求排序；`trade_logger.py` 整理局部 matplotlib import、将 K 线 OHLC 局部变量改为 `open_`/`high`/`low`/`close`、移除当前规则集中无效的 `BLE001` noqa。
+- **保持记录语义不变**：`trade_logger.py` 仅做机械 lint 清理；图表标题中的全角括号改为 ASCII 括号，不改变字段、CSV、图片路径或交易记录写入逻辑。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 `records` 包。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/records` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\records\__init__.py pa_agent\records\analysis_history.py pa_agent\records\experience_reader.py pa_agent\records\pending_writer.py pa_agent\records\schema.py pa_agent\records\trade_logger.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_analysis_history.py --tb=line -q -p no:cacheprovider` → **5 passed**。
+- 相关测试：`PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` 下分别运行 `tests/unit/test_pending_writer_sanitize.py` 与 `tests/unit/test_pending_writer_no_plaintext_key.py` → **15 passed / 10 passed**。本地默认插件环境下两者均已显示 `[100%]` 但进程退出阶段卡住，因此用禁用插件自动加载方式取得干净退出码。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百零四轮：继续 L7，扩展 Ruff 到 security 与 theme）
 
 本轮继续推进 **L7：CI 增强**。第一百零三轮已开始把 Ruff 覆盖从测试侧转向小型源码包；本轮继续选择已经干净、边界明确且低风险的源码范围，把安全包与 GUI 主题包纳入 focused Ruff。
