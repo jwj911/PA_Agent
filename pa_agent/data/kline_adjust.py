@@ -15,10 +15,7 @@ def set_kline_adjust(adjust: str | None) -> None:
     global _current
     key = str(adjust or "qfq").strip().lower()
     with _LOCK:
-        if key in ("qfq", "hfq", "none"):
-            _current = key  # type: ignore[assignment]
-        else:
-            _current = _DEFAULT
+        _current = key if key in ("qfq", "hfq", "none") else _DEFAULT  # type: ignore[assignment]
 
 
 def get_kline_adjust() -> KlineAdjust:

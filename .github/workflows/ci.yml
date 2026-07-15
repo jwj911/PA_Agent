@@ -139,6 +139,11 @@ jobs:
           pa_agent/data/mt5.py
           pa_agent/data/yfinance_source.py
           pa_agent/data/datetime_ts.py
+          pa_agent/data/eastmoney_field_enums.py
+          pa_agent/data/eastmoney_urls.py
+          pa_agent/data/bar_close_wait.py
+          pa_agent/data/kline_adjust.py
+          pa_agent/data/refresh_policy.py
           pa_agent/data/tradingview_connectivity.py
           pa_agent/data/market_defaults.py
           pa_agent/ai/provider_sync_service.py

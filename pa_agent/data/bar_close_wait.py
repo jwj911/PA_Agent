@@ -75,7 +75,7 @@ def seconds_until_bar_closes(
         return 0 if elapsed_ms > 0 else duration_s
 
     remaining_ms = duration_ms - remainder_ms
-    return int(math.ceil(remaining_ms / 1000))
+    return math.ceil(remaining_ms / 1000)
 
 
 def reference_now_ms(
