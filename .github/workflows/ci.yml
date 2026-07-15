@@ -235,3 +235,5 @@ jobs:
           tests/unit/test_demo_replayer.py
           tests/property
           tests/integration
+          tests/e2e
+          tests/fixtures

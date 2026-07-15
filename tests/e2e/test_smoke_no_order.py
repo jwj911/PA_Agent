@@ -7,15 +7,14 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock
 
-import pytest
 import pyqtgraph as pg
+import pytest
 
+from pa_agent.ai.router import route_strategy_files
 from pa_agent.app_context import AppContext
+from tests.fixtures.ai_payloads import VALID_STAGE1, VALID_STAGE2_NO_ORDER
 from tests.fixtures.kline_bars import make_newest_first_bars
 from tests.fixtures.validators import schema_test_validator
-from pa_agent.ai.router import route_strategy_files
-
-from tests.fixtures.ai_payloads import VALID_STAGE1, VALID_STAGE2_NO_ORDER
 
 
 def _make_reply(content_dict: dict) -> MagicMock:
@@ -61,7 +60,7 @@ def test_no_order_shows_no_trade_conclusion(qtbot, tmp_path):
     """When stage2 returns 不下单, DecisionPanel shows that conclusion."""
     from pa_agent.gui.main_window import MainWindow
 
-    ctx, pending_writer = _make_ctx(tmp_path)
+    ctx, _pending_writer = _make_ctx(tmp_path)
 
     window = MainWindow(ctx)
     qtbot.addWidget(window)

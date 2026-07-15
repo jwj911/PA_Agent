@@ -1,4 +1,5 @@
 """Full stage-1 gate_trace fixtures for validator coherence tests."""
+# ruff: noqa: RUF001
 from __future__ import annotations
 
 from typing import Any
@@ -18,10 +19,7 @@ def make_mandatory_gate_trace_proceed(
     for i, nid in enumerate(STAGE1_MANDATORY_GATE_NODES):
         hi = max(1, cap - (i % cap))
         lo = max(1, hi - 1 - (i % 2))
-        if lo >= hi:
-            bar_range = f"K{hi}"
-        else:
-            bar_range = f"K{hi}-K{lo}"
+        bar_range = f"K{hi}" if lo >= hi else f"K{hi}-K{lo}"
         reason = (
             f"节点{nid}依据当前K线窗口{bar_range}完成定性判断，"
             f"结构与周期识别一致，可继续后续分析。"

@@ -9,12 +9,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from pa_agent.ai.router import route_strategy_files
 from pa_agent.app_context import AppContext
+from tests.fixtures.ai_payloads import VALID_STAGE1, VALID_STAGE2_ORDER
 from tests.fixtures.kline_bars import make_newest_first_bars
 from tests.fixtures.validators import schema_test_validator
-from pa_agent.ai.router import route_strategy_files
-
-from tests.fixtures.ai_payloads import VALID_STAGE1, VALID_STAGE2_ORDER
 
 
 def _make_reply(content_dict: dict) -> MagicMock:

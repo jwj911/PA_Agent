@@ -1,4 +1,5 @@
 """Shared valid Stage1/Stage2 JSON payloads for unit, integration, and e2e tests."""
+# ruff: noqa: RUF001
 from __future__ import annotations
 
 from tests.integration.conftest import (
