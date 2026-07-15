@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-14（第三十轮：继续拆分 PromptAssembler，提取 experience_renderer 经验库渲染器 R-M1-2）
+
+本轮为**大文件拆分 M1 的第二刀**（第二十九轮 `kline_table_renderer.py` 已把 K 线表渲染器簇拆出，`prompt_assembler.py` 从 1963 行降至 1902 行）。首刀切走了 **KlineTableRenderer 产出**，本刀转向报告 §5.2 M1 点名的另一产出——**ExperienceRenderer**，即把「阶段二 user 消息」中折叠最近经验库案例的纯文本块渲染器 `_render_experience` 抽成独立叶子模块。它是把经验库条目（dict / 带 `content` 属性对象 / 纯字符串）落地成「## 经验库(最近案例,供参考)」文本块的确定性生成器：逐条 `json.dumps(indent=2)` 序列化、超 `max_chars_per_entry`（默认 400）截断加省略号、每条包 markdown ```json 围栏。选它作为 M1 第二刀的关键动机：① 它是一个**极简自足单元**——单个 `@staticmethod`，除 `build_stage2`/`stage2_system_prompt_only` 链的唯一内部调用点（`self._render_experience(...)`）外不被其他逻辑纠缠；② 依赖**纯 stdlib**——只 `json`（无任何项目 import），故新模块可**独立 import 并运行真实 runtime 等价验证**（同 KlineTableRenderer 一样绕开 `market_features`→PyQt6 触链）；③ `experience_renderer` ← `prompt_assembler` **无环**（新模块不回依赖 `prompt_assembler`）。
+
+### 代码清理
+
+- **新增 `pa_agent/ai/experience_renderer.py`（经验库渲染器模块，stdlib-only 叶子）**：把 `_render_experience`（去掉 `@staticmethod` 装饰降为模块函数、更名去掉前导下划线为 `render_experience`）**逐字节搬迁**至新模块（保留「## 经验库(最近案例,供参考)」块头、「以下案例仅作对照…」中文告诫串、`isinstance(dict)`/`hasattr("content")`/`str(entry)` 三分支序列化、`max_chars_per_entry - 3` 截断加 `"..."`、每条 `\n### 案例 {i}\n```json\n{blob}\n```` 围栏）。import 仅 `from __future__ import annotations` + `json` + `typing.Any`，无其他 import 期项目依赖、无副作用。模块 docstring 说明其「ExperienceRenderer」定位、stdlib-only 叶子依赖、`PromptAssembler` staticmethod 重绑定约束、以及「块头/中文告诫/围栏/截断省略号须逐字节一致（模型按此块形对齐）」的约束。
+- **`prompt_assembler.py` 改为从 `experience_renderer` 导入并重绑定 staticmethod**：删除原 `_render_experience` 方法体（含 `@staticmethod` 装饰，共约 25 行）；在顶部 import 组新增 `from pa_agent.ai.experience_renderer import render_experience`（字母序排在 `decision_stance` 之后、`pattern_routing` 之前）；在 `PromptAssembler` 类体末尾「Experience library rendering」区以 1 行 `_render_experience = staticmethod(render_experience)` **重绑定**，使 `build_stage2` 链内 `self._render_experience(entries)` 调用**逐字节兼容**。`import json` 保留（`_compact_stage1_json` 等多处仍用）。文件从 1902 行降至 1880 行。
+- **调用站点零改动**：`PromptAssembler._render_experience`（`build_stage2` → `stage2_system_prompt_only` 链的唯一内部调用点）因 staticmethod 重绑定仍从 `PromptAssembler` 命名空间取到同一函数。
+
+### 验证
+
+- `py_compile` 通过（`experience_renderer.py`、`prompt_assembler.py`，EXIT=0）。
+- **AST 结构核验**：`ast.walk` 确认 `prompt_assembler.py` 中已无 `render_experience`/`_render_experience` 函数定义残留（渲染器已全部迁出，仅余 1 行 staticmethod 重绑定）。
+- **真实 runtime 等价对比**（新模块 stdlib-only 可独立 import）：从 `git show HEAD:prompt_assembler.py` 用正则提取拆分前的 `_render_experience` 方法 `exec` 重建为 `old_render_exp`，与新模块 `render_experience` 在 **7 组条目用例**（空列表、单/多 dict、带 `content` 属性对象、纯字符串、超长触发截断、四类混排）× **4 种 `max_chars_per_entry`**（50/400/1000/默认）上逐例对比返回值——`EXPERIENCE_EQ` **True**（含 dict/content-attr/str 三分支与截断路径全覆盖）。
+- `ruff check` 对比基线：拆分前后总数 **1373** 保持不变；逐错误码 Counter 对比——新模块 `experience_renderer.py` 携 **1** 条（1×RUF001 全角逗号，随「## 经验库(最近案例,供参考)」块头迁入），`prompt_assembler.py` 从 1373 降至 1372，合计 1373，**逐类别一致、零净新增告警**。
+- `git diff` 密钥扫描（`sk-...` / `api_key` / `Bearer` / `secret=` / `token=`）无命中——纯结构搬迁，无密钥。
+- **既有失败甄别**：`test_prompt_assembler.py` 因 import `PromptAssembler` 经 `market_features`→`util/__init__`→`event_bus`→PyQt6 在本机无法收集，属**既有环境缺口**（本机缺 PyQt6），与本轮纯结构搬迁无关；本轮迁出的渲染器已由 stdlib-only 的 runtime 等价脚本独立验证。
+
+---
+
 ## [Unreleased] — 2026-07-14（第二十九轮：拆分 PromptAssembler，提取 kline_table_renderer K 线表渲染器簇 R-M1-1）
 
 本轮为**大文件拆分 M1 的第一刀**（对应后端审查报告 §5.2 M1「拆分 `PromptAssembler`，产出 `Stage1PromptBuilder`/`Stage2PromptBuilder`/`KlineTableRenderer`/`ExperienceRenderer`」）。`prompt_assembler.py` 是 AI 层超大文件（1963 行，CRLF），此前 M2/M3 各轮未触碰。本刀先切报告明确点名的 **KlineTableRenderer 产出**——即把喂给模型「阶段一/阶段二 user 消息」的两张纯文本 K 线表渲染器抽成独立叶子模块。它们是把结构化 K 线「落地成模型逐字节对齐的 OHLC/EMA20/ATR14 表 + 单棒几何特征表」的确定性文本生成器：`_render_kline_table`（价量指标表，含 EMA/ATR 的 `N/A` warm-up 分支）、`_render_kline_feature_table`（几何特征表，逐字段用 `_fmt_feature` 格式化），配套 `_fmt_feature` 辅助与 `_KLINE_INDICATOR_NOTE` 中文说明常量。选它作为 M1 第一刀的关键动机：① 它是一个**高内聚自足簇**——两个渲染器 + 一个格式化辅助 + 一个常量逻辑闭环，除 `PromptAssembler` 内部调用与测试外不被其他逻辑纠缠；② 依赖**全为 PyQt6-free 叶子模块**——`kline_features`（`bar_candle_direction_label`/`compute_kline_geometry_features`）、`data.base`（`KlineFrame`）、`data.datetime_ts`（`format_epoch_for_display`）均验证 `import` 期不触 PyQt6，故新模块可**独立 import 并运行真实 runtime 等价验证**（区别于经 `market_features`→`util/__init__`→`event_bus`→PyQt6 触链的 market-feature 包装方法——那两个方法本刀**暂留** `prompt_assembler.py`，待后续切 Stage1/Stage2PromptBuilder 时一并处理）；③ `kline_table_renderer` ← `prompt_assembler` **无环**（新模块不回依赖 `prompt_assembler`）。
