@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百二十七轮：继续 L7，扩展 Ruff 到 East Money quote 解析）
+
+本轮继续推进 **L7：CI 增强**。第一百二十六轮已把 A 股共享工具纳入 focused Ruff；本轮继续评估数据层剩余候选，选择边界清晰的 `pa_agent/data/eastmoney_quote.py`，并补充无网络解析单测。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/data/eastmoney_quote.py` 与 `tests/unit/test_eastmoney_quote.py`，目标 pytest 清单同步新增该测试。
+- **补充 East Money quote 测试**：新增测试覆盖免费五档盘口解析、L2 十档分价格缩放、逐笔成交过滤与 tail 截断。
+- **清理 quote parser lint**：将盘口 volume 注释中的全角括号改为 ASCII，调整 `parse_order_book_payload()` docstring 中的 L2 字段范围标点。
+- **保持业务语义不变**：本轮不改 East Money 字段映射、`fltt` 推断、价格/涨跌幅缩放、五档/L2 合并、逐笔 side hint 解析或 tail 截断逻辑。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试与 Ruff 门禁已覆盖 East Money quote 解析。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/data/eastmoney_quote.py tests/unit/test_eastmoney_quote.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\data\eastmoney_quote.py tests\unit\test_eastmoney_quote.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_eastmoney_quote.py --tb=line -q -p no:cacheprovider` → **3 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百二十六轮：继续 L7，扩展 Ruff 到 A 股共享工具）
 
 本轮继续推进 **L7：CI 增强**。第一百二十五轮已把 AI validation messages 纳入 focused Ruff；本轮继续评估数据层剩余候选，选择仅有 docstring 标点与 pandas Timestamp 分支机械 lint 的 `pa_agent/data/ashare_common.py`。
