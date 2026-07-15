@@ -37,6 +37,9 @@ jobs:
           tests/unit/test_refresh_loop_warmup.py
           tests/unit/test_akshare_source.py
           tests/unit/test_tushare_source.py
+          tests/unit/test_tradingview_socket.py
+          tests/unit/test_tradingview_errors.py
+          tests/unit/test_tv_symbol_lookup.py
           tests/unit/test_mt5_clock_skew.py
           tests/unit/test_mt5_symbol_available.py
           tests/unit/test_order_method_router.py
@@ -46,6 +49,8 @@ jobs:
           tests/unit/test_qclaw_auto_fallback.py
           tests/unit/test_qclaw_agent_route.py
           tests/unit/test_cursor_agent_route.py
+          tests/unit/test_api_key_configured.py
+          tests/unit/test_pushplus_notifier.py
           tests/unit/test_secret_store.py
           tests/unit/test_settings_round_trip.py
           tests/unit/test_pending_writer_sanitize.py
@@ -107,6 +112,9 @@ jobs:
           tests/unit/test_refresh_loop_warmup.py
           tests/unit/test_akshare_source.py
           tests/unit/test_tushare_source.py
+          tests/unit/test_tradingview_socket.py
+          tests/unit/test_tradingview_errors.py
+          tests/unit/test_tv_symbol_lookup.py
           tests/unit/test_mt5_clock_skew.py
           tests/unit/test_mt5_symbol_available.py
           tests/unit/test_order_method_router.py
@@ -116,6 +124,8 @@ jobs:
           tests/unit/test_qclaw_auto_fallback.py
           tests/unit/test_qclaw_agent_route.py
           tests/unit/test_cursor_agent_route.py
+          tests/unit/test_api_key_configured.py
+          tests/unit/test_pushplus_notifier.py
           tests/unit/test_secret_store.py
           tests/unit/test_settings_round_trip.py
           tests/unit/test_pending_writer_sanitize.py
