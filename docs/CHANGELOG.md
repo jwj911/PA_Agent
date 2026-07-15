@@ -13,6 +13,29 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第九十三轮：继续 L7，扩展 CI 到 Qt helper 测试）
+
+本轮继续推进 **L7：CI 增强**。第九十二轮已把 decision node property 测试纳入目标 CI；本轮开始处理小范围 Qt helper 测试，优先选择不触真实网络、依赖面较窄且当前实现合同稳定的 GUI 辅助用例。`test_chart_skip_redraw.py` 覆盖纯已收盘 K 线快照相同时跳过重复重绘；`test_debug_widget_masks_key.py` 覆盖 DebugWidget 中 API Key 脱敏展示；`test_token_indicator_thresholds.py` 覆盖 token 进度条阈值样式和提示行为。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_chart_skip_redraw.py`、`tests/unit/test_debug_widget_masks_key.py` 与 `tests/unit/test_token_indicator_thresholds.py`。目标测试数量从 **591** 扩展到 **607**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI headless Qt 设置**：目标 pytest 步骤新增 `QT_QPA_PLATFORM=offscreen`，使 Qt helper 测试可在 GitHub Actions Windows 环境无显示会话下运行。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增上述 3 个 Qt helper 测试文件。
+- **清理目标测试 lint**：通过 Ruff 自动移除未使用 import 并整理 import 块空行；本轮不修改 GUI 源文件。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 chart skip-redraw、DebugWidget key masking 与 token indicator thresholds。
+
+### 验证
+
+- 本地 Python 3.12 环境缺少 `pytest-qt`；为验证本轮测试，在 `%TEMP%\pa_agent_qt_dep` 临时安装 `pytest-qt>=4.4` 并通过 `PYTHONPATH` 注入。CI 仍使用既有 `pip install -e ".[dev]"`，`pyproject.toml` 已包含 `pytest-qt>=4.4`。
+- 新增测试：`py -3.12 -m pytest tests/unit/test_chart_skip_redraw.py tests/unit/test_debug_widget_masks_key.py tests/unit/test_token_indicator_thresholds.py --tb=line -q -p no:cacheprovider`（带 `QT_QPA_PLATFORM=offscreen` 与临时 `PYTHONPATH`）→ **16 passed**。
+- `py -3.12 -m ruff check tests/unit/test_chart_skip_redraw.py tests/unit/test_debug_widget_masks_key.py tests/unit/test_token_indicator_thresholds.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests\unit\test_chart_skip_redraw.py tests\unit\test_debug_widget_masks_key.py tests\unit\test_token_indicator_thresholds.py` → 通过。
+- 扩展后目标集采用分块验证：既有 CI 目标集（排除本轮新增 3 文件）→ **591 passed**；本轮新增 Qt helper 测试 → **16 passed**。完整合计覆盖 **607** 项目标测试。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第九十二轮：继续 L7，扩展 CI 到 decision node property 测试）
 
 本轮继续推进 **L7：CI 增强**。第九十一轮已把 trace normalize 与 prompt assembler 测试纳入目标 CI；本轮继续筛选纯后端 decision node 属性测试。`test_decision_nodes_preflight.py` 覆盖 PreflightDataGate 的空 K 线、坏 OHLC、K 线数量阈值、EMA/ATR 缺失与 Hypothesis 边界性质；`test_decision_nodes_judges.py` 覆盖 direction / always-in / signal-bar judges、program node 合并与 override 规则。
