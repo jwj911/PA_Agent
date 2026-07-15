@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第四十九轮：继续 M7，让 MT5 复用 DataSource 默认 forming 判定）
+
+本轮继续推进 **M7：统一 forming bar 判定**。第四十八轮已让 YFinance 源内构建复用 ABC 默认入口；继续核查剩余显式硬编码后，`MT5Source.latest_snapshot()` 仍把头部 bar 固定视为 forming（`is_forming=True`），再依赖下游 snapshot 复判。MT5 已提供 `server_time_ms()`，而 ABC 默认 `has_forming_bar_at_head(...)` 会通过 `reference_now_ms(data_source=self)` 优先使用 broker tick 时间，因此应把 MT5 源内构建也接入统一入口，让过期/停盘头部在源内就可写回 closed。
+
+### 代码清理
+
+- **`MT5Source.latest_snapshot()` 复用 `DataSource.has_forming_bar_at_head(...)`**：构造每根 `KlineBar` 后，头部 bar 仍先按 MT5 position 0 语义临时 `closed=False`，随后调用 `self.has_forming_bar_at_head([bar], self._timeframe)`，按返回值写回最终 `closed=not is_forming`。非头部 bar 仍保持 `closed=True`，`copy_rates_from_pos()`、成交量兜底、OHLCV/seq/normalize 流程不变。
+- **保持 MT5 使用 ABC 默认语义**：不新增 `MT5Source` override；默认入口会优先调用 `MT5Source.server_time_ms()` 取 broker/server tick 时间，仍保留 `is_bar_still_forming()` 对 daily/weekly stale broker time 的安全网。
+- **扩展 `tests/unit/test_data_source_forming_bar.py`**：新增无真实 MT5 终端测试，stub `MetaTrader5` 模块与 `copy_rates_from_pos()`，验证 `latest_snapshot()` 会调用数据源 forming 入口，并按 override 返回值写回头部 `closed`。
+- **修复 `tests/unit/test_mt5_clock_skew.py` 的环境依赖**：原测试直接 `patch("MetaTrader5.symbol_info_tick")`，在未安装 MetaTrader5 的解释器中会 `ModuleNotFoundError`。改为通过 `monkeypatch.setitem(sys.modules, "MetaTrader5", ...)` 注入假模块，使测试不依赖本机安装 MT5 包。
+- **清理 `mt5.py` 既有失效 noqa**：当前 ruff 配置未启用 `BLE001`，`# noqa: BLE001` 会触发 RUF100；本轮移除这些失效注释，使 `pa_agent/data/mt5.py` 全文件 ruff 通过。
+
+### 验证
+
+- `py_compile` 通过（`mt5.py`、`test_data_source_forming_bar.py`、`test_mt5_clock_skew.py`，EXIT=0）。
+- `py -3.12 -m pytest tests/unit/test_data_source_forming_bar.py tests/unit/test_bar_close_wait.py tests/unit/test_snapshot_closed_only_buffer.py tests/unit/test_build_analysis_frame.py tests/unit/test_snapshot_indicator_warmup.py tests/unit/test_data_source_factory.py tests/unit/test_mt5_clock_skew.py --tb=line -q -p no:cacheprovider` → **41 passed**。
+- `py -3.12 -m ruff check pa_agent/data/mt5.py tests/unit/test_data_source_forming_bar.py tests/unit/test_mt5_clock_skew.py` → **All checks passed**。
+- `git diff --check` 通过；仅提示 Windows 工作树 LF/CRLF 规范化 warning，无 whitespace error。
+
+---
+
 ## [Unreleased] — 2026-07-15（第四十八轮：继续 M7，让 YFinance 复用 DataSource 默认 forming 判定）
 
 本轮继续推进 **M7：统一 forming bar 判定**。前几轮已建立 `DataSource.has_forming_bar_at_head(...)` 入口，并将 A 股源与 TradingView 的特殊语义下沉。继续核查剩余数据源后，`YFinanceSource.latest_snapshot()` 仍硬编码 `closed=(i != 0)`：头部永远先标为未收盘，再依赖 snapshot 层复判。YFinance 没有 broker/server time，也没有 TradingView 的固定偏移取模需求，因此无需新增专门 override；直接复用 ABC 默认判定即可让源内构建与 snapshot 共享同一入口。
