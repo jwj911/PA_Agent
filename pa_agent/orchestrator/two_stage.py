@@ -39,9 +39,9 @@ if TYPE_CHECKING:
     from pa_agent.records.experience_reader import ExperienceReader
     from pa_agent.records.pending_writer import PendingWriter
 
+from pa_agent.data.base import KlineFrame
 from pa_agent.ai.json_validator import Ok, ValidationError
 from pa_agent.orchestrator.validation_retry import validate_with_retry
-from pa_agent.data.base import KlineFrame
 from pa_agent.records.schema import AnalysisRecord, RecordMeta
 from pa_agent.util.threading import CancelToken, OrchestratorEvent
 from pa_agent.util.timefmt import now_local_ms
@@ -1290,49 +1290,18 @@ class TwoStageOrchestrator:
         return self._finish_provider_fallback("WorkBuddy", err)
 
     def _finish_provider_fallback(self, provider_name: str, err: str | None) -> bool:
-        """Shared tail for QClaw/Cursor/WorkBuddy fallback: persist + update client.
-
-        The per-provider guard and ``apply_*`` call happen in the wrappers above
-        (so their connector imports stay call-time and remain patchable in tests);
-        this handles the identical remainder — abort on ``err``, push the new
-        provider into the live client, best-effort persist settings + refresh the
-        log masking key, keep the record writer's masking key in sync, and log
-        the switch. Callers only reach here with ``self._settings`` already
-        confirmed non-None.
-        """
+        """Shared tail for provider fallback; delegated to ProviderSyncService."""
+        from pa_agent.ai.provider_sync_service import ProviderSyncService
         from pa_agent.config.paths import SETTINGS_JSON_PATH
-        from pa_agent.config.settings import save_settings
-        from pa_agent.util.logging import update_api_key
 
-        if err:
-            logger.warning("%s auto-fallback unavailable: %s", provider_name, err)
-            return False
-
-        self._client.update_provider(self._settings.provider)
-        new_key = self._settings.provider.api_key
-        try:
-            save_settings(self._settings, SETTINGS_JSON_PATH)
-            update_api_key(new_key)
-        except Exception as save_exc:  # noqa: BLE001
-            logger.warning(
-                "%s fallback applied but settings save failed: %s", provider_name, save_exc
-            )
-
-        # Keep the record writer's masking key aligned with the rotated provider
-        # key so records saved after this auto-fallback mask the *new* plaintext
-        # key rather than the stale original. Mirrors the GUI settings-save path
-        # (main_window._open_ai_model_settings_dialog), which pairs
-        # update_api_key() with pending_writer.set_api_key().
-        if hasattr(self._pending_writer, "set_api_key"):
-            self._pending_writer.set_api_key(new_key)
-
-        logger.info(
-            "%s auto-fallback: model=%s base_url=%s",
-            provider_name,
-            self._settings.provider.model,
-            self._settings.provider.base_url,
+        return ProviderSyncService(save_path=SETTINGS_JSON_PATH).finish_provider_fallback(
+            provider_name=provider_name,
+            err=err,
+            settings=self._settings,
+            client=self._client,
+            pending_writer=self._pending_writer,
+            logger=logger,
         )
-        return True
 
     @staticmethod
     def _is_network_error(exc: Exception) -> bool:
