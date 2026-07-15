@@ -13,6 +13,29 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百零一轮：继续 L7，扩展 Ruff 到 integration 测试目录）
+
+本轮继续推进 **L7：CI 增强**。第一百轮已启用非 live 非 e2e 回归门禁，并把两个无网络 integration 用例纳入 targeted pytest；本轮继续收窄“全仓 Ruff”缺口，把整个 `tests/integration` 目录纳入 focused Ruff。该目录包含 live 测试文件，但 Ruff 不执行网络调用，因此适合作为 lint 覆盖扩展。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 将两个单独的 integration 测试文件替换为整个 `tests/integration` 目录。
+- **清理 integration lint**：移除 `tests/integration/conftest.py` 的冗余 UTF-8 encoding 声明，整理多个 integration 测试的 import 顺序，删除 `test_switch_mid_analysis.py` 中未使用的 import。
+- **保留中文业务样例**：`test_gate_shortcircuit.py` 中的中文 gate question 属于业务语义样例，使用文件级 `# ruff: noqa: RUF001` 保留原文。
+- **保持测试范围不变**：targeted pytest 仍只运行两个无网络 integration 文件，非 live 非 e2e 门禁继续覆盖完整非 live 回归；本轮不把 live 网络测试加入默认执行。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 `tests/integration`。
+
+### 验证
+
+- `py -3.12 -m ruff check tests/integration` → **All checks passed**。
+- `py -3.12 -m pytest tests/integration -m "not live" --tb=line -q -p no:cacheprovider`（带 `QT_QPA_PLATFORM=offscreen`、临时 `pytest-qt` / `hypothesis` `PYTHONPATH`）→ **21 passed**。
+- `py -3.12 -m py_compile` 覆盖 `tests/integration` 下全部 Python 文件 → 通过。
+- 扩展后目标集：从 `.github/workflows/ci.yml` 解析 targeted pytest 清单 → `py -3.12 -m pytest ... --tb=line -q -p no:cacheprovider` → **通过**。
+- 非 live 非 e2e 门禁：`py -3.12 -m pytest -m "not e2e and not live" --tb=line -q -p no:cacheprovider` → **通过**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百轮：继续 L7，启用非 live 非 e2e 回归门禁）
 
 本轮继续推进 **L7：CI 增强**。第九十九轮已把无网络 property suite 纳入 CI；本轮继续处理完整 `pytest -m "not e2e"` 的剩余阻塞。复核后确认无网络失败集中在 `test_next_bar_prediction.py` 与 `test_two_stage_no_order_with_prices.py` 的旧合同，真实网络失败集中在 AkShare live 测试。因此本轮先修正无网络 integration 合同，并在 CI 中新增 `pytest -m "not e2e and not live"`，把完整非 live 回归升级为稳定门禁。
