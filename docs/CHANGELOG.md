@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第五十三轮：继续 L7，扩大 CI 目标测试并整理 Black 前置格式）
+
+本轮继续推进 **L7：CI 增强**。第五十二轮已让 CI 从“安装 + import”升级为“目标 pytest + 聚焦 Ruff”；本轮在不触碰全仓历史基线的前提下，继续扩大目标 pytest 覆盖，把最近几轮已稳定的 M3/M5 核心路径纳入 CI。同时对上一轮 CI lint 文件集合执行 Black 机械格式化，作为后续启用 Black 门禁前的前置清理；但由于本机 `black --check` 对单文件与多文件均出现无输出卡住，本轮暂不把 Black 写入 CI。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：在原 forming-bar/data-source 测试集基础上，新增 `tests/unit/test_order_method_router.py`、`test_trend_context.py`、`test_decision_nodes_orchestrator.py`、`test_provider_sync_service.py`、`test_qclaw_auto_fallback.py`。CI 现在覆盖 M7 forming-bar 统一入口、M3 决策编排 facade、§11 broad_channel 突破单路由修复，以及 M5 provider fallback 服务尾部。
+- **目标文件 Black 机械格式化**：对 `pa_agent/data/base.py`、`snapshot.py`、`mt5.py`、`yfinance_source.py`、`tests/unit/test_data_source_forming_bar.py`、`tests/unit/test_mt5_clock_skew.py` 执行 Black 格式化。改动仅为 import/docstring 空行、对齐空格、长列表/字典/字符串换行等机械排版，不改变 forming-bar 行为。
+- **暂缓 Black CI 门禁**：本机 `py -3.12 -m black --check ...` 对同一候选文件集合和逐文件执行均无输出卡住，只能手动中断；因此本轮不把 `black --check` 写入 CI，避免引入未经验证的必过门禁。后续 L7 可先固定 Black 版本或进一步定位本机卡顿原因，再启用 Black。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已从 forming-bar/data-source 扩展到 §11 路由、决策编排和 provider fallback。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_data_source_forming_bar.py tests/unit/test_bar_close_wait.py tests/unit/test_snapshot_closed_only_buffer.py tests/unit/test_build_analysis_frame.py tests/unit/test_snapshot_indicator_warmup.py tests/unit/test_data_source_factory.py tests/unit/test_mt5_clock_skew.py tests/unit/test_order_method_router.py tests/unit/test_trend_context.py tests/unit/test_decision_nodes_orchestrator.py tests/unit/test_provider_sync_service.py tests/unit/test_qclaw_auto_fallback.py --tb=line -q -p no:cacheprovider` → **60 passed**。
+- `py -3.12 -m ruff check pa_agent/data/base.py pa_agent/data/snapshot.py pa_agent/data/mt5.py pa_agent/data/yfinance_source.py tests/unit/test_data_source_forming_bar.py tests/unit/test_mt5_clock_skew.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/data/base.py pa_agent/data/snapshot.py pa_agent/data/mt5.py pa_agent/data/yfinance_source.py tests/unit/test_data_source_forming_bar.py tests/unit/test_mt5_clock_skew.py` → 通过。
+- `py -3.12 -m black --check ...` 与逐文件 `black --check` 均超过 30 秒无输出，已手动中断；本轮仅保留机械格式化结果，不启用 CI Black 门禁。
+
+---
+
 ## [Unreleased] — 2026-07-15（第五十二轮：启动 L7，给 CI 增加目标测试与聚焦 Ruff 门禁）
 
 本轮根据后端审查报告 §5.3 的 **L7：CI 增强** 开始收窄 CI 缺口。此前 `.github/workflows/ci.yml` 只在 Windows + Python 3.11 下安装依赖并 import `pa_agent`，没有运行任何 pytest、ruff、black 或覆盖率检查。考虑到全仓仍存在大量历史 Ruff 中文标点告警，且当前 Python 文件尚未整体 black 格式化，本轮先落地低风险第一片：把近期 M7 forming-bar/data-source 相关的稳定目标单测和同范围 Ruff 检查纳入 CI。
