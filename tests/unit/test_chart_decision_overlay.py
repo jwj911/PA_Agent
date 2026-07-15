@@ -45,7 +45,7 @@ def test_enrich_keeps_previous_prices_on_wait_no_order() -> None:
         "entry_price": None,
         "take_profit_price": None,
         "stop_loss_price": None,
-        "reasoning": "上一轮方案未失效，继续等待触发。",
+        "reasoning": "上一轮方案未失效，继续等待触发。",  # noqa: RUF001
     }
     stage2 = {
         "decision": current,
