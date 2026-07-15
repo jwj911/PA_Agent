@@ -178,6 +178,7 @@ jobs:
           pa_agent/gui/chart_decision_overlay.py
           pa_agent/util/__init__.py
           pa_agent/util/crash_diagnostics.py
+          pa_agent/util/event_bus.py
           pa_agent/util/logging.py
           pa_agent/util/safe_filename.py
           pa_agent/util/mask_secret.py
