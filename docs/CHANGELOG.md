@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百零二轮：继续 L7，扩展 Ruff 到 e2e 与 fixtures）
+
+本轮继续推进 **L7：CI 增强**。第一百零一轮已把整个 `tests/integration` 纳入 focused Ruff；本轮继续收窄测试侧 Ruff 缺口，把 `tests/e2e` 与 `tests/fixtures` 纳入静态检查。该变更只扩大 lint 覆盖，不改变默认测试执行范围：e2e 仍不在 CI 中运行，live/e2e 仍作为单独增强项。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/e2e` 与 `tests/fixtures`。
+- **清理 e2e lint**：整理 e2e smoke 测试 import 顺序；将未使用的 `pending_writer` 解包变量改为 `_pending_writer`；`test_smoke_free_chat.py` 对 free-chat reply content 与 follow-up record id 增加断言，避免未使用局部变量。
+- **清理 fixtures lint**：`gate_trace.py` 将简单 `if/else` 改为条件表达式；对保留中文业务 payload / gate_trace 样例的 fixture 文件添加文件级 RUF001 忽略。
+- **保持执行边界**：本轮只扩展 Ruff，targeted pytest 与非 live 非 e2e 门禁执行范围不变；不把 e2e 测试加入默认执行。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 `tests/e2e` 与 `tests/fixtures`。
+
+### 验证
+
+- `py -3.12 -m ruff check tests/e2e tests/fixtures` → **All checks passed**。
+- `py -3.12 -m py_compile` 覆盖 `tests/e2e` 与 `tests/fixtures` 下全部 Python 文件 → 通过。
+- 非 live 非 e2e 门禁：`py -3.12 -m pytest -m "not e2e and not live" --tb=line -q -p no:cacheprovider` → **通过**。
+- 扩展后目标集：从 `.github/workflows/ci.yml` 解析 targeted pytest 清单 → `py -3.12 -m pytest ... --tb=line -q -p no:cacheprovider` → **通过**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百零一轮：继续 L7，扩展 Ruff 到 integration 测试目录）
 
 本轮继续推进 **L7：CI 增强**。第一百轮已启用非 live 非 e2e 回归门禁，并把两个无网络 integration 用例纳入 targeted pytest；本轮继续收窄“全仓 Ruff”缺口，把整个 `tests/integration` 目录纳入 focused Ruff。该目录包含 live 测试文件，但 Ruff 不执行网络调用，因此适合作为 lint 覆盖扩展。
