@@ -298,6 +298,7 @@ pytest -m live
 - 提交前建议至少运行与改动相关的目标测试；较大改动应继续补跑 `pytest -m "not e2e"`。
 - 第一百三十七轮 L7 补充：focused Ruff 新增 `pa_agent/gui/prediction_format.py`，覆盖未来走势预期面板共享显示 helper；本轮不修改 prediction probability 格式化、dominant direction 判定或任何用户可见显示文本。
 - 第一百三十八轮 L7 补充：focused Ruff 新增 `pa_agent/gui/widgets/status_bar.py`，仅清理 status bar widget 的 docstring 标点；本轮不修改消息显示、进度条、颜色切换、TPS 显示或样式逻辑。
+- 第一百三十九轮 L7 补充：focused Ruff 新增 `pa_agent/gui/widgets/model_selector.py`，覆盖模型选择下拉 widget；本轮不修改模型分组、下拉定位、选中态刷新、信号发射、按钮文案或样式逻辑。
 
 ***
 
