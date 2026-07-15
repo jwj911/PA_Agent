@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百三十六轮：继续 L7，扩展 Ruff 到 East Money client）
+
+本轮继续推进 **L7：CI 增强**。第一百三十五轮已把 TradingView source 纳入 focused Ruff；本轮回到 East Money 底层 HTTP client，选择 `pa_agent/data/eastmoney_client.py` 做小范围 lint 等价清理。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/data/eastmoney_client.py`。
+- **清理 East Money client lint**：将 `Callable` 改从 `collections.abc` 导入，移除 stale `BLE001` noqa，用 tuple unpacking 替代 tuple 拼接，并把两处 `try/except ValueError: pass` 改为 `contextlib.suppress(ValueError)`。
+- **清理说明文字标点**：将非用户界面的 comment/docstring 中全角括号、全角逗号、全角分号改为 ASCII 标点。
+- **保留中文用户提示**：东方财富接口连接中断与限频提示属于用户可见文案，本轮使用行级 `# noqa: RUF001` 保留原显示语义。
+- **保持协议语义不变**：本轮不改 East Money endpoint、host、referer、字段清单、请求参数、TLS impersonate 顺序、重试/轮询策略或解析字段。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 East Money client。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/data/eastmoney_client.py tests/unit/test_eastmoney_quote.py tests/unit/test_data_source_forming_bar.py tests/unit/test_data_source_factory.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\data\eastmoney_client.py tests\unit\test_eastmoney_quote.py tests\unit\test_data_source_forming_bar.py tests\unit\test_data_source_factory.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_eastmoney_quote.py tests/unit/test_data_source_forming_bar.py tests/unit/test_data_source_factory.py --tb=line -q -p no:cacheprovider` → **21 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百三十五轮：继续 L7，扩展 Ruff 到 TradingView source）
 
 本轮继续推进 **L7：CI 增强**。第一百三十四轮已把 EastMoney source 纳入 focused Ruff；本轮转向 TradingView 数据源，选择已有 socket/error/connectivity/symbol lookup 无网络测试覆盖的 `pa_agent/data/tradingview.py`。
