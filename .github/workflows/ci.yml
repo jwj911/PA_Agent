@@ -147,6 +147,7 @@ jobs:
           pa_agent/data/akshare_source.py
           pa_agent/data/tushare_source.py
           pa_agent/data/eastmoney_baostock.py
+          pa_agent/data/eastmoney_source.py
           pa_agent/data/eastmoney_quote.py
           pa_agent/data/eastmoney_quote_api.py
           pa_agent/data/mt5.py
