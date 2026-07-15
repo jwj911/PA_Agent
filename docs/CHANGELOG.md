@@ -13,6 +13,25 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百三十七轮：继续 L7，扩展 Ruff 到 prediction format helper）
+
+本轮继续推进 **L7：CI 增强**。第一百三十六轮已覆盖 East Money client；本轮避开 `pa_agent/notify`、`settings.py` 与 GUI 大窗口等中文文案密集候选，选择已经 Ruff clean、边界很小的 `pa_agent/gui/prediction_format.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/gui/prediction_format.py`。
+- **保持运行逻辑不变**：本轮不修改 prediction probability 格式化、dominant direction 判定、FutureTrendPanel 导入路径或任何用户可见显示文本，仅扩大 focused Ruff 覆盖面。
+- **保留历史噪声边界**：`pa_agent/notify` 包级 Ruff 当前仍有大量中文通知卡片/日志文案与 quoted annotation 历史噪声；`settings.py`、`analysis_modes.py`、`speed_profiles.py`、`always_in_judges.py` 也仍以中文说明/业务 reason 文案为主，暂不纳入本轮门禁。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确 Ruff 门禁已覆盖 prediction format helper。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/gui/prediction_format.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/gui/prediction_format.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百三十六轮：继续 L7，扩展 Ruff 到 East Money client）
 
 本轮继续推进 **L7：CI 增强**。第一百三十五轮已把 TradingView source 纳入 focused Ruff；本轮回到 East Money 底层 HTTP client，选择 `pa_agent/data/eastmoney_client.py` 做小范围 lint 等价清理。
