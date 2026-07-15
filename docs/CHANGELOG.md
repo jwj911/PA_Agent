@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第九十四轮：继续 L7，扩展 CI 到 ChartWidget fit/overlay 测试）
+
+本轮继续推进 **L7：CI 增强**。第九十三轮已为 Qt helper 测试建立 offscreen CI 基线；本轮继续筛选同一 GUI 子域中风险较低的 ChartWidget 测试。`test_chart_fit_view.py` 覆盖自动 fit view、首帧自适应、交易价格纳入 y 轴范围与左轴拖拽宽度；`test_chart_widget_no_lines_when_not_trading.py` 覆盖“不下单”时不绘制交易线、切换/重置时清理交易线，以及 continuity overlay 的保留路径。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_chart_fit_view.py` 与 `tests/unit/test_chart_widget_no_lines_when_not_trading.py`。目标测试数量从 **607** 扩展到 **624**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增上述 2 个 ChartWidget 测试文件。
+- **清理目标测试 lint**：通过 Ruff 自动整理局部 import 顺序，修正未使用解包变量，并对需保留的中文 reasoning 样例添加行级 `# noqa: RUF001`。
+- **延续 headless Qt 基线**：沿用第九十三轮新增的 `QT_QPA_PLATFORM=offscreen`，无需额外 CI 环境变量。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 chart fit view 与 chart no-lines when not trading。
+
+### 验证
+
+- 新增测试：`py -3.12 -m pytest tests/unit/test_chart_fit_view.py tests/unit/test_chart_widget_no_lines_when_not_trading.py --tb=line -q -p no:cacheprovider`（带 `QT_QPA_PLATFORM=offscreen`、临时 `pytest-qt` / `hypothesis` `PYTHONPATH`）→ **17 passed**。
+- `py -3.12 -m ruff check tests/unit/test_chart_fit_view.py tests/unit/test_chart_widget_no_lines_when_not_trading.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests\unit\test_chart_fit_view.py tests\unit\test_chart_widget_no_lines_when_not_trading.py` → 通过。
+- 扩展后目标集：从 `.github/workflows/ci.yml` 解析 targeted pytest 清单（本地 `pytest_cov` 插件仍受用户 site-packages 权限问题影响，沿用无 coverage 插件行为验证）→ `py -3.12 -m pytest ... --tb=line -q -p no:cacheprovider` → **624 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第九十三轮：继续 L7，扩展 CI 到 Qt helper 测试）
 
 本轮继续推进 **L7：CI 增强**。第九十二轮已把 decision node property 测试纳入目标 CI；本轮开始处理小范围 Qt helper 测试，优先选择不触真实网络、依赖面较窄且当前实现合同稳定的 GUI 辅助用例。`test_chart_skip_redraw.py` 覆盖纯已收盘 K 线快照相同时跳过重复重绘；`test_debug_widget_masks_key.py` 覆盖 DebugWidget 中 API Key 脱敏展示；`test_token_indicator_thresholds.py` 覆盖 token 进度条阈值样式和提示行为。
