@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第七十轮：继续 L7，扩展 CI 到 QClaw/Cursor route 测试）
+
+本轮继续推进 **L7：CI 增强**。第六十九轮已把 A 股/Tushare 无网络数据源测试纳入目标 CI；本轮继续筛选 provider route 相关的 mock-only 测试。`test_qclaw_agent_route.py` 与 `test_cursor_agent_route.py` 覆盖 OpenClaw/QClaw、WorkBuddy、Cursor subscription route 的模型别名、stale base_url 防串线和启动同步保护，测试稳定且不启动真实 relay/SDK。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_qclaw_agent_route.py` 与 `tests/unit/test_cursor_agent_route.py`。目标测试数量从 **212** 扩展到 **230**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `tests/unit/test_qclaw_agent_route.py` 与 `tests/unit/test_cursor_agent_route.py`。
+- **清理目标测试 lint**：把多处嵌套 `with patch(...)` 合并为单个 `with` 语句，保留 OpenClaw 网关中文 mode 样例并用行级 `# noqa: RUF001` 标注；运行逻辑保持不变。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 QClaw/Cursor route。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_qclaw_agent_route.py tests/unit/test_cursor_agent_route.py --tb=line -q -p no:cacheprovider` → **18 passed**。
+- 扩展后目标集：`py -3.12 -m pytest tests/unit/test_data_source_forming_bar.py tests/unit/test_bar_close_wait.py tests/unit/test_snapshot_closed_only_buffer.py tests/unit/test_build_analysis_frame.py tests/unit/test_snapshot_indicator_warmup.py tests/unit/test_data_source_factory.py tests/unit/test_akshare_source.py tests/unit/test_tushare_source.py tests/unit/test_mt5_clock_skew.py tests/unit/test_mt5_symbol_available.py tests/unit/test_order_method_router.py tests/unit/test_trend_context.py tests/unit/test_decision_nodes_orchestrator.py tests/unit/test_provider_sync_service.py tests/unit/test_qclaw_auto_fallback.py tests/unit/test_qclaw_agent_route.py tests/unit/test_cursor_agent_route.py tests/unit/test_secret_store.py tests/unit/test_settings_round_trip.py tests/unit/test_pending_writer_sanitize.py tests/unit/test_pending_writer_no_plaintext_key.py tests/unit/test_datetime_ts.py tests/unit/test_kline_bar_normalize.py tests/unit/test_atr_true_range.py tests/unit/test_kline_candle_direction.py tests/unit/test_kline_features.py tests/unit/test_structure_levels.py tests/unit/test_cycle_enums.py tests/unit/test_response_extract.py tests/unit/test_mimo_compat.py tests/unit/test_prompt_txt_files.py tests/unit/test_client_factory.py tests/unit/test_cost_and_ledger.py tests/unit/test_trade_metrics.py tests/unit/test_limit_order_k1_freshness.py tests/unit/test_provider_errors.py tests/unit/test_validation_retry.py tests/unit/test_analysis_history.py tests/unit/test_demo_record_loader.py tests/unit/test_demo_replayer.py --tb=line -q -p no:cacheprovider` → **230 passed**。
+- 扩展后 Ruff：`py -3.12 -m ruff check pa_agent/data/base.py pa_agent/data/snapshot.py pa_agent/data/mt5.py pa_agent/data/yfinance_source.py pa_agent/data/datetime_ts.py pa_agent/ai/provider_sync_service.py pa_agent/ai/cycle_enums.py pa_agent/ai/response_extract.py pa_agent/ai/mimo_compat.py pa_agent/ai/kline_features.py pa_agent/ai/structure_levels.py pa_agent/ai/provider_errors.py pa_agent/ai/retry_policy.py pa_agent/ai/client_factory.py pa_agent/ai/session_ledger.py pa_agent/util/trade_metrics.py pa_agent/security/secret_store.py pa_agent/records/pending_writer.py pa_agent/records/analysis_history.py pa_agent/demo/record_loader.py pa_agent/demo/replayer.py tests/unit/test_data_source_forming_bar.py tests/unit/test_akshare_source.py tests/unit/test_tushare_source.py tests/unit/test_mt5_clock_skew.py tests/unit/test_mt5_symbol_available.py tests/unit/test_order_method_router.py tests/unit/test_trend_context.py tests/unit/test_decision_nodes_orchestrator.py tests/unit/test_provider_sync_service.py tests/unit/test_qclaw_auto_fallback.py tests/unit/test_qclaw_agent_route.py tests/unit/test_cursor_agent_route.py tests/unit/test_secret_store.py tests/unit/test_settings_round_trip.py tests/unit/test_pending_writer_sanitize.py tests/unit/test_pending_writer_no_plaintext_key.py tests/unit/test_datetime_ts.py tests/unit/test_kline_bar_normalize.py tests/unit/test_atr_true_range.py tests/unit/test_kline_candle_direction.py tests/unit/test_kline_features.py tests/unit/test_structure_levels.py tests/unit/test_cycle_enums.py tests/unit/test_response_extract.py tests/unit/test_mimo_compat.py tests/unit/test_prompt_txt_files.py tests/unit/test_client_factory.py tests/unit/test_cost_and_ledger.py tests/unit/test_trade_metrics.py tests/unit/test_limit_order_k1_freshness.py tests/unit/test_provider_errors.py tests/unit/test_validation_retry.py tests/unit/test_analysis_history.py tests/unit/test_demo_record_loader.py tests/unit/test_demo_replayer.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests\unit\test_qclaw_agent_route.py tests\unit\test_cursor_agent_route.py` → 通过。
+
+---
+
 ## [Unreleased] — 2026-07-15（第六十九轮：继续 L7，扩展 CI 到 A 股/Tushare 无网络数据源测试）
 
 本轮继续推进 **L7：CI 增强**。第六十八轮已把 prompt txt 文件清单测试纳入目标 CI；本轮继续筛选数据源层的无网络小测试。`test_akshare_source.py` 覆盖 A 股 symbol 归一化、指数识别和 60m→4h 聚合；`test_tushare_source.py` 通过 fake `tushare` 模块覆盖 token 优先级、日线/分钟线抓取、缓存和限频错误提示，测试稳定且不访问真实网络。对应源文件仍有用户可见中文错误提示 Ruff `RUF001/RUF003` 历史基线，本轮暂不把源文件纳入 focused Ruff。
