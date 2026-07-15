@@ -75,6 +75,7 @@ jobs:
           tests/unit/test_decision_stance.py
           tests/unit/test_cycle_enums.py
           tests/unit/test_response_extract.py
+          tests/unit/test_trace_semantic_checks.py
           tests/unit/test_coherence_checks.py
           tests/unit/test_json_validator.py
           tests/unit/test_validation_lenient_fixes.py
@@ -167,6 +168,7 @@ jobs:
           tests/unit/test_decision_stance.py
           tests/unit/test_cycle_enums.py
           tests/unit/test_response_extract.py
+          tests/unit/test_trace_semantic_checks.py
           tests/unit/test_coherence_checks.py
           tests/unit/test_json_validator.py
           tests/unit/test_validation_lenient_fixes.py
