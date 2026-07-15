@@ -1,7 +1,7 @@
 """Detect non-retryable API provider quota / billing failures in model output."""
 from __future__ import annotations
 
-PROVIDER_QUOTA_USER_MESSAGE = "OpenClaw 积分不足，请充值或更换 API"
+PROVIDER_QUOTA_USER_MESSAGE = "OpenClaw 积分不足，请充值或更换 API"  # noqa: RUF001
 
 _QUOTA_MARKERS: tuple[str, ...] = (
     "402",

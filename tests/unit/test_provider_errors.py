@@ -17,7 +17,7 @@ class _Settings:
 
 
 def test_is_provider_quota_exhausted_openclaw_message():
-    text = "402 您的积分已用完，可通过购买或参与活动获取更多积分(错误码: 402)"
+    text = "402 您的积分已用完，可通过购买或参与活动获取更多积分(错误码: 402)"  # noqa: RUF001
     assert is_provider_quota_exhausted(text)
 
 
@@ -28,7 +28,7 @@ def test_is_provider_quota_exhausted_negative():
 
 def test_validator_category_e_for_402_plain_text():
     validator = JsonValidator()
-    text = "402 您的积分已用完，可通过购买或参与活动获取更多积分(错误码: 402)"
+    text = "402 您的积分已用完，可通过购买或参与活动获取更多积分(错误码: 402)"  # noqa: RUF001
     result = validator.validate("stage2", text)
     assert isinstance(result, ValidationError)
     assert result.category == "e"
