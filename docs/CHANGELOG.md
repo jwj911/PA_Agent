@@ -13,6 +13,29 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第八十八轮：继续 L7，扩展 CI 到 decision continuity 测试）
+
+本轮继续推进 **L7：CI 增强**。第八十七轮已把 trace semantic checks 测试纳入目标 CI；本轮继续筛选纯后端决策连续性测试。`test_decision_continuity.py` 覆盖上一轮交易方案失效判断、限价触发判断、连续性 prompt 文案、同结构位反手冷却、neutral+AIS/AIL 方向守卫、连续性守卫改写 Stage 2 决策，以及未成交限价单的自动取消规则。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_decision_continuity.py`。目标测试数量从 **402** 扩展到 **418**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `tests/unit/test_decision_continuity.py`。
+- **修正过期测试数据**：`_ms()` 改为与实现一致的本地 naive timestamp 解析；将几个“未成交买入限价单”样例的 entry 放到当前 K 线 low 下方，避免被当前限价触发规则判为已触发；audit 反手样例的上一轮时间改到冷却窗口内，避免被自动取消规则判为已失效。
+- **清理目标测试 lint**：通过 Ruff 自动整理 import，并使用 `datetime` naive timestamp，清除 UP017/I001 告警。
+- **暂不纳入源文件 Ruff**：`pa_agent/ai/decision_continuity.py` 含中文 prompt 文案，本轮保持小切片策略，只扩展测试文件 Ruff 门禁。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 decision continuity。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_decision_continuity.py --tb=line -q -p no:cacheprovider` → **16 passed**。
+- `py -3.12 -m ruff check tests/unit/test_decision_continuity.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests\unit\test_decision_continuity.py` → 通过。
+- 扩展后目标集：执行 `.github/workflows/ci.yml` 的 targeted pytest 清单（本地 `pytest_cov` 插件仍受用户 site-packages 权限问题影响，沿用无 coverage 插件行为验证）→ `py -3.12 -m pytest ... --tb=line -q -p no:cacheprovider` → **418 passed**。
+- 扩展后 Ruff：执行 `.github/workflows/ci.yml` 的 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第八十七轮：继续 L7，扩展 CI 到 trace semantic checks 测试）
 
 本轮继续推进 **L7：CI 增强**。第八十六轮已把 Stage 1 normalizer 测试纳入目标 CI；本轮继续筛选纯后端 trace 语义校验测试。`test_trace_semantic_checks.py` 覆盖关键 trace 节点 reason 空值规则、问题文本模糊匹配、通道方向问题改写，以及用户 gate_trace 经 Stage 1 normalizer 后通过语义校验的回归场景。
