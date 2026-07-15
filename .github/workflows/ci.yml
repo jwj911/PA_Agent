@@ -72,6 +72,7 @@ jobs:
           tests/unit/test_structure_levels.py
           tests/unit/test_pattern_routing.py
           tests/unit/test_stage1_normalizer.py
+          tests/unit/test_stage2_normalizer.py
           tests/unit/test_stage1_normalizer_strategy_aliases.py
           tests/unit/test_decision_stance.py
           tests/unit/test_cycle_enums.py
@@ -167,6 +168,7 @@ jobs:
           tests/unit/test_structure_levels.py
           tests/unit/test_pattern_routing.py
           tests/unit/test_stage1_normalizer.py
+          tests/unit/test_stage2_normalizer.py
           tests/unit/test_stage1_normalizer_strategy_aliases.py
           tests/unit/test_decision_stance.py
           tests/unit/test_cycle_enums.py

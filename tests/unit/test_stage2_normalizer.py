@@ -1,4 +1,5 @@
 """Unit tests for Stage 2 normalizer — next_bar_prediction (T4)."""
+# ruff: noqa: RUF001
 from __future__ import annotations
 
 import json
@@ -6,14 +7,13 @@ import json
 from pa_agent.ai.json_validator import Ok
 from pa_agent.ai.stage2_normalizer import (
     _normalize_closed_enum,
+    _normalize_next_bar_prediction,
     _normalize_stage2_bar_analysis_enums,
     _strip_enum_suffix,
     normalize_stage2,
-    _normalize_next_bar_prediction,
 )
 from pa_agent.data.base import IndicatorBundle, KlineBar, KlineFrame
 from tests.fixtures.validators import schema_test_validator
-
 
 # ── Closed enum annotation stripping (bar_type / freshness) ────────────────
 
@@ -703,15 +703,15 @@ def test_signal_bar_bumped_when_same_seq_as_entry() -> None:
             "entry_basis_bar": "K3",
             "entry_basis_extreme": "low",
             "entry_rule": "test",
-            "take_profit_price": 3.20,
-            "take_profit_price_2": 3.00,
-            "stop_loss_price": 3.6,
+            "take_profit_price": 3.00,
+            "take_profit_price_2": 2.80,
+            "stop_loss_price": 3.5,
             "reasoning": "t",
             "diagnosis_confidence": 50,
             "diagnosis_confidence_reasoning": "t",
             "trade_confidence": 50,
             "trade_confidence_reasoning": "t",
-            "estimated_win_rate": 50,
+            "estimated_win_rate": 65,
             "estimated_win_rate_reasoning": "t",
             "key_factors": [],
             "watch_points": [],
@@ -892,7 +892,7 @@ def test_prediction_guard_forbids_short_when_next_cycle_bullish() -> None:
             "entry_price": 4022.486,
             "take_profit_price": 4015.365,
             "take_profit_price_2": 4009.473,
-            "stop_loss_price": 4034.234,
+            "stop_loss_price": 4025.0,
             "reasoning": "test",
             "diagnosis_confidence": 64,
             "diagnosis_confidence_reasoning": "t",
