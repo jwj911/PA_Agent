@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百一十九轮：继续 L7，扩展 Ruff 到 util 日志配置）
+
+本轮继续推进 **L7：CI 增强**。第一百一十八轮已把 util 包入口与崩溃诊断纳入 focused Ruff；本轮继续处理 util 侧低噪声小文件，选择仅有过期 `noqa` 的 `pa_agent/util/logging.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/util/logging.py`。
+- **清理 logging lint**：移除 `MaskingFormatter.format()` 上过期的 `# noqa: A003`，以及 `configure_logging()` 中过期的 `# noqa: PLW0603`。
+- **保持业务语义不变**：本轮不改日志 handler 安装、API key 脱敏、第三方 logger 降噪、`update_api_key()` 或日志文件路径。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 util 日志配置。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/util/logging.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\util\logging.py` → 通过。
+- 相关测试：`$env:PYTHONPATH="$env:TEMP\pa_agent_hypothesis_dep"; py -3.12 -m pytest tests/property/test_logs_have_no_plaintext_key.py tests/unit/test_provider_sync_service.py --tb=line -q -p no:cacheprovider` → **6 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+- `git diff --check` → 通过（仅显示 Windows 行尾提示）。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百一十八轮：继续 L7，扩展 Ruff 到 util 包入口与崩溃诊断）
 
 本轮继续推进 **L7：CI 增强**。第一百一十七轮已把验证重试编排纳入 focused Ruff；本轮继续评估 util 侧剩余小文件，选择仅有机械 lint 问题的 `pa_agent/util/__init__.py` 与 `pa_agent/util/crash_diagnostics.py`。
