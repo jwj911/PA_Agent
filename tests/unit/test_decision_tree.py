@@ -19,22 +19,22 @@ from tests.integration.conftest import SAMPLE_DECISION_TRACE, SAMPLE_GATE_TRACE,
 def test_question_with_bar_basis() -> None:
     item = {
         "node_id": "5.1",
-        "question": "是否为微型通道？",
+        "question": "是否为微型通道？",  # noqa: RUF001
         "bar_range": "K50-K1",
     }
-    assert question_with_bar_basis(item) == "是否为微型通道？（基于K50-K1判断）"
-    assert format_bar_basis_suffix(item) == "（基于K50-K1判断）"
-    assert plain_trace_question(item) == "是否为微型通道？"
+    assert question_with_bar_basis(item) == "是否为微型通道？（基于K50-K1判断）"  # noqa: RUF001
+    assert format_bar_basis_suffix(item) == "（基于K50-K1判断）"  # noqa: RUF001
+    assert plain_trace_question(item) == "是否为微型通道？"  # noqa: RUF001
 
 
 def test_strip_question_bar_basis_suffix() -> None:
-    q = "是否满足尖峰条件？（基于K15-K8判断）"
-    assert strip_question_bar_basis_suffix(q) == "是否满足尖峰条件？"
+    q = "是否满足尖峰条件？（基于K15-K8判断）"  # noqa: RUF001
+    assert strip_question_bar_basis_suffix(q) == "是否满足尖峰条件？"  # noqa: RUF001
 
 
 def test_format_trace_answer_with_branch() -> None:
     item = {"answer": "是", "branch": "bearish"}
-    assert format_trace_answer(item) == "是（空头）"
+    assert format_trace_answer(item) == "是（空头）"  # noqa: RUF001
 
 
 def test_load_decision_tree_has_sections() -> None:
@@ -67,7 +67,7 @@ def test_gate_wait_shortcircuit_response() -> None:
         "gate_trace": [
             {
                 "node_id": "1.2",
-                "question": "是否能识别市场周期？",
+                "question": "是否能识别市场周期？",  # noqa: RUF001
                 "answer": "否",
                 "reason": "无法归类",
             }
@@ -109,7 +109,7 @@ def test_gate_trace_forbids_node_0_3() -> None:
         "gate_trace": [
             {
                 "node_id": "0.3",
-                "question": "交易者方程是否通过？",
+                "question": "交易者方程是否通过？",  # noqa: RUF001
                 "answer": "是",
                 "reason": "wrong stage",
                 "bar_range": "K1",
@@ -156,7 +156,7 @@ def test_gate_wait_response_contains_unpredictable_prediction() -> None:
         "gate_trace": [
             {
                 "node_id": "1.2",
-                "question": "是否能识别市场周期？",
+                "question": "是否能识别市场周期？",  # noqa: RUF001
                 "answer": "否",
                 "reason": "无法归类",
             }
@@ -181,7 +181,7 @@ def test_gate_unknown_response_contains_unpredictable_prediction() -> None:
         "gate_trace": [
             {
                 "node_id": "0.1",
-                "question": "是否看得懂当前市场？",
+                "question": "是否看得懂当前市场？",  # noqa: RUF001
                 "answer": "否",
                 "reason": "极端行情",
             }
@@ -208,7 +208,7 @@ def test_gate_wait_prediction_passes_schema() -> None:
         "gate_trace": [
             {
                 "node_id": "1.2",
-                "question": "是否能识别市场周期？",
+                "question": "是否能识别市场周期？",  # noqa: RUF001
                 "answer": "否",
                 "reason": "无法归类",
             }

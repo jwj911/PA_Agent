@@ -47,6 +47,7 @@ jobs:
           tests/unit/test_mt5_symbol_available.py
           tests/unit/test_order_method_router.py
           tests/unit/test_trend_context.py
+          tests/unit/test_decision_tree.py
           tests/unit/test_decision_nodes_orchestrator.py
           tests/unit/test_provider_sync_service.py
           tests/unit/test_qclaw_auto_fallback.py
@@ -134,6 +135,7 @@ jobs:
           tests/unit/test_mt5_symbol_available.py
           tests/unit/test_order_method_router.py
           tests/unit/test_trend_context.py
+          tests/unit/test_decision_tree.py
           tests/unit/test_decision_nodes_orchestrator.py
           tests/unit/test_provider_sync_service.py
           tests/unit/test_qclaw_auto_fallback.py
