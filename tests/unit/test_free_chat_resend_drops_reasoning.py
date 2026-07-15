@@ -5,13 +5,11 @@ Task 12.4 — Validates: Requirements R11.4, R11.5
 """
 from __future__ import annotations
 
-from unittest.mock import MagicMock, call, patch
-import pytest
+from unittest.mock import MagicMock
 
 from pa_agent.orchestrator.free_chat import FreeChatSession
 from pa_agent.records.schema import AnalysisRecord, RecordMeta
 from pa_agent.util.threading import CancelToken
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -158,8 +156,10 @@ class TestFreeChatResendDropsReasoning:
         assert "追问助手" in messages[0]["content"]
         assert messages[1]["role"] == "user"
         assert "上次分析结果" in messages[1]["content"]
-        assert messages[2]["role"] == "user"
-        assert messages[2]["content"] == "hello"
+        assert messages[2]["role"] == "assistant"
+        assert "上次决策结果" in messages[2]["content"]
+        assert messages[3]["role"] == "user"
+        assert messages[3]["content"] == "hello"
         for msg in messages:
             assert "reasoning_content" not in msg
 
@@ -217,13 +217,15 @@ class TestFreeChatResendDropsReasoning:
         session.send("my question", cancel)
 
         messages: list[dict] = client.stream_chat.call_args[0][0]
-        assert len(messages) == 3
+        assert len(messages) == 4
         assert messages[0]["role"] == "system"
         assert "追问助手" in messages[0]["content"]
         assert messages[1]["role"] == "user"
         assert "上次分析结果" in messages[1]["content"]
-        assert messages[2]["role"] == "user"
-        assert messages[2]["content"] == "my question"
+        assert messages[2]["role"] == "assistant"
+        assert "上次决策结果" in messages[2]["content"]
+        assert messages[3]["role"] == "user"
+        assert messages[3]["content"] == "my question"
 
     def test_history_for_api_grows_with_turns(self):
         """On the second send, previous free-chat turn is included in
@@ -239,13 +241,15 @@ class TestFreeChatResendDropsReasoning:
         session.send("question 1", cancel)
         session.send("question 2", cancel)
 
-        # Second call's messages: system, ref, q1, a1, q2
+        # Second call's messages: system, ref, recall, q1, a1, q2
         messages: list[dict] = client.stream_chat.call_args_list[1][0][0]
-        assert len(messages) == 5
-        assert messages[2]["role"] == "user"
-        assert messages[2]["content"] == "question 1"
-        assert messages[3]["role"] == "assistant"
-        assert messages[3]["content"] == "reply 1"
-        assert "reasoning_content" not in messages[3]
-        assert messages[4]["role"] == "user"
-        assert messages[4]["content"] == "question 2"
+        assert len(messages) == 6
+        assert messages[2]["role"] == "assistant"
+        assert "上次决策结果" in messages[2]["content"]
+        assert messages[3]["role"] == "user"
+        assert messages[3]["content"] == "question 1"
+        assert messages[4]["role"] == "assistant"
+        assert messages[4]["content"] == "reply 1"
+        assert "reasoning_content" not in messages[4]
+        assert messages[5]["role"] == "user"
+        assert messages[5]["content"] == "question 2"
