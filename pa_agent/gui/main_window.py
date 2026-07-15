@@ -4339,14 +4339,25 @@ class MainWindow(QMainWindow):
         symbol = self._symbol_combo.currentText().strip()
         timeframe = self._tf_combo.currentText()
         now_ms = self._reference_now_ms()
+        data_source = getattr(self._ctx, "data_source", None)
         if not bars_raw:
             return None
         if include_forming:
             return build_live_frame(
-                bars_raw, n, symbol, timeframe, now_ms=now_ms
+                bars_raw,
+                n,
+                symbol,
+                timeframe,
+                now_ms=now_ms,
+                data_source=data_source,
             )
         return build_display_frame(
-            bars_raw, n, symbol, timeframe, now_ms=now_ms
+            bars_raw,
+            n,
+            symbol,
+            timeframe,
+            now_ms=now_ms,
+            data_source=data_source,
         )
 
     def _take_snapshot(

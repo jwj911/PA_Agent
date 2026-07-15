@@ -3,13 +3,42 @@ from __future__ import annotations
 
 import math
 
-from pa_agent.data.bar_close_wait import has_forming_bar_at_head
-from pa_agent.data.base import IndicatorBundle, KlineBar, KlineFrame, normalize_kline_bar
+from pa_agent.data.bar_close_wait import has_forming_bar_at_head as _has_forming_bar_at_head
+from pa_agent.data.base import (
+    DataSource,
+    IndicatorBundle,
+    KlineBar,
+    KlineFrame,
+    normalize_kline_bar,
+)
 from pa_agent.util.timefmt import now_local_ms
 
 # Extra closed bars fetched before the AI window so EMA20/ATR14 can warm up.
 # Only the newest *n* bars are sent to the model; indicators use this buffer.
 INDICATOR_WARMUP_BARS = 50
+
+
+def _head_is_forming(
+    bars_raw: list[KlineBar],
+    timeframe: str,
+    *,
+    symbol: str,
+    now_ms: int | None = None,
+    data_source: DataSource | None = None,
+) -> bool:
+    if data_source is not None:
+        return data_source.has_forming_bar_at_head(
+            bars_raw,
+            timeframe or None,
+            symbol=symbol or None,
+            now_ms=now_ms,
+        )
+    return _has_forming_bar_at_head(
+        bars_raw,
+        timeframe or None,
+        symbol=symbol or None,
+        now_ms=now_ms,
+    )
 
 
 def frame_is_pure_closed(frame: KlineFrame) -> bool:
@@ -34,10 +63,7 @@ def _indicators_equal(a: IndicatorBundle, b: IndicatorBundle) -> bool:
     for x, y in zip(a.ema20, b.ema20, strict=True):
         if not _float_equal(x, y):
             return False
-    for x, y in zip(a.atr14, b.atr14, strict=True):
-        if not _float_equal(x, y):
-            return False
-    return True
+    return all(_float_equal(x, y) for x, y in zip(a.atr14, b.atr14, strict=True))
 
 
 def _float_equal(a: float, b: float) -> bool:
@@ -53,6 +79,7 @@ def take_snapshot_from_bars(
     timeframe: str,
     *,
     now_ms: int | None = None,
+    data_source: DataSource | None = None,
 ) -> KlineFrame:
     """Build an analysis KlineFrame from a newest-first bar list (same as AI table).
 
@@ -61,7 +88,14 @@ def take_snapshot_from_bars(
 
     Raises ValueError if insufficient bars are available.
     """
-    frame = build_analysis_frame(bars_raw, n, symbol, timeframe, now_ms=now_ms)
+    frame = build_analysis_frame(
+        bars_raw,
+        n,
+        symbol,
+        timeframe,
+        now_ms=now_ms,
+        data_source=data_source,
+    )
     if frame is None:
         raise ValueError(
             f"Need at least {n} closed bars (or {n + 1} with a forming bar at index 0); "
@@ -77,6 +111,7 @@ def _newest_closed_slice(
     timeframe: str = "",
     symbol: str = "",
     now_ms: int | None = None,
+    data_source: DataSource | None = None,
     forming: bool | None = None,
 ) -> list[KlineBar] | None:
     """Return *n* newest closed bars from a newest-first list.
@@ -85,16 +120,17 @@ def _newest_closed_slice(
     halt (e.g. TradingView) is kept as K1.
 
     *forming* may be passed by callers that already computed
-    ``has_forming_bar_at_head`` to avoid recomputing it here.
+    the forming-bar state to avoid recomputing it here.
     """
     if not bars_raw or n < 1:
         return None
     if forming is None:
-        forming = has_forming_bar_at_head(
+        forming = _head_is_forming(
             bars_raw,
-            timeframe or None,
-            symbol=symbol or None,
+            timeframe,
+            symbol=symbol,
             now_ms=now_ms,
+            data_source=data_source,
         )
 
     if forming:
@@ -112,8 +148,8 @@ def compute_indicators(bars: list[KlineBar]) -> IndicatorBundle:
     Indicators are computed on the reversed (oldest-first) sequence and then
     reversed back so that index *i* aligns with ``bars[i]`` (K1 at index 0).
     """
-    from pa_agent.indicators.ema import ema_full
     from pa_agent.indicators.atr import atr_full
+    from pa_agent.indicators.ema import ema_full
 
     # bars is newest-first; indicators need oldest-first input
     bars_asc = list(reversed(bars))
@@ -139,9 +175,17 @@ def build_display_frame(
     timeframe: str,
     *,
     now_ms: int | None = None,
+    data_source: DataSource | None = None,
 ) -> KlineFrame | None:
     """Chart display frame — same semantics as AI (K1 = newest **closed** bar)."""
-    return build_analysis_frame(bars_raw, n, symbol, timeframe, now_ms=now_ms)
+    return build_analysis_frame(
+        bars_raw,
+        n,
+        symbol,
+        timeframe,
+        now_ms=now_ms,
+        data_source=data_source,
+    )
 
 
 def build_live_frame(
@@ -151,17 +195,19 @@ def build_live_frame(
     timeframe: str,
     *,
     now_ms: int | None = None,
+    data_source: DataSource | None = None,
 ) -> KlineFrame | None:
     """Live chart frame: include the forming bar + *n_closed* closed bars.
 
     This is for UI only. The analysis snapshot must still use
     ``build_analysis_frame`` so AI always sees closed-only candles.
     """
-    has_forming = has_forming_bar_at_head(
+    has_forming = _head_is_forming(
         bars_raw,
-        timeframe or None,
-        symbol=symbol or None,
+        timeframe,
+        symbol=symbol,
         now_ms=now_ms,
+        data_source=data_source,
     )
     if has_forming:
         if len(bars_raw) < n_closed + 1:
@@ -228,6 +274,7 @@ def build_analysis_frame(
     timeframe: str,
     *,
     now_ms: int | None = None,
+    data_source: DataSource | None = None,
 ) -> KlineFrame | None:
     """Build a snapshot for AI analysis: *n* newest **closed** bars only.
 
@@ -240,11 +287,12 @@ def build_analysis_frame(
     Chart and AI must both use this (or ``build_display_frame``) so K-line
     seq numbers refer to the same candles.
     """
-    forming = has_forming_bar_at_head(
+    forming = _head_is_forming(
         bars_raw,
-        timeframe or None,
-        symbol=symbol or None,
+        timeframe,
+        symbol=symbol,
         now_ms=now_ms,
+        data_source=data_source,
     )
     avail_closed = len(bars_raw) - (1 if forming else 0)
     if avail_closed < n:
@@ -256,6 +304,7 @@ def build_analysis_frame(
         timeframe=timeframe,
         symbol=symbol,
         now_ms=now_ms,
+        data_source=data_source,
         forming=forming,
     )
     if closed_raw is None or len(closed_raw) < n:

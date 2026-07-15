@@ -4,7 +4,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-
 # ── KlineBar ──────────────────────────────────────────────────────────────────
 
 @dataclass(frozen=True)
@@ -123,3 +122,29 @@ class DataSource(ABC):
 
         Raises DataSourceTransientError on recoverable network issues.
         """
+
+    def has_forming_bar_at_head(
+        self,
+        bars_newest_first: list[KlineBar],
+        timeframe: str | None = None,
+        *,
+        now_ms: int | None = None,
+        symbol: str | None = None,
+    ) -> bool:
+        """Return True when index 0 is the active forming bar.
+
+        Data sources may override this when their exchange/session semantics need
+        custom handling. The default delegates to the shared wall-clock helper and
+        uses broker/server time when the data source exposes it.
+        """
+        from pa_agent.data.bar_close_wait import (
+            has_forming_bar_at_head,
+            reference_now_ms,
+        )
+
+        return has_forming_bar_at_head(
+            bars_newest_first,
+            timeframe,
+            now_ms=reference_now_ms(now_ms=now_ms, data_source=self),
+            symbol=symbol,
+        )
