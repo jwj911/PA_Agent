@@ -62,6 +62,7 @@ jobs:
           tests/unit/test_qclaw_auto_fallback.py
           tests/unit/test_qclaw_agent_route.py
           tests/unit/test_cursor_agent_route.py
+          tests/unit/test_cursor_sdk_client.py
           tests/unit/test_provider_override_by_model.py
           tests/unit/test_api_key_configured.py
           tests/unit/test_pushplus_notifier.py
@@ -135,6 +136,7 @@ jobs:
           pa_agent/ai/retry_policy.py
           pa_agent/ai/client_factory.py
           pa_agent/ai/session_ledger.py
+          pa_agent/ai/cursor_sdk_client.py
           pa_agent/gui/chart_decision_overlay.py
           pa_agent/util/trade_metrics.py
           pa_agent/security/secret_store.py
@@ -168,6 +170,7 @@ jobs:
           tests/unit/test_qclaw_auto_fallback.py
           tests/unit/test_qclaw_agent_route.py
           tests/unit/test_cursor_agent_route.py
+          tests/unit/test_cursor_sdk_client.py
           tests/unit/test_provider_override_by_model.py
           tests/unit/test_api_key_configured.py
           tests/unit/test_pushplus_notifier.py

@@ -13,8 +13,9 @@ import secrets
 import sys
 import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from pa_agent.ai.cursor_connector import resolve_cursor_sdk_model_id
 from pa_agent.ai.deepseek_client import AIReply, AIUsage, CancelledError
@@ -73,7 +74,7 @@ def _default_workspace() -> str:
 
 def _patch_cursor_sdk_bridge_auth_tokens() -> None:
     """Patch cursor-sdk callback token generation (bridge argv parser bug on Windows)."""
-    global _PATCHED_CURSOR_SDK_AUTH_TOKENS  # noqa: PLW0603
+    global _PATCHED_CURSOR_SDK_AUTH_TOKENS
     if _PATCHED_CURSOR_SDK_AUTH_TOKENS:
         return
     try:
@@ -89,7 +90,7 @@ def _patch_cursor_sdk_bridge_auth_tokens() -> None:
 
 def _patch_cursor_sdk_bridge_argv() -> None:
     """Sanitize callback auth tokens when building bridge argv."""
-    global _PATCHED_CURSOR_SDK_BRIDGE_ARGV  # noqa: PLW0603
+    global _PATCHED_CURSOR_SDK_BRIDGE_ARGV
     if _PATCHED_CURSOR_SDK_BRIDGE_ARGV:
         return
     try:
@@ -115,7 +116,7 @@ def _patch_cursor_sdk_bridge_argv() -> None:
 
 def _patch_cursor_sdk_subprocess_popen() -> None:
     """Last-resort argv sanitization right before bridge subprocess launch."""
-    global _PATCHED_CURSOR_SDK_POPEN  # noqa: PLW0603
+    global _PATCHED_CURSOR_SDK_POPEN
     if _PATCHED_CURSOR_SDK_POPEN:
         return
     try:
@@ -157,7 +158,7 @@ def _patch_cursor_sdk_bridge_windows() -> None:
 
     We replace the discovery reader with a thread + queue approach.
     """
-    global _PATCHED_CURSOR_SDK_BRIDGE  # noqa: PLW0603
+    global _PATCHED_CURSOR_SDK_BRIDGE
     if _PATCHED_CURSOR_SDK_BRIDGE:
         return
     if sys.platform != "win32":
@@ -181,7 +182,7 @@ def _patch_cursor_sdk_bridge_windows() -> None:
         if process.stderr is None:
             raise CursorSDKError("Bridge process stderr is unavailable")
 
-        q: "queue.Queue[str | None]" = queue.Queue()
+        q: queue.Queue[str | None] = queue.Queue()
 
         def _reader() -> None:
             try:
@@ -209,7 +210,7 @@ def _patch_cursor_sdk_bridge_windows() -> None:
                     raise CursorSDKError(
                         f"Bridge exited before discovery with status {exit_code}: "
                         + "".join(stderr_lines)
-                    )
+                    ) from None
                 continue
 
             if line is None:
@@ -346,10 +347,15 @@ class CursorSdkClient:
 
         _ensure_cursor_sdk_patches()
         try:
-            from cursor_sdk import Agent, AgentOptions, CursorClient, LocalAgentOptions  # type: ignore
-        except Exception as exc:  # noqa: BLE001
+            from cursor_sdk import (  # type: ignore
+                Agent,
+                AgentOptions,
+                CursorClient,
+                LocalAgentOptions,
+            )
+        except Exception as exc:
             raise RuntimeError(
-                "cursor-sdk 未安装或导入失败。请先安装依赖：pip install cursor-sdk"
+                "cursor-sdk 未安装或导入失败。请先安装依赖: pip install cursor-sdk"
             ) from exc
 
         prompt = _messages_to_prompt(messages)
