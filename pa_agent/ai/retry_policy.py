@@ -174,9 +174,11 @@ def detect_cheat(
         norm_b = str(before.get("gate_result") or "").strip().lower()
         norm_a = str(after.get("gate_result") or "").strip().lower()
         # Normalizer may repair wait/unknown→proceed; skip if effective values agree.
-        if not (norm_b and norm_a and norm_b == norm_a):
-            if br == "proceed" and ar in ("wait", "unknown"):
-                violations.append(f"gate_result: {br!r} → {ar!r}")
+        if not (norm_b and norm_a and norm_b == norm_a) and br == "proceed" and ar in (
+            "wait",
+            "unknown",
+        ):
+            violations.append(f"gate_result: {br!r} → {ar!r}")
 
     if stage == "stage2":
         bsum = before.get("diagnosis_summary") if isinstance(before.get("diagnosis_summary"), dict) else {}

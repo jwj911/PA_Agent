@@ -51,6 +51,7 @@ jobs:
           tests/unit/test_response_extract.py
           tests/unit/test_mimo_compat.py
           tests/unit/test_provider_errors.py
+          tests/unit/test_validation_retry.py
           --tb=line
           -q
           -p pytest_cov
@@ -71,6 +72,7 @@ jobs:
           pa_agent/ai/mimo_compat.py
           pa_agent/ai/kline_features.py
           pa_agent/ai/provider_errors.py
+          pa_agent/ai/retry_policy.py
           pa_agent/security/secret_store.py
           pa_agent/records/pending_writer.py
           tests/unit/test_data_source_forming_bar.py
@@ -93,3 +95,4 @@ jobs:
           tests/unit/test_response_extract.py
           tests/unit/test_mimo_compat.py
           tests/unit/test_provider_errors.py
+          tests/unit/test_validation_retry.py
