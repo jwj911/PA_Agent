@@ -13,6 +13,29 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第九十二轮：继续 L7，扩展 CI 到 decision node property 测试）
+
+本轮继续推进 **L7：CI 增强**。第九十一轮已把 trace normalize 与 prompt assembler 测试纳入目标 CI；本轮继续筛选纯后端 decision node 属性测试。`test_decision_nodes_preflight.py` 覆盖 PreflightDataGate 的空 K 线、坏 OHLC、K 线数量阈值、EMA/ATR 缺失与 Hypothesis 边界性质；`test_decision_nodes_judges.py` 覆盖 direction / always-in / signal-bar judges、program node 合并与 override 规则。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_decision_nodes_preflight.py` 与 `tests/unit/test_decision_nodes_judges.py`。目标测试数量从 **518** 扩展到 **591**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `tests/unit/test_decision_nodes_preflight.py` 与 `tests/unit/test_decision_nodes_judges.py`。
+- **清理目标测试 lint**：通过 Ruff 自动整理 import、移除未使用导入、合并重复分支，并将 tuple 拼接改为等价 unpacking；对保留的中文 decision trace 样例添加文件级 `# ruff: noqa: RUF001`。
+- **修正过期测试期望**：`test_normalize_stage2_upgrades_9_0_for_planned_limit` 更名为 `test_normalize_stage2_rejects_invalid_planned_limit_signal`，验证当前合同：当 §9.0 明确为“否”且 signal quality 为 invalid 时，Stage 2 normalizer 会将该计划型限价归一化为 `不下单` / `reject`，而不是伪造已确认信号。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 PreflightDataGate 与 decision node judges property tests。
+
+### 验证
+
+- 本地 Python 3.12 环境缺少 Hypothesis；为验证本轮测试，在 `%TEMP%\pa_agent_hypothesis_dep` 临时安装 `hypothesis>=6` 并通过 `PYTHONPATH` 注入。CI 仍使用既有 `pip install -e ".[dev]"`，`pyproject.toml` 已包含 `hypothesis>=6`。
+- 新增测试：`py -3.12 -m pytest tests/unit/test_decision_nodes_preflight.py tests/unit/test_decision_nodes_judges.py --tb=line -q -p no:cacheprovider`（带临时 `PYTHONPATH`）→ **73 passed**。
+- `py -3.12 -m ruff check tests/unit/test_decision_nodes_preflight.py tests/unit/test_decision_nodes_judges.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests\unit\test_decision_nodes_preflight.py tests\unit\test_decision_nodes_judges.py` → 通过。
+- 扩展后目标集采用分块验证：既有 CI 目标集（排除本轮新增 2 文件）→ **518 passed**；本轮新增 property 测试 → **73 passed**。完整合计覆盖 **591** 项目标测试。本地一次性合跑曾执行到 100% 后进入 pytest teardown 慢退出，未作为通过证据。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第九十一轮：继续 L7，扩展 CI 到 trace normalize 与 prompt assembler 测试）
 
 本轮继续推进 **L7：CI 增强**。第九十轮已把 Stage 2 normalizer 测试纳入目标 CI；本轮继续筛选纯后端 prompt/trace 组装与归一化测试。`test_trace_normalize.py` 覆盖 trace bar_range 修复、Stage 2 trace 归一化、pending/partial answer 兼容、严格模式 trace 问题修复与 schema 通过路径；`test_prompt_assembler.py` 覆盖 prompt 组装、bar-by-bar 摘要、程序判定闸门、增量分析上下文，以及上一轮 fenced JSON 响应抽取。
