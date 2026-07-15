@@ -171,7 +171,6 @@ def route_order_method(
                 "entry_price",
                 "stop_loss_price",
                 "take_profit_price",
-                "take_profit_price_2",
             )
         )
 
