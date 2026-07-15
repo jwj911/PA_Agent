@@ -5,14 +5,12 @@ from collections.abc import Callable
 
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 
+from pa_agent.ai.response_extract import content_from_response, reasoning_from_response
 from pa_agent.records.schema import AnalysisRecord
 
 # One Unicode codepoint per “token”, like real API streaming.
 _CHAR_MS = 16
 _STAGE_GAP_MS = 450
-
-
-from pa_agent.ai.response_extract import content_from_response, reasoning_from_response
 
 
 def _prompt_parts(messages: list[dict] | None, *, last_user: bool = False) -> tuple[str, str]:

@@ -52,6 +52,9 @@ jobs:
           tests/unit/test_mimo_compat.py
           tests/unit/test_provider_errors.py
           tests/unit/test_validation_retry.py
+          tests/unit/test_analysis_history.py
+          tests/unit/test_demo_record_loader.py
+          tests/unit/test_demo_replayer.py
           --tb=line
           -q
           -p pytest_cov
@@ -75,6 +78,9 @@ jobs:
           pa_agent/ai/retry_policy.py
           pa_agent/security/secret_store.py
           pa_agent/records/pending_writer.py
+          pa_agent/records/analysis_history.py
+          pa_agent/demo/record_loader.py
+          pa_agent/demo/replayer.py
           tests/unit/test_data_source_forming_bar.py
           tests/unit/test_mt5_clock_skew.py
           tests/unit/test_order_method_router.py
@@ -96,3 +102,6 @@ jobs:
           tests/unit/test_mimo_compat.py
           tests/unit/test_provider_errors.py
           tests/unit/test_validation_retry.py
+          tests/unit/test_analysis_history.py
+          tests/unit/test_demo_record_loader.py
+          tests/unit/test_demo_replayer.py
