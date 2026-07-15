@@ -542,6 +542,266 @@ class TwoStageOrchestrator:
         )
         return messages_s2, enable_next_bar, flip_cooldown
 
+    def _run_stage2(
+        self,
+        *,
+        record: AnalysisRecord,
+        on_event: Callable[[OrchestratorEvent], None],
+        on_stage_prompt: Callable[[str, str, str], None] | None,
+        on_stage2_reasoning: Callable[[str], None] | None,
+        on_stage2_content: Callable[[str], None] | None,
+        cancel_token: CancelToken,
+        frame: KlineFrame,
+        messages_s1: list[dict],
+        reply_s1: Any,
+        stage1_json: dict,
+        strategy_files: list[str],
+        experience_entries: list[Any],
+        messages_s2: list[dict],
+        previous_record: AnalysisRecord | None,
+        _enable_next_bar: bool,
+        _flip_cooldown: int,
+        _thinking: bool,
+        _effort: str,
+        s1_usage_calls: list[Any],
+    ) -> AnalysisRecord:
+        """Call, validate, and persist Stage 2 (Steps 15-24).
+
+        Owns the Stage-2 streaming closures (``_on_s2_reasoning`` /
+        ``_on_s2_content`` and the retry closure ``_call_s2_retry`` share the
+        ``s2_streamed_*`` flags via ``nonlocal``), the resilient API call, the
+        two terminal partials (network error, post-call cancel), the
+        validate-with-retry loop and its validation-failure terminal, and the
+        happy-path delegation to ``_persist_result``. Every path returns an
+        ``AnalysisRecord`` (terminal partial or the persisted final record),
+        so ``submit()`` tail-calls this and returns its result directly.
+        """
+        # ── Step 15: Call AI for Stage 2 ──────────────────────────────────────
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("\n" + "="*80)
+            logger.debug("【Stage 2 发送的完整 Prompt】")
+            logger.debug("="*80)
+            for msg in messages_s2:
+                role = msg.get("role", "?").upper()
+                content = msg.get("content", "")
+                logger.debug("\n--- [%s] ---\n%s", role, content)
+            logger.debug("="*80 + "\n")
+
+        # Notify conversation tab of the prompt being sent
+        if on_stage_prompt is not None:
+            s2_system = next((m.get("content", "") for m in messages_s2 if m.get("role") == "system"), "")
+            s2_user = next((m.get("content", "") for m in reversed(messages_s2) if m.get("role") == "user"), "")
+            on_stage_prompt("stage2", s2_system, s2_user)
+
+        s2_streamed_reasoning = False
+        s2_streamed_content = False
+
+        def _on_s2_reasoning(chunk: str) -> None:
+            nonlocal s2_streamed_reasoning
+            s2_streamed_reasoning = True
+            if on_stage2_reasoning is not None:
+                on_stage2_reasoning(chunk)
+
+        def _on_s2_content(chunk: str) -> None:
+            nonlocal s2_streamed_content
+            s2_streamed_content = True
+            if on_stage2_content is not None:
+                on_stage2_content(chunk)
+
+        try:
+            reply_s2 = self._stream_chat_resilient(
+                messages_s2,
+                on_reasoning_token=_on_s2_reasoning,
+                on_content_token=_on_s2_content,
+                cancel_token=cancel_token,
+                thinking=_thinking,
+                reasoning_effort=_effort,
+                stage_label="Stage 2",
+            )
+        except Exception as exc:
+            if self._is_network_error(exc):
+                logger.warning("Stage 2 network error: %s", exc)
+                record = record.model_copy(
+                    update={
+                        "stage1_messages": messages_s1,
+                        "stage1_response": reply_s1.raw,
+                        "stage1_diagnosis": stage1_json,
+                        "stage2_messages": messages_s2,
+                        "strategy_files_used": strategy_files,
+                        "experience_loaded": [
+                            e.model_dump() if hasattr(e, "model_dump") else dict(e)
+                            for e in experience_entries
+                        ],
+                        "usage_total": _accumulate_usage(record.usage_total, reply_s1.usage),
+                        "exception": {
+                            "type": "network_error",
+                            "stage": "stage2",
+                            "message": str(exc),
+                        },
+                    }
+                )
+                self._pending_writer.save_partial(record, "network_error")
+                on_event(OrchestratorEvent.Stage2Failed)
+                return record
+            raise
+
+        if not s2_streamed_reasoning and reply_s2.reasoning_content:
+            _emit_buffered_stream(reply_s2.reasoning_content, on_stage2_reasoning)
+        if not s2_streamed_content and reply_s2.content:
+            _emit_buffered_stream(reply_s2.content, on_stage2_content)
+
+        # ── Step 16: Post-Stage-2-call cancel check ───────────────────────────
+        if cancel_token.is_set():
+            record = record.model_copy(
+                update={
+                    "stage1_messages": messages_s1,
+                    "stage1_response": reply_s1.raw,
+                    "stage1_diagnosis": stage1_json,
+                    "stage2_messages": messages_s2,
+                    "stage2_response": reply_s2.raw,
+                    "strategy_files_used": strategy_files,
+                    "experience_loaded": [
+                        e.model_dump() if hasattr(e, "model_dump") else dict(e)
+                        for e in experience_entries
+                    ],
+                    "usage_total": _accumulate_usage(
+                        _accumulate_usage(record.usage_total, reply_s1.usage),
+                        reply_s2.usage,
+                    ),
+                }
+            )
+            self._pending_writer.save_partial(record, "user_cancelled")
+            on_event(OrchestratorEvent.Cancelled)
+            return record
+
+        # ── Step 17: Validate Stage 2 ─────────────────────────────────────────
+        logger.debug("\n" + "="*80)
+        logger.debug("【Stage 2 AI 完整响应】")
+        logger.debug("="*80)
+        logger.debug(reply_s2.content)
+        if reply_s2.reasoning_content:
+            logger.debug("\n--- [思考过程] ---\n%s", reply_s2.reasoning_content)
+        logger.debug(
+            "\n--- [Token 用量] prompt=%s completion=%s latency=%s ---",
+            reply_s2.usage.prompt_tokens,
+            reply_s2.usage.completion_tokens,
+            _latency_ms_label(reply_s2.latency_ms),
+        )
+        logger.debug("="*80 + "\n")
+
+        s2_usage_calls: list[Any] = [getattr(reply_s2, "usage", None)]
+
+        def _call_s2_retry(msgs: list[dict]) -> Any:
+            nonlocal s2_streamed_reasoning, s2_streamed_content
+            on_event(OrchestratorEvent.Stage2Retry)
+            s2_streamed_reasoning = False
+            s2_streamed_content = False
+            r = self._client.stream_chat(
+                msgs,
+                on_reasoning_token=_on_s2_reasoning,
+                on_content_token=_on_s2_content,
+                cancel_token=cancel_token,
+                thinking=_thinking,
+                reasoning_effort=_effort,
+            )
+            if not s2_streamed_reasoning and r.reasoning_content:
+                _emit_buffered_stream(r.reasoning_content, on_stage2_reasoning)
+            if not s2_streamed_content and r.content:
+                _emit_buffered_stream(r.content, on_stage2_content)
+            s2_usage_calls.append(getattr(r, "usage", None))
+            return r
+
+        vr_s2 = validate_with_retry(
+            stage="stage2",
+            messages=messages_s2,
+            reply=reply_s2,
+            validator=self._validator,
+            validation_settings=self._validation_settings(),
+            validate_kwargs={
+                "kline_frame": frame,
+                "decision_stance": record.meta.decision_stance,
+                "stage1_json": stage1_json,
+                "skip_next_bar": not _enable_next_bar,
+                "previous_record": previous_record,
+                "structure_flip_cooldown_bars": _flip_cooldown,
+            },
+            call_api=_call_s2_retry,
+            provider_settings=getattr(self._settings, "provider", None),
+        )
+        messages_s2 = vr_s2.messages
+        reply_s2 = vr_s2.reply
+        result_s2 = vr_s2.result
+        if vr_s2.attempts > 1:
+            logger.info("Stage 2 validation succeeded after %d attempt(s)", vr_s2.attempts)
+
+        if isinstance(result_s2, ValidationError):
+            err = result_s2
+            err_message = _enrich_validation_message(err, reply_s2, stage="stage2")
+            logger.warning(
+                "Stage 2 validation failed: category=%s message=%s",
+                err.category,
+                err_message,
+            )
+            record = record.model_copy(
+                update={
+                    "stage1_messages": messages_s1,
+                    "stage1_response": reply_s1.raw,
+                    "stage1_diagnosis": stage1_json,
+                    "stage2_messages": messages_s2,
+                    "stage2_response": reply_s2.raw,
+                    "strategy_files_used": strategy_files,
+                    "experience_loaded": [
+                        e.model_dump() if hasattr(e, "model_dump") else dict(e)
+                        for e in experience_entries
+                    ],
+                    "usage_total": _accumulate_usage_calls(
+                        _accumulate_usage_calls(record.usage_total, s1_usage_calls),
+                        s2_usage_calls,
+                    ),
+                    "exception": {
+                        "type": "provider_error" if err.category == "e" else "validation_error",
+                        "stage": "stage2",
+                        "category": err.category,
+                        "message": err_message,
+                        "missing_fields": err.missing_fields,
+                        "invalid_fields": err.invalid_fields,
+                        "raw_text": err.raw_text,
+                        "parse_position": err.parse_position,
+                        "validation_attempts": vr_s2.attempts,
+                    },
+                }
+            )
+            self._pending_writer.save_partial(record, f"stage2_{err.category}")
+            on_event(OrchestratorEvent.Stage2Failed)
+            return record
+
+        # Validation passed
+        assert isinstance(result_s2, Ok)
+        stage2_json: dict = result_s2.obj
+        if not _enable_next_bar and isinstance(stage2_json, dict):
+            stage2_json = copy.deepcopy(stage2_json)
+            stage2_json.pop("next_bar_prediction", None)
+
+        # ── Step 19: Stage 2 done ─────────────────────────────────────────────
+        on_event(OrchestratorEvent.Stage2Done)
+
+        # ── Steps 19.5-24: Log predictions + build/persist final record ───────
+        return self._persist_result(
+            record=record,
+            on_event=on_event,
+            stage1_json=stage1_json,
+            messages_s1=messages_s1,
+            reply_s1=reply_s1,
+            messages_s2=messages_s2,
+            reply_s2=reply_s2,
+            stage2_json=stage2_json,
+            strategy_files=strategy_files,
+            experience_entries=experience_entries,
+            s1_usage_calls=s1_usage_calls,
+            s2_usage_calls=s2_usage_calls,
+            _enable_next_bar=_enable_next_bar,
+        )
+
     # ── Public API ────────────────────────────────────────────────────────────
 
     def submit(
@@ -857,230 +1117,27 @@ class TwoStageOrchestrator:
             previous_record=previous_record,
         )
 
-        # ── Step 15: Call AI for Stage 2 ──────────────────────────────────────
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug("\n" + "="*80)
-            logger.debug("【Stage 2 发送的完整 Prompt】")
-            logger.debug("="*80)
-            for msg in messages_s2:
-                role = msg.get("role", "?").upper()
-                content = msg.get("content", "")
-                logger.debug("\n--- [%s] ---\n%s", role, content)
-            logger.debug("="*80 + "\n")
-
-        # Notify conversation tab of the prompt being sent
-        if on_stage_prompt is not None:
-            s2_system = next((m.get("content", "") for m in messages_s2 if m.get("role") == "system"), "")
-            s2_user = next((m.get("content", "") for m in reversed(messages_s2) if m.get("role") == "user"), "")
-            on_stage_prompt("stage2", s2_system, s2_user)
-
-        s2_streamed_reasoning = False
-        s2_streamed_content = False
-
-        def _on_s2_reasoning(chunk: str) -> None:
-            nonlocal s2_streamed_reasoning
-            s2_streamed_reasoning = True
-            if on_stage2_reasoning is not None:
-                on_stage2_reasoning(chunk)
-
-        def _on_s2_content(chunk: str) -> None:
-            nonlocal s2_streamed_content
-            s2_streamed_content = True
-            if on_stage2_content is not None:
-                on_stage2_content(chunk)
-
-        try:
-            reply_s2 = self._stream_chat_resilient(
-                messages_s2,
-                on_reasoning_token=_on_s2_reasoning,
-                on_content_token=_on_s2_content,
-                cancel_token=cancel_token,
-                thinking=_thinking,
-                reasoning_effort=_effort,
-                stage_label="Stage 2",
-            )
-        except Exception as exc:
-            if self._is_network_error(exc):
-                logger.warning("Stage 2 network error: %s", exc)
-                record = record.model_copy(
-                    update={
-                        "stage1_messages": messages_s1,
-                        "stage1_response": reply_s1.raw,
-                        "stage1_diagnosis": stage1_json,
-                        "stage2_messages": messages_s2,
-                        "strategy_files_used": strategy_files,
-                        "experience_loaded": [
-                            e.model_dump() if hasattr(e, "model_dump") else dict(e)
-                            for e in experience_entries
-                        ],
-                        "usage_total": _accumulate_usage(record.usage_total, reply_s1.usage),
-                        "exception": {
-                            "type": "network_error",
-                            "stage": "stage2",
-                            "message": str(exc),
-                        },
-                    }
-                )
-                self._pending_writer.save_partial(record, "network_error")
-                on_event(OrchestratorEvent.Stage2Failed)
-                return record
-            raise
-
-        if not s2_streamed_reasoning and reply_s2.reasoning_content:
-            _emit_buffered_stream(reply_s2.reasoning_content, on_stage2_reasoning)
-        if not s2_streamed_content and reply_s2.content:
-            _emit_buffered_stream(reply_s2.content, on_stage2_content)
-
-        # ── Step 16: Post-Stage-2-call cancel check ───────────────────────────
-        if cancel_token.is_set():
-            record = record.model_copy(
-                update={
-                    "stage1_messages": messages_s1,
-                    "stage1_response": reply_s1.raw,
-                    "stage1_diagnosis": stage1_json,
-                    "stage2_messages": messages_s2,
-                    "stage2_response": reply_s2.raw,
-                    "strategy_files_used": strategy_files,
-                    "experience_loaded": [
-                        e.model_dump() if hasattr(e, "model_dump") else dict(e)
-                        for e in experience_entries
-                    ],
-                    "usage_total": _accumulate_usage(
-                        _accumulate_usage(record.usage_total, reply_s1.usage),
-                        reply_s2.usage,
-                    ),
-                }
-            )
-            self._pending_writer.save_partial(record, "user_cancelled")
-            on_event(OrchestratorEvent.Cancelled)
-            return record
-
-        # ── Step 17: Validate Stage 2 ─────────────────────────────────────────
-        logger.debug("\n" + "="*80)
-        logger.debug("【Stage 2 AI 完整响应】")
-        logger.debug("="*80)
-        logger.debug(reply_s2.content)
-        if reply_s2.reasoning_content:
-            logger.debug("\n--- [思考过程] ---\n%s", reply_s2.reasoning_content)
-        logger.debug(
-            "\n--- [Token 用量] prompt=%s completion=%s latency=%s ---",
-            reply_s2.usage.prompt_tokens,
-            reply_s2.usage.completion_tokens,
-            _latency_ms_label(reply_s2.latency_ms),
-        )
-        logger.debug("="*80 + "\n")
-
-        s2_usage_calls: list[Any] = [getattr(reply_s2, "usage", None)]
-
-        def _call_s2_retry(msgs: list[dict]) -> Any:
-            nonlocal s2_streamed_reasoning, s2_streamed_content
-            on_event(OrchestratorEvent.Stage2Retry)
-            s2_streamed_reasoning = False
-            s2_streamed_content = False
-            r = self._client.stream_chat(
-                msgs,
-                on_reasoning_token=_on_s2_reasoning,
-                on_content_token=_on_s2_content,
-                cancel_token=cancel_token,
-                thinking=_thinking,
-                reasoning_effort=_effort,
-            )
-            if not s2_streamed_reasoning and r.reasoning_content:
-                _emit_buffered_stream(r.reasoning_content, on_stage2_reasoning)
-            if not s2_streamed_content and r.content:
-                _emit_buffered_stream(r.content, on_stage2_content)
-            s2_usage_calls.append(getattr(r, "usage", None))
-            return r
-
-        vr_s2 = validate_with_retry(
-            stage="stage2",
-            messages=messages_s2,
-            reply=reply_s2,
-            validator=self._validator,
-            validation_settings=self._validation_settings(),
-            validate_kwargs={
-                "kline_frame": frame,
-                "decision_stance": record.meta.decision_stance,
-                "stage1_json": stage1_json,
-                "skip_next_bar": not _enable_next_bar,
-                "previous_record": previous_record,
-                "structure_flip_cooldown_bars": _flip_cooldown,
-            },
-            call_api=_call_s2_retry,
-            provider_settings=getattr(self._settings, "provider", None),
-        )
-        messages_s2 = vr_s2.messages
-        reply_s2 = vr_s2.reply
-        result_s2 = vr_s2.result
-        if vr_s2.attempts > 1:
-            logger.info("Stage 2 validation succeeded after %d attempt(s)", vr_s2.attempts)
-
-        if isinstance(result_s2, ValidationError):
-            err = result_s2
-            err_message = _enrich_validation_message(err, reply_s2, stage="stage2")
-            logger.warning(
-                "Stage 2 validation failed: category=%s message=%s",
-                err.category,
-                err_message,
-            )
-            record = record.model_copy(
-                update={
-                    "stage1_messages": messages_s1,
-                    "stage1_response": reply_s1.raw,
-                    "stage1_diagnosis": stage1_json,
-                    "stage2_messages": messages_s2,
-                    "stage2_response": reply_s2.raw,
-                    "strategy_files_used": strategy_files,
-                    "experience_loaded": [
-                        e.model_dump() if hasattr(e, "model_dump") else dict(e)
-                        for e in experience_entries
-                    ],
-                    "usage_total": _accumulate_usage_calls(
-                        _accumulate_usage_calls(record.usage_total, s1_usage_calls),
-                        s2_usage_calls,
-                    ),
-                    "exception": {
-                        "type": "provider_error" if err.category == "e" else "validation_error",
-                        "stage": "stage2",
-                        "category": err.category,
-                        "message": err_message,
-                        "missing_fields": err.missing_fields,
-                        "invalid_fields": err.invalid_fields,
-                        "raw_text": err.raw_text,
-                        "parse_position": err.parse_position,
-                        "validation_attempts": vr_s2.attempts,
-                    },
-                }
-            )
-            self._pending_writer.save_partial(record, f"stage2_{err.category}")
-            on_event(OrchestratorEvent.Stage2Failed)
-            return record
-
-        # Validation passed
-        assert isinstance(result_s2, Ok)
-        stage2_json: dict = result_s2.obj
-        if not _enable_next_bar and isinstance(stage2_json, dict):
-            stage2_json = copy.deepcopy(stage2_json)
-            stage2_json.pop("next_bar_prediction", None)
-
-        # ── Step 19: Stage 2 done ─────────────────────────────────────────────
-        on_event(OrchestratorEvent.Stage2Done)
-
-        # ── Steps 19.5-24: Log predictions + build/persist final record ───────
-        return self._persist_result(
+        # ── Steps 15-24: Call/validate Stage 2, then persist ─────────────────
+        return self._run_stage2(
             record=record,
             on_event=on_event,
-            stage1_json=stage1_json,
+            on_stage_prompt=on_stage_prompt,
+            on_stage2_reasoning=on_stage2_reasoning,
+            on_stage2_content=on_stage2_content,
+            cancel_token=cancel_token,
+            frame=frame,
             messages_s1=messages_s1,
             reply_s1=reply_s1,
-            messages_s2=messages_s2,
-            reply_s2=reply_s2,
-            stage2_json=stage2_json,
+            stage1_json=stage1_json,
             strategy_files=strategy_files,
             experience_entries=experience_entries,
-            s1_usage_calls=s1_usage_calls,
-            s2_usage_calls=s2_usage_calls,
+            messages_s2=messages_s2,
+            previous_record=previous_record,
             _enable_next_bar=_enable_next_bar,
+            _flip_cooldown=_flip_cooldown,
+            _thinking=_thinking,
+            _effort=_effort,
+            s1_usage_calls=s1_usage_calls,
         )
 
     # ── Internal helpers ──────────────────────────────────────────────────────
