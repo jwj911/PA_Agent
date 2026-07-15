@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百零三轮：继续 L7，扩展 Ruff 到 indicators 源码）
+
+本轮继续推进 **L7：CI 增强**。第一百零二轮已把测试侧目录的 Ruff 覆盖扩展到 `tests/e2e` 与 `tests/fixtures`；本轮开始继续收窄源码侧 Ruff 缺口。先选择边界清晰、噪声很小且已有单元/属性测试覆盖的 `pa_agent/indicators` 包，避免直接触碰仍有大量中文文案基线的 `notify` / `config` 等模块。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/indicators`。
+- **清理 EMA/ATR lint**：`ema.py` docstring 中的希腊字母 `α` 改为 ASCII `alpha`；`atr.py` 中 `state_after_atr()` 的循环变量从 `h/l/c` 改为 `high/low/close`。
+- **保持 ATR 行为不变**：`state_after_atr()` 的 `zip()` 显式设置 `strict=False`，保留原先按最短输入序列截断的行为，同时满足 Ruff `B905`。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 `indicators`。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/indicators` → **All checks passed**。
+- 相关测试：`py -3.12 -m pytest tests/property/test_indicators_incremental.py tests/unit/test_atr_true_range.py tests/unit/test_snapshot_indicator_warmup.py --tb=line -q -p no:cacheprovider` → **11 passed**。
+- `py -3.12 -m py_compile pa_agent\indicators\ema.py pa_agent\indicators\atr.py` → 通过。
+- 扩展后目标集：从 `.github/workflows/ci.yml` 解析 targeted pytest 清单 → `py -3.12 -m pytest ... --tb=line -q -p no:cacheprovider` → **通过**。
+- 非 live 非 e2e 门禁：`py -3.12 -m pytest -m "not e2e and not live" --tb=line -q -p no:cacheprovider` → **通过**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百零二轮：继续 L7，扩展 Ruff 到 e2e 与 fixtures）
 
 本轮继续推进 **L7：CI 增强**。第一百零一轮已把整个 `tests/integration` 纳入 focused Ruff；本轮继续收窄测试侧 Ruff 缺口，把 `tests/e2e` 与 `tests/fixtures` 纳入静态检查。该变更只扩大 lint 覆盖，不改变默认测试执行范围：e2e 仍不在 CI 中运行，live/e2e 仍作为单独增强项。
