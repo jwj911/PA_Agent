@@ -131,6 +131,9 @@ jobs:
       - name: Run focused Ruff checks
         run: >
           python -m ruff check
+          pa_agent/__init__.py
+          pa_agent/app_context.py
+          pa_agent/main.py
           pa_agent/data/base.py
           pa_agent/data/snapshot.py
           pa_agent/data/mt5.py
