@@ -434,6 +434,66 @@ class TwoStageOrchestrator:
         # ── Step 24: Return ───────────────────────────────────────────────────
         return record
 
+    def _try_gate_short_circuit(
+        self,
+        *,
+        record: AnalysisRecord,
+        on_event: Callable[[OrchestratorEvent], None],
+        on_stage_prompt: Callable[[str, str, str], None] | None,
+        on_stage2_content: Callable[[str], None] | None,
+        stage1_json: dict,
+        messages_s1: list[dict],
+        reply_s1: Any,
+        strategy_files: list[str],
+        experience_entries: list[Any],
+    ) -> AnalysisRecord | None:
+        """Short-circuit Stage 2 when the Stage-1 gate did not proceed.
+
+        Part of Step 13: when ``stage1_json['gate_result']`` is ``wait`` or
+        ``unknown``, the program synthesises the Stage-2 result locally (no
+        model call), persists the full record, and returns it. Returns
+        ``None`` when the gate proceeds, signalling ``submit()`` to continue
+        with the normal Stage-2 build/call/validate flow.
+        """
+        gate_result = str(stage1_json.get("gate_result", "proceed")).lower()
+        if gate_result not in ("wait", "unknown"):
+            return None
+
+        from pa_agent.ai.decision_tree import build_stage2_gate_wait_response
+
+        if on_stage_prompt is not None:
+            on_stage_prompt("stage2", "", "（阶段一闸门未通过，跳过阶段二模型调用）")
+        short_msg = (
+            f"阶段一 gate_result={gate_result}，程序已短路生成阶段二结果，"
+            "未向模型发起请求。\n"
+        )
+        _emit_buffered_stream(short_msg, on_stage2_content)
+
+        stage2_json = build_stage2_gate_wait_response(stage1_json)
+        on_event(OrchestratorEvent.Stage2Done)
+        logger.info("next_bar_prediction direction=null probs=null/null/null unpredictable=true (gate short-circuit)")
+        usage_total = _accumulate_usage(record.usage_total, reply_s1.usage)
+        record = record.model_copy(
+            update={
+                "stage1_messages": messages_s1,
+                "stage1_response": reply_s1.raw,
+                "stage1_diagnosis": stage1_json,
+                "stage2_messages": [],
+                "stage2_response": None,
+                "stage2_decision": stage2_json,
+                "strategy_files_used": strategy_files,
+                "experience_loaded": [
+                    e.model_dump() if hasattr(e, "model_dump") else dict(e)
+                    for e in experience_entries
+                ],
+                "usage_total": usage_total,
+                "exception": None,
+            }
+        )
+        self._pending_writer.save_full(record)
+        on_event(OrchestratorEvent.RecordSaved)
+        return record
+
     # ── Public API ────────────────────────────────────────────────────────────
 
     def submit(
@@ -723,42 +783,19 @@ class TwoStageOrchestrator:
         if on_stage2_files is not None:
             on_stage2_files(list(strategy_files))
 
-        gate_result = str(stage1_json.get("gate_result", "proceed")).lower()
-        if gate_result in ("wait", "unknown"):
-            from pa_agent.ai.decision_tree import build_stage2_gate_wait_response
-
-            if on_stage_prompt is not None:
-                on_stage_prompt("stage2", "", "（阶段一闸门未通过，跳过阶段二模型调用）")
-            short_msg = (
-                f"阶段一 gate_result={gate_result}，程序已短路生成阶段二结果，"
-                "未向模型发起请求。\n"
-            )
-            _emit_buffered_stream(short_msg, on_stage2_content)
-
-            stage2_json = build_stage2_gate_wait_response(stage1_json)
-            on_event(OrchestratorEvent.Stage2Done)
-            logger.info("next_bar_prediction direction=null probs=null/null/null unpredictable=true (gate short-circuit)")
-            usage_total = _accumulate_usage(record.usage_total, reply_s1.usage)
-            record = record.model_copy(
-                update={
-                    "stage1_messages": messages_s1,
-                    "stage1_response": reply_s1.raw,
-                    "stage1_diagnosis": stage1_json,
-                    "stage2_messages": [],
-                    "stage2_response": None,
-                    "stage2_decision": stage2_json,
-                    "strategy_files_used": strategy_files,
-                    "experience_loaded": [
-                        e.model_dump() if hasattr(e, "model_dump") else dict(e)
-                        for e in experience_entries
-                    ],
-                    "usage_total": usage_total,
-                    "exception": None,
-                }
-            )
-            self._pending_writer.save_full(record)
-            on_event(OrchestratorEvent.RecordSaved)
-            return record
+        _gate_record = self._try_gate_short_circuit(
+            record=record,
+            on_event=on_event,
+            on_stage_prompt=on_stage_prompt,
+            on_stage2_content=on_stage2_content,
+            stage1_json=stage1_json,
+            messages_s1=messages_s1,
+            reply_s1=reply_s1,
+            strategy_files=strategy_files,
+            experience_entries=experience_entries,
+        )
+        if _gate_record is not None:
+            return _gate_record
 
         # ── Step 14: Build Stage 2 messages ───────────────────────────────────
         _enable_next_bar = bool(
