@@ -4,7 +4,7 @@ Property 1b: data insufficient → zero AI calls, record.exception.type=="insuff
 """
 from __future__ import annotations
 
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -109,7 +109,7 @@ def test_insufficient_data_zero_ai_calls(frame_factory, expected_check):
 
 def test_insufficient_data_no_stage2_ai_call():
     """Stage2 AI is also not called for insufficient data."""
-    orch, client, assembler, writer = _make_orchestrator()
+    orch, client, _assembler, _writer = _make_orchestrator()
     frame = _insufficient_frame_19bars()
     cancel_token = CancelToken()
 
@@ -123,7 +123,7 @@ def test_insufficient_data_no_stage2_ai_call():
 
 def test_insufficient_data_record_exception_type_distinct():
     """Verify insufficient_data record can be distinguished from other error types."""
-    orch, client, assembler, writer = _make_orchestrator()
+    orch, _client, _assembler, _writer = _make_orchestrator()
     frame = _insufficient_frame_19bars()
 
     record = orch.submit(frame, CancelToken(), lambda e: None)

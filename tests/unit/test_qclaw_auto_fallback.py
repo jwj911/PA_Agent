@@ -1,6 +1,7 @@
 """Tests for QClaw auto-fallback on network errors."""
 from __future__ import annotations
 
+from contextlib import suppress
 from unittest.mock import MagicMock, patch
 
 import openai
@@ -70,19 +71,19 @@ def test_stream_chat_does_not_retry_when_qclaw_unavailable() -> None:
         settings=settings,
     )
 
-    with patch.object(orchestrator, "_try_qclaw_fallback", return_value=False):
-        try:
-            orchestrator._stream_chat_resilient(
-                [{"role": "user", "content": "hi"}],
-                on_reasoning_token=None,
-                on_content_token=None,
-                cancel_token=MagicMock(is_set=MagicMock(return_value=False)),
-                thinking=True,
-                reasoning_effort="max",
-                stage_label="Stage 1",
-            )
-        except openai.APIConnectionError:
-            pass
+    with (
+        patch.object(orchestrator, "_try_qclaw_fallback", return_value=False),
+        suppress(openai.APIConnectionError),
+    ):
+        orchestrator._stream_chat_resilient(
+            [{"role": "user", "content": "hi"}],
+            on_reasoning_token=None,
+            on_content_token=None,
+            cancel_token=MagicMock(is_set=MagicMock(return_value=False)),
+            thinking=True,
+            reasoning_effort="max",
+            stage_label="Stage 1",
+        )
 
     assert client.stream_chat.call_count == 1
 

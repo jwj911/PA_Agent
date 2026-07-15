@@ -48,5 +48,11 @@ jobs:
           pa_agent/data/snapshot.py
           pa_agent/data/mt5.py
           pa_agent/data/yfinance_source.py
+          pa_agent/ai/provider_sync_service.py
           tests/unit/test_data_source_forming_bar.py
           tests/unit/test_mt5_clock_skew.py
+          tests/unit/test_order_method_router.py
+          tests/unit/test_trend_context.py
+          tests/unit/test_decision_nodes_orchestrator.py
+          tests/unit/test_provider_sync_service.py
+          tests/unit/test_qclaw_auto_fallback.py

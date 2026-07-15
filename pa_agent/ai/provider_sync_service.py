@@ -49,7 +49,7 @@ class ProviderSyncService:
         try:
             save_settings(settings, self._save_path)
             update_api_key(new_key)
-        except Exception as save_exc:  # noqa: BLE001
+        except Exception as save_exc:
             logger.warning(
                 "%s fallback applied but settings save failed: %s",
                 provider_name,
