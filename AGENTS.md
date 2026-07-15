@@ -294,7 +294,7 @@ pytest -m live
 **测试约定**：
 
 - 修改 JSON schema、提示词、策略路由、决策节点时，请补充或更新对应测试用例。
-- CI（`.github/workflows/ci.yml`）目前在 Windows + Python 3.11 下执行安装/import 验证，并运行一组形成中 K 线/数据源、§11 路由、决策编排与 provider fallback 相关的目标单测；Ruff 门禁覆盖 forming-bar/data-source 文件、`ProviderSyncService` 及这些目标测试文件。尚未启用完整 `pytest -m "not e2e"`、全仓 Ruff、Black 或覆盖率门禁。
+- CI（`.github/workflows/ci.yml`）目前在 Windows + Python 3.11 下执行安装/import 验证，并运行一组形成中 K 线/数据源、§11 路由、决策编排与 provider fallback 相关的目标单测；目标 pytest 会通过 `pytest-cov` 输出 `pa_agent` 覆盖率报告但暂不设阈值。Ruff 门禁覆盖 forming-bar/data-source 文件、`ProviderSyncService` 及这些目标测试文件。尚未启用完整 `pytest -m "not e2e"`、全仓 Ruff、Black 或覆盖率阈值门禁。
 - 提交前建议至少运行与改动相关的目标测试；较大改动应继续补跑 `pytest -m "not e2e"`。
 
 ***
@@ -384,7 +384,7 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
 - 部署方式以源码运行或 `pip install -e .` 为主：
   - Windows 用户：直接双击 `run.py` 或在终端执行 `python run.py`。
   - 开发者：`pip install -e ".[dev]"` 后使用 `make run` / `python -m pa_agent.main`。
-- CI（`.github/workflows/ci.yml`）已开始执行安装/import 验证、目标单测与聚焦 Ruff 检查；目标测试现覆盖 forming-bar/data-source、§11 路由、决策编排与 provider fallback，Ruff 门禁同步覆盖对应测试文件和 `ProviderSyncService`，完整测试、Black 与覆盖率仍属于 L7 后续增强。
+- CI（`.github/workflows/ci.yml`）已开始执行安装/import 验证、目标单测、目标覆盖率报告与聚焦 Ruff 检查；目标测试现覆盖 forming-bar/data-source、§11 路由、决策编排与 provider fallback，Ruff 门禁同步覆盖对应测试文件和 `ProviderSyncService`，完整测试、Black 与覆盖率阈值仍属于 L7 后续增强。
 - `tools/` 目录包含大量一次性诊断脚本（网关探测、stage2 JSON 调试、MT5 时钟偏移检测等），不属于正式发布流程。
 
 ***

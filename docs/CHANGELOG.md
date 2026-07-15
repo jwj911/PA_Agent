@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第五十五轮：继续 L7，给 CI 目标测试增加覆盖率报告）
+
+本轮继续推进 **L7：CI 增强**，切入上一轮尚未覆盖的“覆盖率”项。当前 CI 已具备安装/import、目标 pytest 与聚焦 Ruff；但 `pyproject.toml` 的 dev 依赖没有 `pytest-cov`，CI 也没有任何覆盖率输出。本轮先建立低风险覆盖率基线：让现有目标测试输出 `pa_agent` 的终端覆盖率报告，但暂不设置 `--cov-fail-under`，避免把当前 11% 的目标子集覆盖率误变成阻塞门禁。
+
+### 工程治理
+
+- **新增 dev 依赖 `pytest-cov>=5`**：加入 `pyproject.toml` 的 `[project.optional-dependencies].dev`，使 CI 的 `pip install -e ".[dev]"` 能安装 coverage 插件。
+- **CI 目标 pytest 增加 coverage 输出**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 步骤新增 `-p pytest_cov --cov=pa_agent --cov-report=term-missing:skip-covered`。这会在现有 60 项目标测试通过后输出 `pa_agent` 覆盖率报告，先提供可观测基线，不生成持久报告文件，也不设失败阈值。
+- **保持现有测试/Ruff 门禁不变**：目标 pytest 范围、聚焦 Ruff 文件集合不扩大，避免本轮同时引入测试范围变化与覆盖率工具链变化。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 CI 已输出目标覆盖率报告，但完整测试、Black 与覆盖率阈值仍属于 L7 后续增强。
+
+### 验证
+
+- 本机通过仓库临时 target 安装 `pytest-cov>=5` 后，使用 `PYTHONPATH=.tmp_pytest_cov` 显式加载插件验证 coverage 命令：目标 pytest **60 passed**，输出 `pa_agent` 终端覆盖率报告，总覆盖率 **11%**（目标子集基线）。
+- `py -3.12 -m ruff check pa_agent/data/base.py pa_agent/data/snapshot.py pa_agent/data/mt5.py pa_agent/data/yfinance_source.py pa_agent/ai/provider_sync_service.py tests/unit/test_data_source_forming_bar.py tests/unit/test_mt5_clock_skew.py tests/unit/test_order_method_router.py tests/unit/test_trend_context.py tests/unit/test_decision_nodes_orchestrator.py tests/unit/test_provider_sync_service.py tests/unit/test_qclaw_auto_fallback.py` → **All checks passed**。
+- `py -3.12 -c "import pathlib, tomllib; data=tomllib.loads(pathlib.Path('pyproject.toml').read_text(encoding='utf-8')); print(data['project']['optional-dependencies']['dev'])"` → 成功解析并包含 `pytest-cov>=5`。
+- coverage 验证产生的 `.coverage` 与 `.tmp_pytest_cov/` 临时目录已删除，未进入提交。
+
+---
+
 ## [Unreleased] — 2026-07-15（第五十四轮：继续 L7，扩大 Ruff 门禁并清理目标测试 lint）
 
 本轮继续推进 **L7：CI 增强**。第五十三轮留下的直接问题是 Black 门禁尚未启用，因为本机 `black --check` 会卡住。本轮先复核 Black 工具链：当前全局 `black 26.5.1` 连 `--version` 都无法稳定返回；把 `black>=24.4,<26` 安装到仓库临时 target 后，隔离的 `black 25.12.0` 同样在 `--version` / `--check` 卡住。因此本轮不再强行推进 Black CI，而是选择可验证的 L7 切片：把上一轮新增到 CI 的 M3/M5 目标测试和 `ProviderSyncService` 纳入 Ruff 门禁，并清理这些文件中的真实 lint。
