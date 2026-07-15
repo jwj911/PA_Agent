@@ -50,6 +50,7 @@ jobs:
           tests/unit/test_qclaw_auto_fallback.py
           tests/unit/test_qclaw_agent_route.py
           tests/unit/test_cursor_agent_route.py
+          tests/unit/test_provider_override_by_model.py
           tests/unit/test_api_key_configured.py
           tests/unit/test_pushplus_notifier.py
           tests/unit/test_secret_store.py
@@ -127,6 +128,7 @@ jobs:
           tests/unit/test_qclaw_auto_fallback.py
           tests/unit/test_qclaw_agent_route.py
           tests/unit/test_cursor_agent_route.py
+          tests/unit/test_provider_override_by_model.py
           tests/unit/test_api_key_configured.py
           tests/unit/test_pushplus_notifier.py
           tests/unit/test_secret_store.py
