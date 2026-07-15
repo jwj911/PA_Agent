@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百一十轮：继续 L7，扩展 Ruff 到 ai/prompts 包）
+
+本轮继续推进 **L7：CI 增强**。第一百零九轮已把数据层小文件组纳入 focused Ruff；本轮继续收窄 AI 源码侧 Ruff 缺口，选择低噪声且直接承载 JSON schema 合同的 `pa_agent/ai/prompts` 包。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/ai/prompts`。
+- **清理 schema lint**：`schemas.py` 中一处中文注释全角逗号改为 ASCII；`next_cycle_prediction.cycle.enum` 从 list 拼接改为解包列表，消除 Ruff `RUF005`。
+- **保持 schema 语义不变**：本轮不改 Stage 1 / Stage 2 schema 字段、required 列表、枚举值或条件校验逻辑。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 `ai/prompts`。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/ai/prompts` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\ai\prompts\__init__.py pa_agent\ai\prompts\schemas.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_json_validator.py tests/unit/test_prompt_assembler.py --tb=line -q -p no:cacheprovider` → **42 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+- `git diff --check` → 通过。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百零九轮：继续 L7，扩展 Ruff 到数据层小文件组）
 
 本轮继续推进 **L7：CI 增强**。第一百零八轮已把 util 小工具组纳入 focused Ruff；本轮继续收窄源码侧 Ruff 缺口，选择依赖面较小、能以机械 lint 清理完成的数据层辅助文件。
