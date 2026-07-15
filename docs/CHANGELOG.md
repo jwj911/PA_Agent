@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第八十三轮：继续 L7，扩展 CI 到 coherence checks 测试）
+
+本轮继续推进 **L7：CI 增强**。第八十二轮已把 lenient validation auto-fix 测试纳入目标 CI；本轮继续筛选纯后端校验链路测试。`test_coherence_checks.py` 覆盖 Stage 1 必填 gate 节点、Stage 2 跨阶段诊断一致性、方向重判自动补 trace、增量分析 delta、完整 Stage 1 fixture 校验，以及 K 线几何特征与 `bar_by_bar_summary` 的一致性校验。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_coherence_checks.py`。目标测试数量从 **345** 扩展到 **353**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `tests/unit/test_coherence_checks.py`。
+- **修正过期测试期望**：`validate_bar_by_bar_vs_features()` 当前合同只把 `trend_bull ↔ trend_bear`、`outside_bull ↔ outside_bear` 这类真正多空矛盾视为 hard contradiction；`inside` 与 `trend_*` 属于可重叠分类，不再报错。测试改为显式覆盖 inside/trend 不报错，并新增 outside bull/bear 真矛盾断言，避免测试变弱。
+- **清理目标测试 lint**：删除未使用 `pytest` import，整理导入顺序，并为保留的中文增量摘要样例添加行级 `# noqa: RUF001`。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 coherence validators。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_coherence_checks.py --tb=line -q -p no:cacheprovider` → **8 passed**。
+- `py -3.12 -m ruff check tests/unit/test_coherence_checks.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests\unit\test_coherence_checks.py` → 通过。
+- 扩展后目标集：执行 `.github/workflows/ci.yml` 的 targeted pytest 清单（本地 `pytest_cov` 插件仍受用户 site-packages 权限问题影响，沿用无 coverage 插件行为验证）→ `py -3.12 -m pytest ... --tb=line -q -p no:cacheprovider` → **353 passed**。
+- 扩展后 Ruff：执行 `.github/workflows/ci.yml` 的 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第八十二轮：继续 L7，扩展 CI 到 lenient validation auto-fix 测试）
 
 本轮继续推进 **L7：CI 增强**。第八十一轮已把 JSON validator 测试纳入目标 CI；本轮继续筛选校验归一化链路中的稳定后端测试。`test_validation_lenient_fixes.py` 覆盖 Stage 1/Stage 2 lenient normalizer、pending answer synonym、市场单 entry_bar 修复、pending entry freshness 修复，以及 OpenClaw/Agent 常见枚举滑移。
