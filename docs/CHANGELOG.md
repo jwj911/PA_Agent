@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百零八轮：继续 L7，扩展 Ruff 到 util 小工具组）
+
+本轮继续推进 **L7：CI 增强**。第一百零七轮已把入口文件组纳入 focused Ruff；本轮继续评估剩余小范围源码。`config`、`notify`、部分 AI 小文件与 `util` 包级检查仍受历史中文文案/注释或其它存量噪声影响，因此本轮收窄到已经低噪声且具备安全/基础设施意义的 util 小工具文件。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/util/safe_filename.py`、`pa_agent/util/mask_secret.py`、`pa_agent/util/timefmt.py` 与 `pa_agent/util/threading.py`。
+- **清理 util lint**：`timefmt.py` 在模块 docstring 与 import 之间补齐标准空行，修复 import 块格式问题。
+- **保持工具语义不变**：本轮不改 `safe_filename` 路径安全规则、`mask_secret` 脱敏规则、`CancelToken` 行为或时间戳计算逻辑。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 util 小工具组。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/util/safe_filename.py pa_agent/util/mask_secret.py pa_agent/util/timefmt.py pa_agent/util/threading.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\util\safe_filename.py pa_agent\util\mask_secret.py pa_agent\util\timefmt.py pa_agent\util\threading.py` → 通过。
+- 属性测试：使用本地临时依赖 `$env:TEMP\pa_agent_hypothesis_dep` 作为 `PYTHONPATH` 运行 `py -3.12 -m pytest tests/property/test_mask_secret.py --tb=line -q -p no:cacheprovider` → **5 passed**。
+- 轻量断言：`sanitize_filename_component`、`now_local_ms` 与 `CancelToken` 基本合同验证 → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+- `git diff --check` → 通过。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百零七轮：继续 L7，扩展 Ruff 到入口文件组）
 
 本轮继续推进 **L7：CI 增强**。第一百零六轮已把 `demo` 提升为包级 focused Ruff；本轮评估剩余小范围源码后，`config` 与 `notify` 仍主要受用户可见中文注释/文案的 RUF 历史基线影响，暂不直接包级纳入。本轮收窄到入口文件组 `pa_agent/__init__.py`、`pa_agent/app_context.py` 与 `pa_agent/main.py`。
