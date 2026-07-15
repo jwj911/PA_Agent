@@ -139,6 +139,7 @@ jobs:
           pa_agent/data/__init__.py
           pa_agent/orchestrator/__init__.py
           pa_agent/data/base.py
+          pa_agent/data/factory.py
           pa_agent/data/snapshot.py
           pa_agent/data/mt5.py
           pa_agent/data/yfinance_source.py
@@ -191,6 +192,7 @@ jobs:
           pa_agent/indicators
           pa_agent/gui/theme
           tests/unit/test_data_source_forming_bar.py
+          tests/unit/test_data_source_factory.py
           tests/unit/test_refresh_loop_warmup.py
           tests/unit/test_akshare_source.py
           tests/unit/test_tushare_source.py

@@ -43,7 +43,7 @@ _DEFAULT_SYMBOLS: dict[DataSourceKind, str] = {
 
 
 def default_tradingview_exchange() -> str:
-    """Empty string = UI «（自动）» — probe all TV preset venues."""
+    """Empty string = UI «(自动)» — probe all TV preset venues."""
     return ""
 
 
