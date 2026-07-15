@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百二十八轮：继续 L7，扩展 Ruff 到收盘等待与快照 warmup 测试）
+
+本轮继续推进 **L7：CI 增强**。第一百二十七轮已把 East Money quote 解析纳入 focused Ruff；本轮转向已经在目标 pytest 中运行、但尚未进入 focused Ruff 的数据框架测试，补齐收盘等待与快照 warmup 相关测试的静态检查覆盖。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_bar_close_wait.py`、`tests/unit/test_snapshot_closed_only_buffer.py`、`tests/unit/test_build_analysis_frame.py` 与 `tests/unit/test_snapshot_indicator_warmup.py`。
+- **清理测试 lint**：整理 `test_bar_close_wait.py` 的函数内 import 空行，移除 `test_snapshot_indicator_warmup.py` 中未使用的局部变量。
+- **保持业务语义不变**：本轮不改收盘等待逻辑、快照构建、forming bar 跳过、EMA/ATR warmup buffer 或几何特征上下文逻辑，仅让既有测试进入 focused Ruff。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖收盘等待与快照 warmup 测试。
+
+### 验证
+
+- `py -3.12 -m ruff check tests/unit/test_bar_close_wait.py tests/unit/test_snapshot_closed_only_buffer.py tests/unit/test_build_analysis_frame.py tests/unit/test_snapshot_indicator_warmup.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests\unit\test_bar_close_wait.py tests\unit\test_snapshot_closed_only_buffer.py tests\unit\test_build_analysis_frame.py tests\unit\test_snapshot_indicator_warmup.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_bar_close_wait.py tests/unit/test_snapshot_closed_only_buffer.py tests/unit/test_build_analysis_frame.py tests/unit/test_snapshot_indicator_warmup.py --tb=line -q -p no:cacheprovider` → **19 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百二十七轮：继续 L7，扩展 Ruff 到 East Money quote 解析）
 
 本轮继续推进 **L7：CI 增强**。第一百二十六轮已把 A 股共享工具纳入 focused Ruff；本轮继续评估数据层剩余候选，选择边界清晰的 `pa_agent/data/eastmoney_quote.py`，并补充无网络解析单测。
