@@ -10,7 +10,6 @@ from pa_agent.util.trade_metrics import (
     passes_trader_equation,
     validate_order_trade_metrics,
 )
-
 from tests.fixtures.validators import schema_test_validator
 
 validator = schema_test_validator()
@@ -82,14 +81,14 @@ def _stage2_trade_obj(**decision_overrides) -> dict:
         "decision_trace": [
             {
                 "node_id": "10.3",
-                "question": "交易者方程是否通过？",
+                "question": "交易者方程是否通过？",  # noqa: RUF001
                 "answer": "是",
                 "reason": "test",
                 "bar_range": "K2-K1",
             },
             {
                 "node_id": "11.1",
-                "question": "趋势？",
+                "question": "趋势？",  # noqa: RUF001
                 "answer": "是",
                 "reason": "test",
                 "bar_range": "K2-K1",
@@ -212,14 +211,14 @@ def test_stage2_validator_coerces_bad_rr_to_no_order() -> None:
         "decision_trace": [
             {
                 "node_id": "10.3",
-                "question": "交易者方程是否通过？",
+                "question": "交易者方程是否通过？",  # noqa: RUF001
                 "answer": "是",
                 "reason": "wrong",
                 "bar_range": "K1",
             },
             {
                 "node_id": "11.1",
-                "question": "趋势？",
+                "question": "趋势？",  # noqa: RUF001
                 "answer": "是",
                 "reason": "test",
                 "bar_range": "K1",
@@ -315,7 +314,7 @@ def test_stage2_validator_accepts_planned_limit_without_signal_bar() -> None:
         "bar": None,
         "quality": "invalid",
         "pattern": "none",
-        "reason": "计划型限价单，尚无已收盘信号棒",
+        "reason": "计划型限价单，尚无已收盘信号棒",  # noqa: RUF001
     }
     obj["bar_analysis"]["entry_bar"] = {
         "bar": None,
@@ -327,17 +326,17 @@ def test_stage2_validator_accepts_planned_limit_without_signal_bar() -> None:
     obj["decision_trace"] = [
         {
             "node_id": "9.0",
-            "question": "信号棒是否已经收盘且质量足够？",
+            "question": "信号棒是否已经收盘且质量足够？",  # noqa: RUF001
             "answer": "否",
-            "reason": "无合格信号棒，改走背景限价路径",
+            "reason": "无合格信号棒，改走背景限价路径",  # noqa: RUF001
             "skipped": False,
             "bar_range": "K3-K1",
         },
         {
             "node_id": "9.0P",
-            "question": "背景驱动限价单评估（§9.0=否 时必须评估）",
+            "question": "背景驱动限价单评估（§9.0=否 时必须评估）",  # noqa: RUF001
             "answer": "是",
-            "reason": "计划型限价挂阻力区，周期/边界支持",
+            "reason": "计划型限价挂阻力区，周期/边界支持",  # noqa: RUF001
             "skipped": False,
             "bar_range": "K10-K1",
         },
@@ -372,7 +371,7 @@ def test_stage2_validator_accepts_planned_limit_invalid_tr_boundary_null() -> No
         "bar": None,
         "quality": "invalid",
         "pattern": "tr_boundary",
-        "reason": "计划型限价单，尚无已收盘信号棒，边界 setup",
+        "reason": "计划型限价单，尚无已收盘信号棒，边界 setup",  # noqa: RUF001
     }
     obj["bar_analysis"]["entry_bar"] = {
         "bar": None,
@@ -384,17 +383,17 @@ def test_stage2_validator_accepts_planned_limit_invalid_tr_boundary_null() -> No
     obj["decision_trace"] = [
         {
             "node_id": "9.0",
-            "question": "信号棒是否已经收盘且质量足够？",
+            "question": "信号棒是否已经收盘且质量足够？",  # noqa: RUF001
             "answer": "否",
-            "reason": "无合格信号棒，改走背景限价路径",
+            "reason": "无合格信号棒，改走背景限价路径",  # noqa: RUF001
             "skipped": False,
             "bar_range": "K3-K1",
         },
         {
             "node_id": "9.0P",
-            "question": "背景驱动限价单评估（§9.0=否 时必须评估）",
+            "question": "背景驱动限价单评估（§9.0=否 时必须评估）",  # noqa: RUF001
             "answer": "是",
-            "reason": "计划型限价挂阻力区，周期/边界支持",
+            "reason": "计划型限价挂阻力区，周期/边界支持",  # noqa: RUF001
             "skipped": False,
             "bar_range": "K10-K1",
         },
@@ -427,7 +426,7 @@ def test_stage2_validator_accepts_planned_limit_with_weak_signal_bar() -> None:
         "bar": "K2",
         "quality": "weak",
         "pattern": "tr_boundary",
-        "reason": "边界弱反弹棒，计划型限价接受次优信号",
+        "reason": "边界弱反弹棒，计划型限价接受次优信号",  # noqa: RUF001
     }
     obj["bar_analysis"]["entry_bar"] = {
         "bar": None,
@@ -439,9 +438,9 @@ def test_stage2_validator_accepts_planned_limit_with_weak_signal_bar() -> None:
     obj["decision_trace"] = [
         {
             "node_id": "9.0",
-            "question": "信号棒是否已经收盘且质量足够？",
+            "question": "信号棒是否已经收盘且质量足够？",  # noqa: RUF001
             "answer": "是",
-            "reason": "计划型限价：宽通道上边界 weak 信号可接受，等待反弹到位",
+            "reason": "计划型限价：宽通道上边界 weak 信号可接受，等待反弹到位",  # noqa: RUF001
             "skipped": False,
             "bar_range": "K3-K1",
         },

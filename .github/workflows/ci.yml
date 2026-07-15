@@ -86,6 +86,7 @@ jobs:
           tests/unit/test_client_factory.py
           tests/unit/test_cost_and_ledger.py
           tests/unit/test_trade_metrics.py
+          tests/unit/test_trade_metrics_validation.py
           tests/unit/test_limit_order_k1_freshness.py
           tests/unit/test_provider_errors.py
           tests/unit/test_validation_retry.py
@@ -180,6 +181,7 @@ jobs:
           tests/unit/test_client_factory.py
           tests/unit/test_cost_and_ledger.py
           tests/unit/test_trade_metrics.py
+          tests/unit/test_trade_metrics_validation.py
           tests/unit/test_limit_order_k1_freshness.py
           tests/unit/test_provider_errors.py
           tests/unit/test_validation_retry.py
