@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第四十六轮：继续 M7，下沉 A 股数据源 forming 判定 override）
+
+本轮继续推进 **M7：统一 forming bar 判定**。第四十五轮已在 `DataSource` ABC 上建立默认 `has_forming_bar_at_head(...)` 入口，并让 snapshot 构建优先调用数据源方法。本轮核查各数据源后，发现 A 股源存在一个必须由数据源自身表达的语义差异：`EastMoneySource` 的日线头部在 A 股交易日午休期间仍应视为 live/forming（`ashare_head_bar_live("1d")` 使用 09:30-15:00 trading day），而 `AkShareSource` 现有 `latest_snapshot()` 只在连续交易时段把头部标为未收盘（午休不 live）。通用 helper 无法同时表达这两个差异，因此本轮把两者各自的 live-head 规则下沉为 override。
+
+### 代码清理
+
+- **`EastMoneySource.has_forming_bar_at_head(...)` override**：空列表或头部 `closed=True` 直接返回 `False`；否则把 `now_ms` 转为 Asia/Shanghai 时间，并调用 `_ashare_head_bar_live(timeframe or self._timeframe, now)`。这保留 EastMoney 日线在午休期间仍 live 的既有 `latest_snapshot()` 语义，避免第四十五轮 GUI 传入 `data_source` 后被通用 A 股 helper 误判为 closed。
+- **`AkShareSource.has_forming_bar_at_head(...)` override**：空列表或头部 `closed=True` 直接返回 `False`；否则按 `_ashare_session_open(now)` 判定。该规则与 AkShare 当前 `latest_snapshot()` 中 `row["closed"] = not (i == 0 and _ashare_session_open())` 保持一致，不把午休日线视为 live。
+- **扩展 `tests/unit/test_data_source_forming_bar.py`**：新增 EastMoney 日线午休仍 forming、AkShare 日线午休不 forming 两个确定性测试，显式锁住两个数据源的 session 语义差异。
+
+### 验证
+
+- `py_compile` 通过（`eastmoney_source.py`、`akshare_source.py`、`test_data_source_forming_bar.py`，EXIT=0）。
+- `py -3.12 -m pytest tests/unit/test_data_source_forming_bar.py tests/unit/test_bar_close_wait.py tests/unit/test_snapshot_closed_only_buffer.py tests/unit/test_build_analysis_frame.py tests/unit/test_snapshot_indicator_warmup.py --tb=line -q -p no:cacheprovider` → **24 passed**。
+- `py -3.12 -m ruff check tests/unit/test_data_source_forming_bar.py` → **All checks passed**。
+- `akshare_source.py` / `eastmoney_source.py` 全文件 ruff 仍存在既有 RUF/SIM/I001 基线告警（中文标点、旧 import 排序、旧 SIM 分支等），本轮未做大文件顺手清理；新增 override 行未触发新的源文件告警。
+- `git diff --check` 通过；仅提示 Windows 工作树 LF/CRLF 规范化 warning，无 whitespace error。
+
+---
+
 ## [Unreleased] — 2026-07-15（第四十五轮：启动 M7，统一 forming bar 判定入口）
 
 本轮启动后端审查报告 §5.2 的 **M7：统一 forming bar 判定**。此前 `DataSource` ABC 只约定 `latest_snapshot()` 返回 newest-first K 线，forming-bar 是否存在由各数据源自行设置 `KlineBar.closed`，而 `snapshot.py` 直接散用 `bar_close_wait.has_forming_bar_at_head()`。这让后续为特定交易所/数据源处理 session、server time、停牌或周末 stale tick 时缺少统一覆写点。本轮第一刀不改变 `KlineBar.closed` 含义，也不改各数据源产出；先在 ABC 上提供默认判定入口，并把 GUI snapshot 构建迁移到该入口。
