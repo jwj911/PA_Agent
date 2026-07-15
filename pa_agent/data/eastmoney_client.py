@@ -6,10 +6,12 @@ Uses ``curl_cffi`` when available to pass TLS fingerprint checks.
 """
 from __future__ import annotations
 
+import contextlib
 import logging
 import time
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +123,7 @@ def _prioritize_primary_host(
     """Always try the reachable delay mirror first (rotation must not skip it)."""
     if primary not in hosts:
         return hosts
-    return (primary,) + tuple(h for h in hosts if h != primary)
+    return (primary, *(h for h in hosts if h != primary))
 
 
 def is_transient_http_error(exc: BaseException) -> bool:
@@ -228,7 +230,7 @@ def _http_get(
                 referer=referer,
                 host_header=host_header,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             last_exc = exc
             if not _is_transient_http_error(exc):
                 raise
@@ -288,7 +290,7 @@ def _get_json_on_hosts(
                         referer=referer,
                         host_header=effective_host_header,
                     )
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:
                     last_exc = exc
                     if not _is_transient_http_error(exc):
                         raise EastMoneyTransientError(str(exc)) from exc
@@ -303,8 +305,8 @@ def _get_json_on_hosts(
     msg = str(last_exc or "all hosts failed")
     if _is_transient_http_error(last_exc or Exception(msg)):
         raise EastMoneyTransientError(
-            "东方财富接口连接中断（筛选请求过多时易触发）。"
-            "请等待 1–2 分钟后重试，或减少「行情页数」。"
+            "东方财富接口连接中断（筛选请求过多时易触发）。"  # noqa: RUF001
+            "请等待 1–2 分钟后重试，或减少「行情页数」。"  # noqa: RUF001
         ) from last_exc
     raise EastMoneyTransientError(msg) from last_exc
 
@@ -336,15 +338,11 @@ def _parse_klines(raw: list[str]) -> list[dict[str, Any]]:
             "pct_chg": None,
         }
         if len(parts) > 6 and parts[6].strip():
-            try:
+            with contextlib.suppress(ValueError):
                 row["amount"] = float(parts[6])
-            except ValueError:
-                pass
         if len(parts) > 8 and parts[8].strip():
-            try:
+            with contextlib.suppress(ValueError):
                 row["pct_chg"] = float(parts[8])
-            except ValueError:
-                pass
         rows.append(row)
     return rows
 
@@ -537,7 +535,7 @@ _CLIST_FS_A_SHARE = (
 _CLIST_FIELDS_UNIVERSE = (
     "f12,f14,f2,f3,f4,f5,f6,f7,f15,f16,f17,f18,f8,f9,f10,f20,f21,f23"
 )
-# clist 单页上限；全市场用分页拉取（比 pz=5000 单请求更稳、进度可更新）
+# clist 单页上限; 全市场用分页拉取(比 pz=5000 单请求更稳、进度可更新)
 _CLIST_PAGE_SIZE_DEFAULT = 100
 
 
@@ -773,7 +771,7 @@ def fetch_hot_stock_codes(*, limit: int = 30) -> list[str]:
 
 
 def fetch_stock_quote_payload(symbol: str) -> dict[str, Any] | None:
-    """Full ``/api/qt/stock/get`` payload (五档需完整响应，不可缩 fields)."""
+    """Full ``/api/qt/stock/get`` payload (五档需完整响应, 不可缩 fields)."""
     code = symbol[-6:] if len(symbol) > 6 else symbol
     params = {
         "fltt": "2",
@@ -803,7 +801,7 @@ def fetch_stock_quote_payload(symbol: str) -> dict[str, Any] | None:
 
 
 def fetch_stock_ten_depth_payload(symbol: str) -> dict[str, Any] | None:
-    """十档协议 ``stock/get``（``fltt=1`` + vendor.js fields，L2 未开通时仅五档有值）。"""
+    """十档协议 ``stock/get`` (``fltt=1`` + vendor.js fields, L2 未开通时仅五档有值)。"""
     from pa_agent.data.eastmoney_quote_api import TEN_DEPTH_FIELDS
 
     code = symbol[-6:] if len(symbol) > 6 else symbol
@@ -835,7 +833,7 @@ def fetch_stock_ten_depth_payload(symbol: str) -> dict[str, Any] | None:
 
 
 def fetch_stock_order_book(symbol: str):
-    """盘口（五档免费 + 六~十档需超级 L2，见 ``eastmoney_quote_api``）。"""
+    """盘口(五档免费 + 六~十档需超级 L2, 见 ``eastmoney_quote_api``)。"""
     from pa_agent.data.eastmoney_quote import parse_order_book_payload
 
     payload = fetch_stock_ten_depth_payload(symbol)
@@ -853,7 +851,7 @@ def fetch_stock_tick_details(
     *,
     tail: int = 40,
 ) -> list:
-    """当日逐笔成交（``/api/qt/stock/details/get``）。"""
+    """当日逐笔成交(``/api/qt/stock/details/get``)。"""
     from pa_agent.data.eastmoney_quote import parse_tick_lines
 
     code = symbol[-6:] if len(symbol) > 6 else symbol
@@ -886,7 +884,7 @@ def fetch_stock_tick_details(
 
 
 def fetch_stock_intraday_trends(symbol: str, *, ndays: int = 1) -> list[dict[str, Any]]:
-    """当日/多日分时（``/api/qt/stock/trends2/get``）。"""
+    """当日/多日分时(``/api/qt/stock/trends2/get``)。"""
     code = symbol[-6:] if len(symbol) > 6 else symbol
     params = {
         "fields1": "f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13",
