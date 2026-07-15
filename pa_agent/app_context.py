@@ -63,13 +63,9 @@ class AppContext:
 
         # ── Settings ──────────────────────────────────────────────────────────
         settings = load_settings(SETTINGS_JSON_PATH)
-        from pa_agent.ai.qclaw_connector import sync_qclaw_agent_provider_on_load
-        from pa_agent.ai.workbuddy_connector import sync_workbuddy_provider_on_load
-        from pa_agent.ai.cursor_connector import sync_cursor_provider_on_load
+        from pa_agent.ai.provider_sync_service import sync_providers_on_load
 
-        sync_qclaw_agent_provider_on_load(settings, save_path=SETTINGS_JSON_PATH)
-        sync_workbuddy_provider_on_load(settings, save_path=SETTINGS_JSON_PATH)
-        sync_cursor_provider_on_load(settings, save_path=SETTINGS_JSON_PATH)
+        sync_providers_on_load(settings, save_path=SETTINGS_JSON_PATH)
 
         # ── Logging (with API key masking) ────────────────────────────────────
         configure_logging(api_key=settings.provider.api_key)
