@@ -13,6 +13,29 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第七十九轮：继续 L7，扩展 CI 到 order opportunity 测试）
+
+本轮继续推进 **L7：CI 增强**。第七十八轮已把 TradingView connectivity 测试纳入目标 CI；本轮继续筛选轻量 GUI helper 测试。`test_order_opportunity.py` 覆盖订单机会识别、提示文案、自动关闭时长，以及 Windows 下单提示音选择逻辑。该测试不启动 Qt widget，也不访问真实网络。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_order_opportunity.py`。目标测试数量从 **304** 扩展到 **310**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `tests/unit/test_order_opportunity.py`。
+- **修正测试隔离**：`test_play_order_alert_sound_uses_wav_on_windows` 的 fake `winsound` 补齐 `SND_ASYNC`，避免实现组合 `SND_FILENAME | SND_ASYNC | SND_NODEFAULT` 时触发 AttributeError 并回退到 `MessageBeep`。
+- **清理目标测试 lint**：删除两个过期的 `ANN001` noqa；测试逻辑保持等价。
+- **暂不纳入源文件 Ruff**：`pa_agent/gui/order_opportunity.py` 包含用户可见中文弹窗文案，仍作为历史 Ruff 基线暂缓进入 focused Ruff；本轮只扩展测试文件 Ruff 门禁。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 order opportunity alert helper。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_order_opportunity.py --tb=line -q -p no:cacheprovider` → **6 passed**。
+- `py -3.12 -m ruff check tests/unit/test_order_opportunity.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests\unit\test_order_opportunity.py` → 通过。
+- 扩展后目标集：从 `.github/workflows/ci.yml` 解析 `Run targeted unit tests` 清单并执行 `py -3.12 -m pytest @tests --tb=line -q -p no:cacheprovider` → **310 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单并执行 `py -3.12 -m ruff check @argsList` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第七十八轮：继续 L7，扩展 CI 到 TradingView connectivity 测试）
 
 本轮继续推进 **L7：CI 增强**。第七十七轮已把 provider override 测试纳入目标 CI；本轮继续处理剩余 TradingView 辅助测试。`test_tradingview_connectivity.py` 覆盖 TradingView 出站连接探测的成功、空数据、重试后成功与重试耗尽路径。测试现在通过 fake `tvDatafeed` module 注入完成，避免本地或 CI 环境必须安装真实 `tvDatafeed` 包。
