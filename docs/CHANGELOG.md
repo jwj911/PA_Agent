@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百二十轮：继续 L7，扩展 Ruff 到 A 股涨跌停辅助）
+
+本轮继续推进 **L7：CI 增强**。第一百一十九轮已把 util 日志配置纳入 focused Ruff；本轮继续评估数据层低噪声候选，选择只需现代类型注解迁移且边界明确的 `pa_agent/data/ashare_limits.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/data/ashare_limits.py`。
+- **清理 A 股涨跌停辅助 lint**：`Sequence` 改从 `collections.abc` 导入，并移除 `KlineBar` 注解中的多余引号，消除 `UP035` / `UP037`。
+- **保持业务语义不变**：本轮不改 A 股涨跌停比例、涨跌停价计算、跨交易日昨收映射、`pct_chg` 优先级或 frame label 生成逻辑。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 A 股涨跌停辅助。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/data/ashare_limits.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\data\ashare_limits.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_akshare_source.py tests/unit/test_tushare_source.py tests/unit/test_market_defaults.py --tb=line -q -p no:cacheprovider` → **32 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+- `git diff --check` → 通过（仅显示 Windows 行尾提示）。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百一十九轮：继续 L7，扩展 Ruff 到 util 日志配置）
 
 本轮继续推进 **L7：CI 增强**。第一百一十八轮已把 util 包入口与崩溃诊断纳入 focused Ruff；本轮继续处理 util 侧低噪声小文件，选择仅有过期 `noqa` 的 `pa_agent/util/logging.py`。
