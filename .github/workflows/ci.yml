@@ -152,8 +152,7 @@ jobs:
           pa_agent/gui/chart_decision_overlay.py
           pa_agent/util/trade_metrics.py
           pa_agent/security
-          pa_agent/records/pending_writer.py
-          pa_agent/records/analysis_history.py
+          pa_agent/records
           pa_agent/demo/record_loader.py
           pa_agent/demo/replayer.py
           pa_agent/indicators

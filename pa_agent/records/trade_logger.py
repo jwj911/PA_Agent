@@ -173,9 +173,11 @@ def _render_chart(bars_newest_first: list[Any], ema20_newest_first: list[float],
     """
     try:
         import matplotlib
+
         matplotlib.use("Agg")  # non-interactive backend
-        import matplotlib.pyplot as plt
-        import matplotlib.patches as mpatches
+
+        from matplotlib import patches as mpatches
+        from matplotlib import pyplot as plt
         from matplotlib.lines import Line2D
     except ImportError:
         logger.warning("matplotlib not installed; skipping chart generation")
@@ -209,23 +211,23 @@ def _render_chart(bars_newest_first: list[Any], ema20_newest_first: list[float],
     for i, bar in enumerate(bars):
         # Support both KlineBar dataclass and plain dict
         if hasattr(bar, "open"):
-            o, h, l, c = bar.open, bar.high, bar.low, bar.close
+            open_, high, low, close = bar.open, bar.high, bar.low, bar.close
             seq = getattr(bar, "seq", None)
         else:
-            o = float(bar.get("open", 0))
-            h = float(bar.get("high", 0))
-            l = float(bar.get("low", 0))
-            c = float(bar.get("close", 0))
+            open_ = float(bar.get("open", 0))
+            high = float(bar.get("high", 0))
+            low = float(bar.get("low", 0))
+            close = float(bar.get("close", 0))
             seq = bar.get("seq")
 
-        is_bull = c >= o
+        is_bull = close >= open_
         color = "#26a641" if is_bull else "#f85149"
 
         # Wick
-        ax.plot([i, i], [l, h], color=color, linewidth=0.8, zorder=2)
+        ax.plot([i, i], [low, high], color=color, linewidth=0.8, zorder=2)
         # Body
-        body_low = min(o, c)
-        body_height = max(abs(c - o), (h - l) * 0.005)
+        body_low = min(open_, close)
+        body_height = max(abs(close - open_), (high - low) * 0.005)
         rect = mpatches.FancyBboxPatch(
             (i - bar_width / 2, body_low),
             bar_width,
@@ -241,7 +243,7 @@ def _render_chart(bars_newest_first: list[Any], ema20_newest_first: list[float],
         # Sequence label on every 10th bar (newest = seq 1 at right)
         if seq is not None and seq % 10 == 0:
             ax.text(
-                i, h * 1.0003, f"K{seq}",
+                i, high * 1.0003, f"K{seq}",
                 color="#8b949e", fontsize=6.5, ha="center", va="bottom", zorder=4,
             )
 
@@ -262,7 +264,7 @@ def _render_chart(bars_newest_first: list[Any], ema20_newest_first: list[float],
     for spine in ax.spines.values():
         spine.set_edgecolor("#30363d")
     ax.set_title(
-        f"{symbol} {timeframe}  —  最近 {n} 根K线（K1=最新收盘）",
+        f"{symbol} {timeframe}  —  最近 {n} 根K线(K1=最新收盘)",
         color="#e6edf3", fontsize=10, pad=8,
     )
 
@@ -457,7 +459,7 @@ def save_trade_record(
             model_name=model_name,
             structure_flip_cooldown_bars=structure_flip_cooldown_bars,
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.error("save_trade_record failed: %s", exc, exc_info=True)
 
 
@@ -516,7 +518,7 @@ def _save_trade_record_impl(
                 trade_confidence=str(dec.get("trade_confidence") or ""),
                 estimated_win_rate=str(dec.get("estimated_win_rate") or ""),
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning("chart render failed: %s", exc)
 
     # ── Decision trace summary (node_id + answer, compact) ───────────────────
