@@ -13,6 +13,25 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第三十六轮：继续拆分 TwoStageOrchestrator.submit() 第三刀，提取 _try_gate_short_circuit 闸门短路终局）
+
+本轮为**大文件拆分 M4 的第三刀**（第三十五轮第二刀已切 `_persist_result`，`submit()` 从约 601 行降至 575 行）。roadmap（`docs/backend_review_report.md` §5 L262）M4 剩余目标原列为 `_run_stage1`（Steps 3-9）与 `_run_stage2`（Steps 12-19）两大块。核查 `submit()` 现状后**细化了拆分粒度**：`_run_stage2`（Steps 12-19）经通读发现内含**五处 `return record` early-return 终局**（Step 12 取消检查、Step 13 闸门短路、Step 15 网络错误、Step 16 取消检查、Step 17 校验失败）与**两组 `nonlocal` 流式闭包**（`_on_s2_reasoning`/`_on_s2_content` 及 retry 内的 `_call_s2_retry`），整块一次性外提约 284 行、且须引入新的控制流信号类型，违背用户的**原子提交**偏好、风险过高。因此本轮改切其中**最自足的单一终局分支**——Step 13 的闸门短路块（`gate_result ∈ {wait, unknown}` 时程序本地合成阶段二结果、不调模型、落盘返回）：它是「计算 → `save_full` → `RecordSaved` → `return record`」的单出口块，**无闭包、无 `nonlocal`**，结构与第二刀 `_persist_result` 同构。外提为返回 `AnalysisRecord | None` 的守卫方法（返回 `None` 表示闸门放行、`submit()` 继续 Step 14 正常流程），**不引入任何新类型**，保持提交原子、低风险。
+
+### 代码清理
+
+- **`pa_agent/orchestrator/two_stage.py` 新增实例方法 `_try_gate_short_circuit(self, *, record, on_event, on_stage_prompt, on_stage2_content, stage1_json, messages_s1, reply_s1, strategy_files, experience_entries) -> AnalysisRecord | None`**：把 `submit()` 内 Step 13 的 `gate_result in ("wait", "unknown")` 分支**逐字节搬迁**为独立方法，放在 `_persist_result` 之后、`# ── Public API ──` 分隔线之前。逻辑完全不变：`gate_result` 小写归一化后若不属于 `{wait, unknown}` 则 `return None`（放行）；否则局部 import `build_stage2_gate_wait_response`、`on_stage_prompt("stage2", "", "（阶段一闸门未通过…）")`、`_emit_buffered_stream(short_msg, on_stage2_content)`、`build_stage2_gate_wait_response(stage1_json)`、`Stage2Done` 事件、gate 短路专用 next_bar_prediction 日志、`_accumulate_usage(record.usage_total, reply_s1.usage)`、`record.model_copy(update={...含 stage2_messages=[]/stage2_response=None...})`、`save_full`、`RecordSaved`、`return record`。
+- **`submit()` 内 Step 13 闸门块替换为守卫调用**：`Stage2Started` 事件 + `on_stage2_files` 回调之后，改为 `_gate_record = self._try_gate_short_circuit(record=..., on_event=..., on_stage_prompt=..., on_stage2_content=..., stage1_json=..., messages_s1=..., reply_s1=..., strategy_files=..., experience_entries=...)`，随后 `if _gate_record is not None: return _gate_record`。`submit()` 从 575 行降至 552 行。
+
+### 验证
+
+- `py_compile` 通过（`two_stage.py`，EXIT=0）。
+- **AST 结构核验**：`ast.walk` 确认 `TwoStageOrchestrator` 类体已含 `_try_gate_short_circuit` 方法，`submit()` 现跨 499-1050 行（552 行）。
+- **集成测试基线对比**：核心 submit-path 套件（`test_gate_shortcircuit`（**闸门短路专项，本刀关键守护**）+ `test_two_stage_happy_path`/`_no_order_with_prices`/`_stage1_syntax`/`_stage1_missing_field`/`_stage2_invalid_value`/`_network_timeout`/`_user_cancel` + `test_decision_nodes_orchestrator`）**13 passed / 1 failed**，进度串 `..F...........`——`test_gate_shortcircuit` 两条用例（居首 `..`）全过，验证闸门短路行为逐字节等价；唯一失败 `test_no_order_with_non_null_price_fails_stage2` 为**既有失败**（该测试用不含业务规则的 `schema_test_validator()`，与第三十四/三十五轮记录一致）。
+- `ruff check` 对比基线：`git show HEAD:two_stage.py` 与拆分后同为 **40 条**，逐类别 Counter 完全一致（`E402:11, I001:1, RUF001:22, RUF100:1, UP037:5`），**零净新增告警**。
+- `git diff` 密钥扫描（`api_key`/`sk-`/`secret`/`Bearer`/`password`/`token`）无命中——纯结构搬迁。
+
+---
+
 ## [Unreleased] — 2026-07-15（第三十五轮：继续拆分 TwoStageOrchestrator.submit() 第二刀，提取 _persist_result 落盘尾段）
 
 本轮为**大文件拆分 M4 的第二刀**（第三十四轮首刀已切 `_route_and_load_experience`，`submit()` 从约 647 行降至约 601 行）。与 M1/M2/M3 的**叶子模块提取**不同，M4 是**同类内的方法级拆分**：子方法共享 `self` 与跨阶段可变局部状态，无法用纯函数等价脚本验证，须靠既有 mock-based 集成测试套件做 baseline 对比。roadmap（`docs/backend_review_report.md` §5 L262）将 M4 目标拆为 `_run_stage1`/`_run_stage2`/`_route_and_load_experience`/`_persist_result`。本刀切**尾段** Steps 19.5-24（预测日志 + 构建 final record + `save_full` + `RecordSaved` 事件 + return）。选它作为 M4 第二刀的关键动机：① 它是 `_route_and_load_experience` 之后 `submit()` 中**最自足的一段**——纯只读聚合（读 `stage2_json`/`record`/两组 `usage_calls` 等已算好的状态）+ 单次落盘，**无 early-return 回流、无 `nonlocal` 闭包**（`submit()` 的所有中途失败/取消 early-return 都在本段之前，本段是 happy-path 的唯一终点）；② 它只被 `submit()` 尾部唯一调用点触达，`stage2_json`/`usage_total` 等中间局部只在段内与段末 return 使用，可完整封装；③ 因用 `self.*` 与 `on_event` 回调，自然拆为实例方法而非模块函数，`submit()` 内替换为单次 `return self._persist_result(...)` 关键字实参调用，行为逐字节一致。
