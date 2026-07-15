@@ -80,7 +80,7 @@ class TestChartFitView:
         chart_widget.request_fit_on_next_render()
         qtbot.wait(80)
         x_range, y_range = chart_widget.getViewBox().viewRange()
-        exp_x, exp_y = chart_widget._view_ranges_for_frame(frame)
+        _exp_x, exp_y = chart_widget._view_ranges_for_frame(frame)
         assert x_range[1] > 2.5
         assert y_range[1] > exp_y[0]
 
@@ -140,9 +140,8 @@ class TestResizableAxisItem:
     """viewportEvent-based axis resize."""
 
     def test_axis_resize_via_viewport_event(self, chart_widget, qtbot):
-        from PyQt6.QtCore import QPointF
+        from PyQt6.QtCore import QEvent, QPointF, Qt
         from PyQt6.QtGui import QMouseEvent
-        from PyQt6.QtCore import QEvent, Qt
         from PyQt6.QtWidgets import QApplication
 
         vp = chart_widget.viewport()
@@ -174,10 +173,10 @@ class TestResizableAxisItem:
         assert chart_widget._axis_resizing is False
 
     def test_axis_resize_minimum_width(self, chart_widget, qtbot):
-        from PyQt6.QtCore import QPointF
+        from PyQt6.QtCore import QEvent, QPointF, Qt
         from PyQt6.QtGui import QMouseEvent
-        from PyQt6.QtCore import QEvent, Qt
         from PyQt6.QtWidgets import QApplication
+
         from pa_agent.gui.chart_widget import _AXIS_RESIZE_MIN_WIDTH
 
         vp = chart_widget.viewport()
@@ -207,9 +206,8 @@ class TestResizableAxisItem:
 
     def test_viewbox_still_receives_normal_click(self, chart_widget, qtbot):
         """Click in the ViewBox area should NOT be consumed by axis resize."""
-        from PyQt6.QtCore import QPointF
+        from PyQt6.QtCore import QEvent, QPointF, Qt
         from PyQt6.QtGui import QMouseEvent
-        from PyQt6.QtCore import QEvent, Qt
         from PyQt6.QtWidgets import QApplication
 
         vp = chart_widget.viewport()

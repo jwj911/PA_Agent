@@ -44,7 +44,7 @@ class TestNoLinesWhenNotTrading:
             "entry_price": None,
             "take_profit_price": None,
             "stop_loss_price": None,
-            "reasoning": "市场结构不明朗，暂不入场。",
+            "reasoning": "市场结构不明朗，暂不入场。",  # noqa: RUF001
         }
         chart_widget.set_decision(decision)
 
@@ -100,7 +100,7 @@ class TestNoLinesWhenNotTrading:
 
     def test_short_decision_shows_down_arrow(self, chart_widget, qtbot):
         """做空 decision draws a ▼ marker at the newest bar."""
-        from pa_agent.data.base import KlineBar, KlineFrame, IndicatorBundle
+        from pa_agent.data.base import IndicatorBundle, KlineBar, KlineFrame
 
         bars = tuple(
             KlineBar(

@@ -47,7 +47,9 @@ jobs:
           tests/unit/test_market_defaults.py
           tests/unit/test_mt5_clock_skew.py
           tests/unit/test_mt5_symbol_available.py
+          tests/unit/test_chart_fit_view.py
           tests/unit/test_chart_skip_redraw.py
+          tests/unit/test_chart_widget_no_lines_when_not_trading.py
           tests/unit/test_order_method_router.py
           tests/unit/test_trend_context.py
           tests/unit/test_decision_tree.py
@@ -147,7 +149,9 @@ jobs:
           tests/unit/test_market_defaults.py
           tests/unit/test_mt5_clock_skew.py
           tests/unit/test_mt5_symbol_available.py
+          tests/unit/test_chart_fit_view.py
           tests/unit/test_chart_skip_redraw.py
+          tests/unit/test_chart_widget_no_lines_when_not_trading.py
           tests/unit/test_order_method_router.py
           tests/unit/test_trend_context.py
           tests/unit/test_decision_tree.py
