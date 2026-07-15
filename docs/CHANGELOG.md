@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第四十三轮：启动 M5，提取 ProviderSyncService 启动期 provider 同步）
+
+本轮启动后端审查报告 §5.2 的 **M5：提取 `ProviderSyncService`**。M5 目标是把 QClaw / WorkBuddy / Cursor provider 同步与持久化职责从 `AppContext.bootstrap()` 与 `TwoStageOrchestrator` 中下沉。第一刀先切启动期路径：`AppContext.bootstrap()` 原本直接 import 并顺序调用 `sync_qclaw_agent_provider_on_load()`、`sync_workbuddy_provider_on_load()`、`sync_cursor_provider_on_load()`，这让依赖容器承担了特殊 provider 同步编排职责。本轮新增薄服务集中这段顺序编排；各 connector 仍保留自身的 route 检测、provider mutation、`save_settings` 持久化与日志逻辑，避免一次性触碰自动降级 fallback 尾部。
+
+### 代码清理
+
+- **新增 `pa_agent/ai/provider_sync_service.py`**：提供 `ProviderSyncService(save_path=...)` 与便利函数 `sync_providers_on_load(settings, save_path=...)`。`sync_on_load()` 内以既有顺序调用 QClaw → WorkBuddy → Cursor 三个 connector 的 `sync_*_provider_on_load()`，并透传同一个 `save_path`。服务本身不判断 route、不写 settings、不更新日志，只负责把启动期特殊 provider 同步编排从 AppContext 中抽离。
+- **`pa_agent/app_context.py` 简化启动期 provider 同步**：删除 `bootstrap()` 内三个 connector 直接 import 与三次调用，替换为 `from pa_agent.ai.provider_sync_service import sync_providers_on_load` + `sync_providers_on_load(settings, save_path=SETTINGS_JSON_PATH)`。设置加载、后续 `configure_logging(api_key=settings.provider.api_key)`、AI client 创建、PendingWriter 初始 `api_key` 注入等逻辑保持不变。
+- **新增 `tests/unit/test_provider_sync_service.py`**：用 monkeypatch 验证 `ProviderSyncService.sync_on_load()` 按 QClaw → WorkBuddy → Cursor 顺序调用，并向三者传入同一 `settings` 对象与 `save_path`。
+
+### 验证
+
+- `py_compile` 通过（`provider_sync_service.py`、`app_context.py`、`test_provider_sync_service.py`，EXIT=0）。
+- import 核验通过：`ProviderSyncService`、`sync_providers_on_load`、`AppContext` 均可正常 import。
+- `pytest tests/unit/test_provider_sync_service.py --tb=line -q -p no:cacheprovider` → **1 passed**。
+- 新增文件 ruff 通过：`ruff check pa_agent/ai/provider_sync_service.py tests/unit/test_provider_sync_service.py` → **All checks passed**。
+- app_context 相关 ruff 对比：HEAD `app_context.py` 为 `I001:2, RUF100:1, UP037:1`；拆分后 `app_context.py` + 新服务 + 新测试为 `I001:1, RUF100:1, UP037:1`，**零净新增告警**，并减少 1 条既有 I001。
+- staged diff 密钥扫描（`api_key`/`sk-`/`secret`/`Bearer`/`password`/`token`）仅命中 `configure_logging(api_key=settings.provider.api_key)` 标识符引用，无明文密钥。
+
+---
+
 ## [Unreleased] — 2026-07-15（第四十二轮：继续拆分 PromptAssembler，提取 Stage2PromptBuilder）
 
 本轮继续推进后端审查报告 §5.2 的 **M1：拆分 `PromptAssembler`**。第四十一轮已提取 `Stage1PromptBuilder`，本轮切剩余的 Stage 2 builder 主体：独立阶段二请求、前缀链 continuation 请求、以及 Stage 2 user prompt 渲染。`PromptAssembler` 继续保留对外 `build_stage2()` / `build_stage2_continuation()` / `stage2_system_prompt_only()` API、进程级系统 prompt 缓存、以及既有私有 wrapper 名称，避免影响 orchestrator、测试和工具调用点。新模块通过构造参数接收 system prompt 构建函数、txt 加载函数、策略文件列表函数、预测说明/输出契约常量、Stage 2 guidance/experience/carryover/market-feature/K 线表渲染 callable，避免反向 import `prompt_assembler.py` 形成循环依赖。

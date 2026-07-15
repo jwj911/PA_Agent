@@ -94,7 +94,7 @@ price_action_agent/
    - 创建 `MainWindow(ctx)` 并显示。
 3. `AppContext.bootstrap()`（见 `pa_agent/app_context.py`）：
    - 加载 `config/settings.json`；
-   - 同步特殊 provider（QClaw / WorkBuddy / Cursor）配置；
+   - 通过 `ProviderSyncService` 同步特殊 provider（QClaw / WorkBuddy / Cursor）配置；
    - 配置日志（API Key 脱敏）；
    - 创建 `EventBus`、数据源、AI 客户端；
    - 创建 `PromptAssembler`、`JsonValidator`、记录写入器、经验库读取器等。
@@ -104,6 +104,7 @@ price_action_agent/
 - **`pa_agent/ai/`**：项目核心算法层。
   - `client_factory.py`：根据模型选择客户端（DeepSeekClient / CursorSdkClient）。
   - `deepseek_client.py`：OpenAI 兼容通用客户端，支持流式、reasoning\_content、KV cache，并内置 MiMo、QClaw、WorkBuddy、PackyAPI、KKAI、MiniMax 等网关适配逻辑。按 `(base_url, api_key)` 缓存 `_OpenAI` 实例（`_get_client()`），`chat`/`stream_chat` 复用连接池；`update_provider()` 会失效缓存。
+  - `provider_sync_service.py`：**ProviderSyncService 启动期 provider 同步服务**（M5 第一刀）。`ProviderSyncService(save_path=...).sync_on_load(settings)` 按 QClaw → WorkBuddy → Cursor 顺序调用既有 connector 的 `sync_*_provider_on_load()` 并透传 `save_path`；服务本身不判断 route、不 mutate provider、不写 settings，只集中启动期编排。`app_context.bootstrap()` 现只调用 `sync_providers_on_load(settings, save_path=SETTINGS_JSON_PATH)`，不再直接 import 三个 connector。M5 下一刀应继续处理 `two_stage._finish_provider_fallback` 的 provider fallback 共享尾部（`update_provider` / `save_settings` / `update_api_key` / `pending_writer.set_api_key`）。
   - `cursor_sdk_client.py` / `cursor_connector.py`：Cursor SDK 路由。
   - `qclaw_connector.py` / `qclaw_relay.py` / `qclaw_relay_manager.py`：QClaw 本地网关。
   - `workbuddy_connector.py`：WorkBuddy / CodeBuddy 环境检测与 DPAPI 解密取 token。
