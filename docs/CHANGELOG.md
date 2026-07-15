@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百一十五轮：继续 L7，扩展 Ruff 到 QClaw relay 脚本）
+
+本轮继续推进 **L7：CI 增强**。第一百一十四轮已把 AI business rules 纳入 focused Ruff；本轮继续评估剩余 AI 源码侧候选后，`decision_stance`、`market_features`、`json_repair`、`override_arbiter`、connector 与 judge 模块仍有较多中文业务文案或结构性 lint 噪声，因此本轮收窄到已经 Ruff 干净、边界独立的 `qclaw_relay.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/ai/qclaw_relay.py`。
+- **保持业务语义不变**：本轮不改 relay 监听端口、HTTP 转发逻辑、health/model 响应、自测逻辑或 QClaw relay 启动策略；`qclaw_relay_manager.py` 与 connector 仍暂不纳入 Ruff。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 QClaw relay 脚本。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/ai/qclaw_relay.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\ai\qclaw_relay.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_qclaw_agent_route.py tests/unit/test_qclaw_auto_fallback.py --tb=line -q -p no:cacheprovider` → **14 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+- `git diff --check` → 通过（仅显示 Windows 行尾提示）。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百一十四轮：继续 L7，扩展 Ruff 到 AI business rules）
 
 本轮继续推进 **L7：CI 增强**。第一百一十三轮已把 AI token/signal 辅助文件纳入 focused Ruff；本轮继续评估 AI 源码侧候选后，`coherence_checks`、`trace_normalize`、`retry_feedback`、`qclaw_relay_manager` 等仍有较多中文业务文案或结构性 lint 噪声，因此本轮收窄到仅有一处机械 Ruff 问题的 `business_rules.py`。
