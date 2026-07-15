@@ -43,7 +43,7 @@ def _probe_once(*, timeout_s: float) -> tuple[bool, str | None, bool]:
             "TradingView connectivity probe: tvDatafeed not installed: %s", exc
         )
         return False, str(exc), False
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("TradingView connectivity probe failed: %s", exc)
         return False, str(exc), True
 
@@ -85,5 +85,5 @@ def check_tradingview_connectivity(
         time.sleep(max(0.0, retry_delay_s))
 
     if attempts > 1 and last_detail:
-        last_detail = f"{last_detail}（已自动重试 {attempts} 次）"
+        last_detail = f"{last_detail}（已自动重试 {attempts} 次）"  # noqa: RUF001
     return False, last_detail

@@ -1,6 +1,8 @@
 """TradingView outbound connectivity probe."""
 from __future__ import annotations
 
+import sys
+from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 from pa_agent.data.tradingview_connectivity import check_tradingview_connectivity
@@ -14,11 +16,19 @@ def _mock_tv_ok() -> tuple[MagicMock, MagicMock]:
     return mock_interval, mock_df
 
 
+def _fake_tv_module(mock_interval: MagicMock) -> ModuleType:
+    module = ModuleType("tvDatafeed")
+    module.Interval = mock_interval
+    module.TvDatafeed = MagicMock()
+    return module
+
+
 def test_check_tradingview_connectivity_ok() -> None:
     mock_interval, mock_df = _mock_tv_ok()
+    fake_tv = _fake_tv_module(mock_interval)
     with (
-        patch("tvDatafeed.Interval", mock_interval),
-        patch("tvDatafeed.TvDatafeed") as tv_cls,
+        patch.dict(sys.modules, {"tvDatafeed": fake_tv}),
+        patch.object(fake_tv, "TvDatafeed") as tv_cls,
     ):
         tv_cls.return_value.get_hist.return_value = mock_df
         ok, detail = check_tradingview_connectivity(
@@ -33,9 +43,10 @@ def test_check_tradingview_connectivity_empty_data() -> None:
     mock_df.empty = True
     mock_interval = MagicMock()
     mock_interval.in_1_minute = object()
+    fake_tv = _fake_tv_module(mock_interval)
     with (
-        patch("tvDatafeed.Interval", mock_interval),
-        patch("tvDatafeed.TvDatafeed") as tv_cls,
+        patch.dict(sys.modules, {"tvDatafeed": fake_tv}),
+        patch.object(fake_tv, "TvDatafeed") as tv_cls,
     ):
         tv_cls.return_value.get_hist.return_value = mock_df
         ok, detail = check_tradingview_connectivity(
@@ -48,9 +59,10 @@ def test_check_tradingview_connectivity_empty_data() -> None:
 def test_check_tradingview_connectivity_retries_then_succeeds() -> None:
     mock_interval, mock_df = _mock_tv_ok()
     side_effects = [RuntimeError("transient"), mock_df]
+    fake_tv = _fake_tv_module(mock_interval)
     with (
-        patch("tvDatafeed.Interval", mock_interval),
-        patch("tvDatafeed.TvDatafeed") as tv_cls,
+        patch.dict(sys.modules, {"tvDatafeed": fake_tv}),
+        patch.object(fake_tv, "TvDatafeed") as tv_cls,
         patch("pa_agent.data.tradingview_connectivity.time.sleep"),
     ):
         tv_cls.return_value.get_hist.side_effect = side_effects
@@ -65,9 +77,10 @@ def test_check_tradingview_connectivity_retries_then_succeeds() -> None:
 def test_check_tradingview_connectivity_exhausts_retries() -> None:
     mock_interval = MagicMock()
     mock_interval.in_1_minute = object()
+    fake_tv = _fake_tv_module(mock_interval)
     with (
-        patch("tvDatafeed.Interval", mock_interval),
-        patch("tvDatafeed.TvDatafeed") as tv_cls,
+        patch.dict(sys.modules, {"tvDatafeed": fake_tv}),
+        patch.object(fake_tv, "TvDatafeed") as tv_cls,
         patch("pa_agent.data.tradingview_connectivity.time.sleep"),
     ):
         tv_cls.return_value.get_hist.side_effect = RuntimeError("still down")

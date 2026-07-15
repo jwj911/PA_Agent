@@ -40,6 +40,7 @@ jobs:
           tests/unit/test_tushare_source.py
           tests/unit/test_tradingview_socket.py
           tests/unit/test_tradingview_errors.py
+          tests/unit/test_tradingview_connectivity.py
           tests/unit/test_tv_symbol_lookup.py
           tests/unit/test_mt5_clock_skew.py
           tests/unit/test_mt5_symbol_available.py
@@ -95,6 +96,7 @@ jobs:
           pa_agent/data/mt5.py
           pa_agent/data/yfinance_source.py
           pa_agent/data/datetime_ts.py
+          pa_agent/data/tradingview_connectivity.py
           pa_agent/ai/provider_sync_service.py
           pa_agent/ai/cycle_enums.py
           pa_agent/ai/response_extract.py
@@ -118,6 +120,7 @@ jobs:
           tests/unit/test_tushare_source.py
           tests/unit/test_tradingview_socket.py
           tests/unit/test_tradingview_errors.py
+          tests/unit/test_tradingview_connectivity.py
           tests/unit/test_tv_symbol_lookup.py
           tests/unit/test_mt5_clock_skew.py
           tests/unit/test_mt5_symbol_available.py
