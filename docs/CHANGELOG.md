@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第八十一轮：继续 L7，扩展 CI 到 JSON validator 测试）
+
+本轮继续推进 **L7：CI 增强**。第八十轮已把 market defaults 测试纳入目标 CI；本轮继续筛选纯后端 validator 测试。`test_json_validator.py` 覆盖 JSON fence stripping、unescaped quote repair、truncated string repair、Stage 2 prediction 兼容填充，以及 next-bar prediction 校验规则。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_json_validator.py`。目标测试数量从 **327** 扩展到 **338**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `tests/unit/test_json_validator.py`。
+- **移除本地样本依赖**：`test_json_validator.py` 不再读取被 `.gitignore` 排除的 `tools/stage2_raw_sample.txt`，改用内联的最小 broken Stage 2 JSON 样本验证 quote repair 与 fence strip。测试因此可在 CI 环境稳定运行。
+- **清理目标测试 lint**：删除未使用 import，整理导入顺序，并为需保留的中文 reasoning 样例添加行级 `# noqa: RUF001`。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 JSON repair/validator。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_json_validator.py --tb=line -q -p no:cacheprovider` → **11 passed**。
+- `py -3.12 -m ruff check tests/unit/test_json_validator.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests\unit\test_json_validator.py` → 通过。
+- 扩展后目标集：从 `.github/workflows/ci.yml` 解析 `Run targeted unit tests` 清单并执行 `py -3.12 -m pytest @tests --tb=line -q -p no:cacheprovider` → **338 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单并执行 `py -3.12 -m ruff check @argsList` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第八十轮：继续 L7，扩展 CI 到 market defaults 测试）
 
 本轮继续推进 **L7：CI 增强**。第七十九轮已把 order opportunity 测试纳入目标 CI；本轮继续筛选数据源默认值与 symbol/exchange 归一化相关的纯后端测试。`test_market_defaults.py` 覆盖黄金默认 symbol、TradingView gold/forex auto probe、A 股与港股数字代码保护、TVC/XAUUSD 迁移，以及 A 股交易所推断顺序。
