@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百三十五轮：继续 L7，扩展 Ruff 到 TradingView source）
+
+本轮继续推进 **L7：CI 增强**。第一百三十四轮已把 EastMoney source 纳入 focused Ruff；本轮转向 TradingView 数据源，选择已有 socket/error/connectivity/symbol lookup 无网络测试覆盖的 `pa_agent/data/tradingview.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/data/tradingview.py`。
+- **清理 TradingView source lint**：整理 import 顺序，并移除 tvDatafeed timeout/socket/probe callback 保护分支上的 stale `BLE001` noqa。
+- **保留中文用户提示**：TradingView 连接失败、自动探测失败、无法识别品种、未连接提示属于用户可见文案，本轮使用行级 `# noqa: RUF001` 保留原显示语义。
+- **保持业务语义不变**：本轮不改 tvDatafeed 连接、WebSocket 关闭、自动探测顺序、probe callback、snapshot 锁、K 线转换或错误格式化逻辑。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 TradingView source。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/data/tradingview.py tests/unit/test_tradingview_socket.py tests/unit/test_tradingview_errors.py tests/unit/test_tradingview_connectivity.py tests/unit/test_tv_symbol_lookup.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\data\tradingview.py tests\unit\test_tradingview_socket.py tests\unit\test_tradingview_errors.py tests\unit\test_tradingview_connectivity.py tests\unit\test_tv_symbol_lookup.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_tradingview_socket.py tests/unit/test_tradingview_errors.py tests/unit/test_tradingview_connectivity.py tests/unit/test_tv_symbol_lookup.py --tb=line -q -p no:cacheprovider` → **23 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百三十四轮：继续 L7，扩展 Ruff 到 EastMoney source）
 
 本轮继续推进 **L7：CI 增强**。第一百三十三轮已把 Tushare source 纳入 focused Ruff；本轮继续沿 A 股数据源边界推进，选择已有 forming-bar 与 factory 无网络测试覆盖的 `pa_agent/data/eastmoney_source.py`。
