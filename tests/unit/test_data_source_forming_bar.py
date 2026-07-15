@@ -12,6 +12,7 @@ from pa_agent.data.akshare_source import AkShareSource
 from pa_agent.data.bar_close_wait import has_forming_bar_at_head
 from pa_agent.data.base import DataSource, KlineBar
 from pa_agent.data.eastmoney_source import EastMoneySource
+from pa_agent.data.mt5 import MT5Source
 from pa_agent.data.snapshot import build_analysis_frame
 from pa_agent.data.tradingview import TradingViewSource
 from pa_agent.data.yfinance_source import YFinanceSource
@@ -261,6 +262,54 @@ def test_yfinance_latest_snapshot_reuses_data_source_forming_entry(monkeypatch) 
     src = _Source()
     src._connected = True
     src._symbol = "GC=F"
+    src._timeframe = "15m"
+
+    bars = src.latest_snapshot(1)
+
+    assert calls == [("15m", False)]
+    assert len(bars) == 1
+    assert bars[0].closed
+
+
+def test_mt5_latest_snapshot_reuses_data_source_forming_entry(monkeypatch) -> None:
+    calls: list[tuple[str | None, bool]] = []
+
+    class _Source(MT5Source):
+        def has_forming_bar_at_head(
+            self,
+            bars_newest_first: list[KlineBar],
+            timeframe: str | None = None,
+            *,
+            now_ms: int | None = None,
+            symbol: str | None = None,
+        ) -> bool:
+            calls.append((timeframe, bars_newest_first[0].closed))
+            return False
+
+    rates = [
+        {
+            "time": 1_700_000_000,
+            "open": 10.0,
+            "high": 11.0,
+            "low": 9.0,
+            "close": 10.5,
+            "tick_volume": 100.0,
+        }
+    ]
+    monkeypatch.setitem(
+        sys.modules,
+        "MetaTrader5",
+        SimpleNamespace(
+            TIMEFRAME_M15="M15",
+            symbol_select=lambda symbol, selected: True,
+            copy_rates_from_pos=lambda symbol, timeframe, start, count: rates,
+            last_error=lambda: (0, "ok"),
+        ),
+    )
+
+    src = _Source()
+    src._connected = True
+    src._symbol = "XAUUSD"
     src._timeframe = "15m"
 
     bars = src.latest_snapshot(1)

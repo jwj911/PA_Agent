@@ -91,7 +91,7 @@ class MT5Source(DataSource):
             try:
                 import MetaTrader5 as mt5  # type: ignore[import]
                 mt5.shutdown()
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.warning("MT5 shutdown error: %s", exc)
         self._connected = False
         logger.info("MT5Source disconnected")
@@ -108,7 +108,7 @@ class MT5Source(DataSource):
         try:
             import MetaTrader5 as mt5  # type: ignore[import]
             return mt5.symbol_info(name) is not None
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.debug("MT5 symbol_info(%s) failed: %s", name, exc)
             return False
 
@@ -122,7 +122,7 @@ class MT5Source(DataSource):
             symbols = mt5.symbols_get()
             if symbols:
                 return [s.name for s in symbols]
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning("MT5 list_symbols failed: %s", exc)
         return []
 
@@ -144,7 +144,7 @@ class MT5Source(DataSource):
             try:
                 import MetaTrader5 as mt5  # type: ignore[import]
                 mt5.symbol_select(symbol, True)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.debug(
                     "MT5 symbol_select failed on subscribe: %s %s", symbol, timeframe,
                     exc_info=True,
@@ -179,7 +179,7 @@ class MT5Source(DataSource):
             tick_time = getattr(tick, "time", None)
             if tick_time:
                 return int(tick_time) * 1000
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.debug("MT5 server_time_ms(%s) failed: %s", name, exc)
         return None
 
@@ -213,7 +213,7 @@ class MT5Source(DataSource):
         # Ensure the symbol is selected/subscribed in MT5 for real-time data
         try:
             mt5.symbol_select(self._symbol, True)
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.debug(
                 "MT5 symbol_select failed before fetch: %s", self._symbol, exc_info=True
             )  # Non-fatal; proceed with fetch
@@ -243,30 +243,29 @@ class MT5Source(DataSource):
                 except (ValueError, KeyError):
                     vol = 0.0
 
-            if i == 0:
-                # Position 0 is the newest (potentially forming) bar in MT5.
-                # Mark it as closed=False so downstream is_bar_still_forming()
-                # can do a proper wall-clock + safety-net check.
-                # (is_bar_still_forming has a 6 h safety margin for daily/weekly
-                # bars to handle stale broker server time during weekends.)
-                is_forming = True
-            else:
-                is_forming = False
-
-            bars.append(
-                normalize_kline_bar(
-                    KlineBar(
-                        seq=i + 1,
-                        ts_open=ts_ms,
-                        open=float(rate["open"]),
-                        high=float(rate["high"]),
-                        low=float(rate["low"]),
-                        close=float(rate["close"]),
-                        volume=vol,
-                        closed=not is_forming,
-                    )
-                )
+            bar = KlineBar(
+                seq=i + 1,
+                ts_open=ts_ms,
+                open=float(rate["open"]),
+                high=float(rate["high"]),
+                low=float(rate["low"]),
+                close=float(rate["close"]),
+                volume=vol,
+                closed=(i != 0),
             )
+            if i == 0:
+                is_forming = self.has_forming_bar_at_head([bar], self._timeframe)
+                bar = KlineBar(
+                    seq=bar.seq,
+                    ts_open=bar.ts_open,
+                    open=bar.open,
+                    high=bar.high,
+                    low=bar.low,
+                    close=bar.close,
+                    volume=bar.volume,
+                    closed=not is_forming,
+                )
+            bars.append(normalize_kline_bar(bar))
             if len(bars) >= n:
                 break
 
