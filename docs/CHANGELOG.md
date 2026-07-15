@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百零七轮：继续 L7，扩展 Ruff 到入口文件组）
+
+本轮继续推进 **L7：CI 增强**。第一百零六轮已把 `demo` 提升为包级 focused Ruff；本轮评估剩余小范围源码后，`config` 与 `notify` 仍主要受用户可见中文注释/文案的 RUF 历史基线影响，暂不直接包级纳入。本轮收窄到入口文件组 `pa_agent/__init__.py`、`pa_agent/app_context.py` 与 `pa_agent/main.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/__init__.py`、`pa_agent/app_context.py` 与 `pa_agent/main.py`。
+- **清理入口文件 lint**：`app_context.py` 移除 `bootstrap()` 返回类型的冗余引号、整理方法内延迟 import 顺序，并删除当前规则集中无效的 `BLE001` noqa。
+- **保持启动语义不变**：本轮只做注解、import 顺序和无效 noqa 的机械清理，不改变 `AppContext.bootstrap()` 的组件装配、数据源订阅或日志初始化流程。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖入口文件组。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/app_context.py pa_agent/main.py pa_agent/__init__.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\app_context.py pa_agent\main.py pa_agent\__init__.py` → 通过。
+- 轻量导入验证：`py -3.12 -c "from pa_agent.app_context import AppContext; ctx = AppContext(); assert ctx.settings is None"` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+- `git diff --check` → 通过。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百零六轮：继续 L7，扩展 Ruff 到 demo 包）
 
 本轮继续推进 **L7：CI 增强**。第一百零五轮已把 `records` 提升为包级 focused Ruff；本轮继续处理已经部分覆盖且边界很小的 `pa_agent/demo`，将 demo 记录加载/回放从文件级 Ruff 提升为包级 Ruff。
