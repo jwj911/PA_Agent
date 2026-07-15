@@ -216,7 +216,10 @@ def check_next_cycle_prediction(obj: dict) -> list[str]:
 
     probs = pred.get("probabilities")
     if not isinstance(probs, dict):
-        return errors + ["next_cycle_prediction.probabilities: must be an object when unpredictable=false"]
+        return [
+            *errors,
+            "next_cycle_prediction.probabilities: must be an object when unpredictable=false",
+        ]
 
     for key in CYCLE_ORDER:
         value = probs.get(key)
