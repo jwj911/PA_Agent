@@ -345,6 +345,95 @@ class TwoStageOrchestrator:
 
         return strategy_files, experience_entries
 
+    def _persist_result(
+        self,
+        *,
+        record: AnalysisRecord,
+        on_event: Callable[[OrchestratorEvent], None],
+        stage1_json: dict,
+        messages_s1: list[dict],
+        reply_s1: Any,
+        messages_s2: list[dict],
+        reply_s2: Any,
+        stage2_json: dict,
+        strategy_files: list[str],
+        experience_entries: list[Any],
+        s1_usage_calls: list[Any],
+        s2_usage_calls: list[Any],
+        _enable_next_bar: bool,
+    ) -> AnalysisRecord:
+        """Log predictions, build the final record, persist it, and return it.
+
+        Steps 19.5-24 of the happy path: emit next_bar / next_cycle prediction
+        logs, assemble the fully-populated ``AnalysisRecord`` (accumulating
+        Stage 1 + Stage 2 usage), write it via ``save_full``, fire
+        ``RecordSaved``, and return the record.
+        """
+        # ── Step 19.5: Log next_bar_prediction (R9.3, NFR2.1) ───────────────────
+        _pred = stage2_json if isinstance(stage2_json, dict) else {}
+        _nb_pred = _pred.get("next_bar_prediction")
+        if not _enable_next_bar:
+            logger.info("next_bar_prediction omitted (feature disabled)")
+        elif isinstance(_nb_pred, dict):
+            if _nb_pred.get("unpredictable"):
+                logger.info("next_bar_prediction direction=null probs=null/null/null unpredictable=true")
+            else:
+                _probs = _nb_pred.get("probabilities") or {}
+                logger.info(
+                    "next_bar_prediction direction=%s probs=%s/%s/%s unpredictable=false",
+                    _nb_pred.get("direction"),
+                    _probs.get("bullish"),
+                    _probs.get("bearish"),
+                    _probs.get("neutral"),
+                )
+        elif _enable_next_bar:
+            logger.info("next_bar_prediction absent from stage2 response")
+
+        _nc_pred = _pred.get("next_cycle_prediction")
+        if isinstance(_nc_pred, dict):
+            if _nc_pred.get("unpredictable"):
+                logger.info("next_cycle_prediction cycle=null unpredictable=true")
+            else:
+                logger.info(
+                    "next_cycle_prediction cycle=%s direction=%s unpredictable=false",
+                    _nc_pred.get("cycle"),
+                    _nc_pred.get("direction"),
+                )
+        else:
+            logger.info("next_cycle_prediction absent from stage2 response")
+
+        # ── Step 20: Build final record ───────────────────────────────────────
+        usage_total = _accumulate_usage_calls(
+            _accumulate_usage_calls(record.usage_total, s1_usage_calls),
+            s2_usage_calls,
+        )
+        record = record.model_copy(
+            update={
+                "stage1_messages": messages_s1,
+                "stage1_response": reply_s1.raw,
+                "stage1_diagnosis": stage1_json,
+                "stage2_messages": messages_s2,
+                "stage2_response": reply_s2.raw,
+                "stage2_decision": stage2_json,
+                "strategy_files_used": strategy_files,
+                "experience_loaded": [
+                    e.model_dump() if hasattr(e, "model_dump") else dict(e)
+                    for e in experience_entries
+                ],
+                "usage_total": usage_total,
+                "exception": None,
+            }
+        )
+
+        # ── Step 22: Persist full record ──────────────────────────────────────
+        self._pending_writer.save_full(record)
+
+        # ── Step 23: Record saved event ───────────────────────────────────────
+        on_event(OrchestratorEvent.RecordSaved)
+
+        # ── Step 24: Return ───────────────────────────────────────────────────
+        return record
+
     # ── Public API ────────────────────────────────────────────────────────────
 
     def submit(
@@ -906,70 +995,22 @@ class TwoStageOrchestrator:
         # ── Step 19: Stage 2 done ─────────────────────────────────────────────
         on_event(OrchestratorEvent.Stage2Done)
 
-        # ── Step 19.5: Log next_bar_prediction (R9.3, NFR2.1) ───────────────────
-        _pred = stage2_json if isinstance(stage2_json, dict) else {}
-        _nb_pred = _pred.get("next_bar_prediction")
-        if not _enable_next_bar:
-            logger.info("next_bar_prediction omitted (feature disabled)")
-        elif isinstance(_nb_pred, dict):
-            if _nb_pred.get("unpredictable"):
-                logger.info("next_bar_prediction direction=null probs=null/null/null unpredictable=true")
-            else:
-                _probs = _nb_pred.get("probabilities") or {}
-                logger.info(
-                    "next_bar_prediction direction=%s probs=%s/%s/%s unpredictable=false",
-                    _nb_pred.get("direction"),
-                    _probs.get("bullish"),
-                    _probs.get("bearish"),
-                    _probs.get("neutral"),
-                )
-        elif _enable_next_bar:
-            logger.info("next_bar_prediction absent from stage2 response")
-
-        _nc_pred = _pred.get("next_cycle_prediction")
-        if isinstance(_nc_pred, dict):
-            if _nc_pred.get("unpredictable"):
-                logger.info("next_cycle_prediction cycle=null unpredictable=true")
-            else:
-                logger.info(
-                    "next_cycle_prediction cycle=%s direction=%s unpredictable=false",
-                    _nc_pred.get("cycle"),
-                    _nc_pred.get("direction"),
-                )
-        else:
-            logger.info("next_cycle_prediction absent from stage2 response")
-
-        # ── Step 20: Build final record ───────────────────────────────────────
-        usage_total = _accumulate_usage_calls(
-            _accumulate_usage_calls(record.usage_total, s1_usage_calls),
-            s2_usage_calls,
+        # ── Steps 19.5-24: Log predictions + build/persist final record ───────
+        return self._persist_result(
+            record=record,
+            on_event=on_event,
+            stage1_json=stage1_json,
+            messages_s1=messages_s1,
+            reply_s1=reply_s1,
+            messages_s2=messages_s2,
+            reply_s2=reply_s2,
+            stage2_json=stage2_json,
+            strategy_files=strategy_files,
+            experience_entries=experience_entries,
+            s1_usage_calls=s1_usage_calls,
+            s2_usage_calls=s2_usage_calls,
+            _enable_next_bar=_enable_next_bar,
         )
-        record = record.model_copy(
-            update={
-                "stage1_messages": messages_s1,
-                "stage1_response": reply_s1.raw,
-                "stage1_diagnosis": stage1_json,
-                "stage2_messages": messages_s2,
-                "stage2_response": reply_s2.raw,
-                "stage2_decision": stage2_json,
-                "strategy_files_used": strategy_files,
-                "experience_loaded": [
-                    e.model_dump() if hasattr(e, "model_dump") else dict(e)
-                    for e in experience_entries
-                ],
-                "usage_total": usage_total,
-                "exception": None,
-            }
-        )
-
-        # ── Step 22: Persist full record ──────────────────────────────────────
-        self._pending_writer.save_full(record)
-
-        # ── Step 23: Record saved event ───────────────────────────────────────
-        on_event(OrchestratorEvent.RecordSaved)
-
-        # ── Step 24: Return ───────────────────────────────────────────────────
-        return record
 
     # ── Internal helpers ──────────────────────────────────────────────────────
 
