@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第九十五轮：继续 L7，扩展 CI 到 free chat reasoning resend 测试）
+
+本轮继续推进 **L7：CI 增强**。第九十四轮已把 ChartWidget fit/overlay 测试纳入目标 CI；本轮转向自由追问会话的 reasoning resend 合同。`test_free_chat_resend_drops_reasoning.py` 覆盖默认情况下 API 历史不回传上一轮 reasoning、但 `history_full` 与 JSONL 持久化仍保留 reasoning；`test_free_chat_keeps_reasoning_when_toggled.py` 覆盖 `keep_reasoning_in_resend=True` 时后续自由追问 assistant turn 会带回 `reasoning_content`。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_free_chat_resend_drops_reasoning.py` 与 `tests/unit/test_free_chat_keeps_reasoning_when_toggled.py`。目标测试数量从 **624** 扩展到 **639**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增上述 2 个 free chat 测试文件。
+- **修正过期测试期望**：`FreeChatSession._build_prefix()` 当前会在 system 与分析 JSON 后追加一条由程序校验结果合成的 recall assistant（如 `【上次决策结果】不下单`）。测试改为显式验证这条 prefix recall，并只对后续自由追问 assistant turn 断言 reasoning resend 行为，避免把 prefix assistant 误判为用户追问回复。
+- **清理目标测试 lint**：通过 Ruff 自动整理 import、删除未使用的 `json` / `pytest` / `call` / `patch` import。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 free chat reasoning resend。
+
+### 验证
+
+- 新增测试：`py -3.12 -m pytest tests/unit/test_free_chat_keeps_reasoning_when_toggled.py tests/unit/test_free_chat_resend_drops_reasoning.py --tb=line -q -p no:cacheprovider` → **15 passed**。
+- `py -3.12 -m ruff check tests/unit/test_free_chat_keeps_reasoning_when_toggled.py tests/unit/test_free_chat_resend_drops_reasoning.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests\unit\test_free_chat_keeps_reasoning_when_toggled.py tests\unit\test_free_chat_resend_drops_reasoning.py` → 通过。
+- 扩展后目标集：从 `.github/workflows/ci.yml` 解析 targeted pytest 清单（本地 `pytest_cov` 插件仍受用户 site-packages 权限问题影响，沿用无 coverage 插件行为验证）→ `py -3.12 -m pytest ... --tb=line -q -p no:cacheprovider` → **639 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第九十四轮：继续 L7，扩展 CI 到 ChartWidget fit/overlay 测试）
 
 本轮继续推进 **L7：CI 增强**。第九十三轮已为 Qt helper 测试建立 offscreen CI 基线；本轮继续筛选同一 GUI 子域中风险较低的 ChartWidget 测试。`test_chart_fit_view.py` 覆盖自动 fit view、首帧自适应、交易价格纳入 y 轴范围与左轴拖拽宽度；`test_chart_widget_no_lines_when_not_trading.py` 覆盖“不下单”时不绘制交易线、切换/重置时清理交易线，以及 continuity overlay 的保留路径。
