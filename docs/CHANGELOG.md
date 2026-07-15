@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百一十三轮：继续 L7，扩展 Ruff 到 AI token/signal 辅助文件）
+
+本轮继续推进 **L7：CI 增强**。第一百一十二轮已把 AI schema/routing 辅助文件纳入 focused Ruff；本轮继续选择小型、低风险的 AI 辅助模块，收窄到 token 估算与 signal/limit context 两个确定性工具文件。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/ai/token_counter.py` 与 `pa_agent/ai/signal_context.py`。
+- **清理 token/signal lint**：`token_counter.py` 将未使用的循环变量改为 `_key`；`signal_context.py` 移除过期 `# noqa: BLE001`，并把 planned-limit 弱信号判断尾部分支改为直接返回条件。
+- **保持业务语义不变**：本轮不改 token 估算公式、不改 tiktoken fallback、不改 signal bar seq fallback、不改 §9.0P 背景限价路径与 planned limit 判定。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 AI token/signal 辅助文件。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/ai/token_counter.py pa_agent/ai/signal_context.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\ai\token_counter.py pa_agent\ai\signal_context.py` → 通过。
+- 相关测试：`$env:PYTHONPATH="$env:TEMP\pa_agent_hypothesis_dep;$env:TEMP\pa_agent_qt_dep"; $env:QT_QPA_PLATFORM="offscreen"; py -3.12 -m pytest tests/unit/test_decision_nodes_judges.py tests/unit/test_token_indicator_thresholds.py --tb=line -q -p no:cacheprovider` → 通过。
+- DeepSeek client 回归：`py -3.12 -m pytest tests/unit/test_deepseek_client.py --tb=line -q -p no:cacheprovider` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+- `git diff --check` → 通过（仅显示 Windows 行尾提示）。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百一十二轮：继续 L7，扩展 Ruff 到 AI schema/routing 辅助文件）
 
 本轮继续推进 **L7：CI 增强**。第一百一十一轮已把 AI 基础叶子模块纳入 focused Ruff；本轮继续评估 AI 源码侧小范围候选。`json_repair`、`override_arbiter`、`signal_context` 等仍存在中文业务文案或多点机械清理，本轮收窄到已经 Ruff 干净且测试覆盖明确的 `schema_validator.py`、`strategy_files.py` 与 `router.py`。
