@@ -144,6 +144,7 @@ jobs:
           pa_agent/data/snapshot.py
           pa_agent/data/ashare_common.py
           pa_agent/data/eastmoney_quote.py
+          pa_agent/data/eastmoney_quote_api.py
           pa_agent/data/mt5.py
           pa_agent/data/yfinance_source.py
           pa_agent/data/datetime_ts.py

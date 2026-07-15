@@ -22,7 +22,7 @@ WBP2U = "|0|0|0|web"
 # Params:
 #   secid  = {market}.{code}   # SH 1.xxxxxx  SZ 0.xxxxxx
 #   fltt=2 invt=2 ut={UT_WEB}
-#   **Do not pass a narrow ``fields`` list** — f11–f40 become null.
+#   **Do not pass a narrow ``fields`` list** — f11-f40 become null.
 #   If you must pass fields, use ORDER_BOOK_FIELDS below (akshare-compatible).
 #
 # Field map (same as akshare.stock_bid_ask_em):
@@ -31,14 +31,14 @@ WBP2U = "|0|0|0|web"
 #   现价/量   f43 / f47(手)
 #   涨跌幅    f170
 #
-# **十档 (L2) 协议**（vendor.js 逆向，需 ``fltt=1`` + ``FIELDS_TEN_DEPTH``）:
-#   卖1–5  f39/f40 .. f31/f32  （同五档，价位单位=分）
-#   买1–5  f19/f20 .. f11/f12
-#   卖6–10 f29/f30, f27/f28, f25/f26, f23/f24, f21/f22
-#   买6–10 f9/f10,  f7/f8,   f5/f6,   f3/f4,   f1/f2
-# 未开通超级 Level-2 时 f21–f30、f1–f10 返回 ``"-"``（服务端鉴权，非缺字段）。
+# **十档 (L2) 协议**(vendor.js 逆向, 需 ``fltt=1`` + ``FIELDS_TEN_DEPTH``):
+#   卖1-5  f39/f40 .. f31/f32  (同五档, 价位单位=分)
+#   买1-5  f19/f20 .. f11/f12
+#   卖6-10 f29/f30, f27/f28, f25/f26, f23/f24, f21/f22
+#   买6-10 f9/f10,  f7/f8,   f5/f6,   f3/f4,   f1/f2
+# 未开通超级 Level-2 时 f21-f30、f1-f10 返回 ``"-"``(服务端鉴权, 非缺字段)。
 #
-# **SSE 推送**（网页实时行情，同字段）:
+# **SSE 推送**(网页实时行情, 同字段):
 #   GET {push_host}/api/qt/stock/sse?fields=...&fltt=1&mpi=1000&invt=2&secid=...
 #   GET .../api/qt/stock/details/sse  逐笔
 #   GET .../api/qt/stock/trends2/sse  分时
@@ -81,7 +81,7 @@ BID_FIELD_PAIRS: tuple[tuple[str, str], ...] = (
 FREE_DEPTH_LEVELS = 5
 L2_DEPTH_LEVELS = 10
 
-# L2 扩展档位（fltt=1，卖六~卖十 / 买六~买十）
+# L2 扩展档位(fltt=1, 卖六~卖十 / 买六~买十)
 L2_ASK_EXTENDED: tuple[tuple[str, str], ...] = (
     ("f29", "f30"),
     ("f27", "f28"),
@@ -97,7 +97,7 @@ L2_BID_EXTENDED: tuple[tuple[str, str], ...] = (
     ("f1", "f2"),
 )
 
-# vendor.js ``_(enums)`` 构建的完整十档 fields（勿缩成 f1–f40 列表）
+# vendor.js ``_(enums)`` 构建的完整十档 fields(勿缩成 f1-f40 列表)
 TEN_DEPTH_FIELDS = FIELDS_TEN_DEPTH
 
 # ── 2) 当日逐笔成交 ───────────────────────────────────────────────────────────
