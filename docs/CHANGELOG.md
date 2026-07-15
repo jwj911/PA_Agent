@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百二十二轮：继续 L7，扩展 Ruff 到刷新循环）
+
+本轮继续推进 **L7：CI 增强**。第一百二十一轮已把包入口文件纳入 focused Ruff；本轮继续评估数据层剩余小文件，选择已有 warmup 合同测试覆盖、且只需机械 lint 清理的 `pa_agent/data/refresh_loop.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/data/refresh_loop.py`。
+- **清理刷新循环 lint**：将 PyQt import 移到标准 import 区并排序，移除 `CancelToken` / `QObject` 注解中的多余引号，清理过期的 `C901` / `BLE001` noqa。
+- **保持业务语义不变**：本轮不改 `RefreshLoop` 线程生命周期、warmup bar 请求数量、数据延迟提示、瞬时错误退避、取消逻辑或信号发射路径。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖刷新循环。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/data/refresh_loop.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\data\refresh_loop.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_refresh_loop_warmup.py --tb=line -q -p no:cacheprovider` → **1 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百二十一轮：继续 L7，扩展 Ruff 到包入口文件）
 
 本轮继续推进 **L7：CI 增强**。第一百二十轮已把 A 股涨跌停辅助纳入 focused Ruff；本轮继续从低风险源码边界扩容，选择已 Ruff clean 的包入口文件，避免触碰中文业务文案密集模块。
