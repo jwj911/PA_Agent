@@ -52,6 +52,7 @@ jobs:
           tests/unit/test_cycle_enums.py
           tests/unit/test_response_extract.py
           tests/unit/test_mimo_compat.py
+          tests/unit/test_prompt_txt_files.py
           tests/unit/test_client_factory.py
           tests/unit/test_cost_and_ledger.py
           tests/unit/test_trade_metrics.py
@@ -112,6 +113,7 @@ jobs:
           tests/unit/test_cycle_enums.py
           tests/unit/test_response_extract.py
           tests/unit/test_mimo_compat.py
+          tests/unit/test_prompt_txt_files.py
           tests/unit/test_client_factory.py
           tests/unit/test_cost_and_ledger.py
           tests/unit/test_trade_metrics.py
