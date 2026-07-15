@@ -22,3 +22,26 @@ jobs:
 
       - name: Verify install
         run: python -c "import pa_agent; print('OK')"
+
+      - name: Run targeted unit tests
+        run: >
+          python -m pytest
+          tests/unit/test_data_source_forming_bar.py
+          tests/unit/test_bar_close_wait.py
+          tests/unit/test_snapshot_closed_only_buffer.py
+          tests/unit/test_build_analysis_frame.py
+          tests/unit/test_snapshot_indicator_warmup.py
+          tests/unit/test_data_source_factory.py
+          tests/unit/test_mt5_clock_skew.py
+          --tb=line
+          -q
+
+      - name: Run focused Ruff checks
+        run: >
+          python -m ruff check
+          pa_agent/data/base.py
+          pa_agent/data/snapshot.py
+          pa_agent/data/mt5.py
+          pa_agent/data/yfinance_source.py
+          tests/unit/test_data_source_forming_bar.py
+          tests/unit/test_mt5_clock_skew.py
