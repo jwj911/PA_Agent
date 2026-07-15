@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百零九轮：继续 L7，扩展 Ruff 到数据层小文件组）
+
+本轮继续推进 **L7：CI 增强**。第一百零八轮已把 util 小工具组纳入 focused Ruff；本轮继续收窄源码侧 Ruff 缺口，选择依赖面较小、能以机械 lint 清理完成的数据层辅助文件。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/data/eastmoney_field_enums.py`、`pa_agent/data/eastmoney_urls.py`、`pa_agent/data/bar_close_wait.py`、`pa_agent/data/kline_adjust.py` 与 `pa_agent/data/refresh_policy.py`。
+- **清理数据层 lint**：`eastmoney_field_enums.py` 中两处中文注释全角括号改为 ASCII；`bar_close_wait.py` 移除 `math.ceil()` 外层多余 `int()`；`kline_adjust.py` 将简单 `if/else` 改为条件表达式。
+- **保持业务语义不变**：本轮不改 EastMoney URL/字段映射、不改 forming-bar 等待计算、不改复权偏好 fallback、不改刷新间隔策略。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖数据层小文件组。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/data/eastmoney_field_enums.py pa_agent/data/eastmoney_urls.py pa_agent/data/bar_close_wait.py pa_agent/data/kline_adjust.py pa_agent/data/refresh_policy.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\data\eastmoney_field_enums.py pa_agent\data\eastmoney_urls.py pa_agent\data\bar_close_wait.py pa_agent\data\kline_adjust.py pa_agent\data\refresh_policy.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_bar_close_wait.py tests/unit/test_data_source_forming_bar.py tests/unit/test_mt5_clock_skew.py --tb=line -q -p no:cacheprovider` → **22 passed**。
+- 轻量断言：`quote_page_url`、`set_kline_adjust` / `get_kline_adjust`、`effective_refresh_interval_ms`、`snapshot_cache_ttl_s` 与 `zombie_join_timeout_ms` 基本合同验证 → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+- `git diff --check` → 通过。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百零八轮：继续 L7，扩展 Ruff 到 util 小工具组）
 
 本轮继续推进 **L7：CI 增强**。第一百零七轮已把入口文件组纳入 focused Ruff；本轮继续评估剩余小范围源码。`config`、`notify`、部分 AI 小文件与 `util` 包级检查仍受历史中文文案/注释或其它存量噪声影响，因此本轮收窄到已经低噪声且具备安全/基础设施意义的 util 小工具文件。
