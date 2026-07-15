@@ -72,6 +72,7 @@ jobs:
           tests/unit/test_decision_stance.py
           tests/unit/test_cycle_enums.py
           tests/unit/test_response_extract.py
+          tests/unit/test_json_validator.py
           tests/unit/test_mimo_compat.py
           tests/unit/test_kv_prefix_cache.py
           tests/unit/test_prompt_txt_files.py
@@ -158,6 +159,7 @@ jobs:
           tests/unit/test_decision_stance.py
           tests/unit/test_cycle_enums.py
           tests/unit/test_response_extract.py
+          tests/unit/test_json_validator.py
           tests/unit/test_mimo_compat.py
           tests/unit/test_kv_prefix_cache.py
           tests/unit/test_prompt_txt_files.py

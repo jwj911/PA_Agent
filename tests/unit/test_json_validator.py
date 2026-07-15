@@ -2,39 +2,45 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
-
-import pytest
 
 from pa_agent.ai.json_validator import (
     JsonValidator,
     Ok,
-    ValidationError,
     _repair_unclosed_string_before_brace,
     _repair_unescaped_quotes,
     _strip_fences,
 )
-
-_SAMPLE = Path(__file__).resolve().parents[2] / "tools" / "stage2_raw_sample.txt"
 from tests.fixtures.validators import schema_test_validator
 
 _validator = schema_test_validator()
 
+_BROKEN_STAGE2_SAMPLE = """\
+JSON 校验通过。
+
+```json
+{
+  "decision": {
+    "order_type": "不下单",
+    "reasoning": "Avoid "mid-range entry" until breakout"
+  },
+  "decision_trace": []
+}
+```
+"""
+
 
 def test_stage2_raw_sample_repair_then_parse():
     """Broken stage-2 sample with inner quotes must parse after repair."""
-    raw = _SAMPLE.read_text(encoding="utf-8")
-    stripped = _strip_fences(raw)
+    stripped = _strip_fences(_BROKEN_STAGE2_SAMPLE)
     repaired = _repair_unescaped_quotes(stripped)
     obj = json.loads(repaired)
     assert obj["decision"]["order_type"] == "不下单"
-    assert "在区间中部入场" in obj["decision"]["reasoning"]
+    assert '"mid-range entry"' in obj["decision"]["reasoning"]
 
 
 def test_strip_fences_includes_repair():
     """_strip_fences applies quote repair so json.loads succeeds directly."""
-    raw = _SAMPLE.read_text(encoding="utf-8")
-    obj = json.loads(_strip_fences(raw))
+    obj = json.loads(_strip_fences(_BROKEN_STAGE2_SAMPLE))
     assert isinstance(obj["decision_trace"], list)
 
 
@@ -91,7 +97,7 @@ def _valid_prediction() -> dict:
     return {
         "direction": "bullish",
         "probabilities": {"bullish": 50, "bearish": 30, "neutral": 20},
-        "reasoning": "阳线概率最高，趋势明确，结构清晰。",
+        "reasoning": "阳线概率最高，趋势明确，结构清晰。",  # noqa: RUF001
         "unpredictable": False,
         "features_used": ["stage1_diagnosis"],
     }
@@ -166,7 +172,7 @@ def test_check_next_bar_prediction_unpredictable_null_consistency():
         "next_bar_prediction": {
             "direction": None,
             "probabilities": None,
-            "reasoning": "数据不足，无法预测方向",
+            "reasoning": "数据不足，无法预测方向",  # noqa: RUF001
             "unpredictable": True,
             "features_used": ["stage1_diagnosis"],
         }
