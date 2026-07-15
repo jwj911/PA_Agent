@@ -191,6 +191,7 @@ jobs:
           pa_agent/orchestrator/validation_retry.py
           pa_agent/gui/chart_decision_overlay.py
           pa_agent/gui/prediction_format.py
+          pa_agent/gui/widgets/model_selector.py
           pa_agent/gui/widgets/status_bar.py
           pa_agent/util/__init__.py
           pa_agent/util/crash_diagnostics.py
