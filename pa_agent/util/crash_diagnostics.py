@@ -1,6 +1,7 @@
 """Fatal crash diagnostics: faulthandler dump file for native/Qt crashes."""
 from __future__ import annotations
 
+import contextlib
 import faulthandler
 import logging
 import signal
@@ -16,7 +17,7 @@ _enabled = False
 
 def enable_crash_diagnostics() -> None:
     """Write Python/native stack traces to logs/crash.log on fatal errors."""
-    global _crash_file, _enabled  # noqa: PLW0603
+    global _crash_file, _enabled
 
     if _enabled:
         return
@@ -25,10 +26,8 @@ def enable_crash_diagnostics() -> None:
     _crash_file = open(CRASH_LOG_PATH, "a", encoding="utf-8")  # noqa: SIM115
     faulthandler.enable(file=_crash_file, all_threads=True)
     if hasattr(faulthandler, "register"):
-        try:
+        with contextlib.suppress(AttributeError, OSError, ValueError):
             faulthandler.register(signal.SIGTERM, file=_crash_file, all_threads=True)
-        except (AttributeError, OSError, ValueError):
-            pass
     _enabled = True
     logger.info("faulthandler enabled → %s", CRASH_LOG_PATH)
 
