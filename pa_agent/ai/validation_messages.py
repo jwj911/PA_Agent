@@ -41,7 +41,7 @@ def format_validation_errors(
     extra = len(invalid_fields) - max_items
     if extra > 0:
         lines.append(f"…另有 {extra} 条")
-    return "；".join(lines) if lines else ""
+    return "；".join(lines) if lines else ""  # noqa: RUF001
 
 
 def _label_one(raw: str) -> str:
