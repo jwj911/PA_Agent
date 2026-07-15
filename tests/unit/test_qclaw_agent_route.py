@@ -21,19 +21,18 @@ def test_is_openclaw_model_accepts_gateway_aliases() -> None:
 
 
 def test_should_use_qclaw_provider_when_base_url_matches_gateway() -> None:
-    with patch("pa_agent.ai.qclaw_connector.detect_qclaw", return_value=True):
-        with patch(
-            "pa_agent.ai.qclaw_connector._get_qclaw_gateway_info",
-            return_value=("127.0.0.1", 64257, "tok"),
-        ):
-            assert should_use_qclaw_provider(
-                "pool-deepseek-v4-pro",
-                "http://127.0.0.1:64257/v1",
-            )
-            assert not should_use_qclaw_provider(
-                "pool-deepseek-v4-pro",
-                "https://api.deepseek.com",
-            )
+    with patch("pa_agent.ai.qclaw_connector.detect_qclaw", return_value=True), patch(
+        "pa_agent.ai.qclaw_connector._get_qclaw_gateway_info",
+        return_value=("127.0.0.1", 64257, "tok"),
+    ):
+        assert should_use_qclaw_provider(
+            "pool-deepseek-v4-pro",
+            "http://127.0.0.1:64257/v1",
+        )
+        assert not should_use_qclaw_provider(
+            "pool-deepseek-v4-pro",
+            "https://api.deepseek.com",
+        )
 
 
 def test_resolve_qclaw_endpoint_skips_relay_by_default() -> None:
@@ -58,7 +57,7 @@ def test_qclaw_provider_settings_uses_openclaw_agent() -> None:
             resolve.return_value = (
                 "http://127.0.0.1:58579/v1",
                 _PUBLIC_GATEWAY_MODEL,
-                "公开网关（OpenClaw Agent / openclaw）",
+                "公开网关（OpenClaw Agent / openclaw）",  # noqa: RUF001
             )
             settings = qclaw_provider_settings()
     assert settings is not None
@@ -86,16 +85,14 @@ def test_apply_qclaw_provider_keeps_openclaw_sub_agent_alias() -> None:
                 "context_window": 2_000_000,
             },
         )(),
+    ), patch("pa_agent.ai.qclaw_connector.detect_qclaw", return_value=True), patch(
+        "pa_agent.ai.qclaw_connector.qclaw_health_check_base",
+        return_value=(True, "ok"),
     ):
-        with patch("pa_agent.ai.qclaw_connector.detect_qclaw", return_value=True):
-            with patch(
-                "pa_agent.ai.qclaw_connector.qclaw_health_check_base",
-                return_value=(True, "ok"),
-            ):
-                err = apply_qclaw_provider_to_settings(
-                    settings,
-                    preferred_model="openclaw/main",
-                )
+        err = apply_qclaw_provider_to_settings(
+            settings,
+            preferred_model="openclaw/main",
+        )
 
     assert err is None
     assert settings.provider.model == "openclaw/main"
@@ -122,13 +119,11 @@ def test_apply_qclaw_provider_forces_agent_model() -> None:
                 "context_window": 2_000_000,
             },
         )(),
+    ), patch("pa_agent.ai.qclaw_connector.detect_qclaw", return_value=True), patch(
+        "pa_agent.ai.qclaw_connector.qclaw_health_check_base",
+        return_value=(True, "ok"),
     ):
-        with patch("pa_agent.ai.qclaw_connector.detect_qclaw", return_value=True):
-            with patch(
-                "pa_agent.ai.qclaw_connector.qclaw_health_check_base",
-                return_value=(True, "ok"),
-            ):
-                err = apply_qclaw_provider_to_settings(settings)
+        err = apply_qclaw_provider_to_settings(settings)
 
     assert err is None
     assert settings.provider.model == _PUBLIC_GATEWAY_MODEL
@@ -158,12 +153,11 @@ def test_apply_qclaw_provider_on_load_keeps_sub_agent_alias() -> None:
                 "context_window": 2_000_000,
             },
         )()
-        with patch("pa_agent.ai.qclaw_connector.detect_qclaw", return_value=True):
-            with patch(
-                "pa_agent.ai.qclaw_connector.qclaw_health_check_base",
-                return_value=(True, "ok"),
-            ):
-                err = apply_qclaw_provider_to_settings(settings)
+        with patch("pa_agent.ai.qclaw_connector.detect_qclaw", return_value=True), patch(
+            "pa_agent.ai.qclaw_connector.qclaw_health_check_base",
+            return_value=(True, "ok"),
+        ):
+            err = apply_qclaw_provider_to_settings(settings)
 
     assert err is None
     resolve.assert_called_once_with(model="openclaw/main", prefer_relay=False)
@@ -221,13 +215,12 @@ def test_openclaw_wb_model_never_selects_qclaw_on_stale_gateway_base() -> None:
     )
 
     stale_qclaw = "http://127.0.0.1:58579/v1"
-    with patch("pa_agent.ai.qclaw_connector.detect_qclaw", return_value=True):
-        with patch(
-            "pa_agent.ai.qclaw_connector._get_qclaw_gateway_info",
-            return_value=("127.0.0.1", 58579, "tok"),
-        ):
-            assert not should_use_qclaw_provider("openclaw_wb", stale_qclaw)
-            assert should_use_workbuddy_provider("openclaw_wb", stale_qclaw)
+    with patch("pa_agent.ai.qclaw_connector.detect_qclaw", return_value=True), patch(
+        "pa_agent.ai.qclaw_connector._get_qclaw_gateway_info",
+        return_value=("127.0.0.1", 58579, "tok"),
+    ):
+        assert not should_use_qclaw_provider("openclaw_wb", stale_qclaw)
+        assert should_use_workbuddy_provider("openclaw_wb", stale_qclaw)
 
     provider = type(
         "P",
@@ -247,16 +240,14 @@ def test_sync_qclaw_on_load_skips_openclaw_wb_with_stale_gateway_base() -> None:
     settings.provider.base_url = "http://127.0.0.1:58579/v1"
     settings.provider.api_key = "wb-token"
 
-    with patch("pa_agent.ai.qclaw_connector.detect_qclaw", return_value=True):
-        with patch(
-            "pa_agent.ai.qclaw_connector._get_qclaw_gateway_info",
-            return_value=("127.0.0.1", 58579, "qclaw-tok"),
-        ):
-            with patch(
-                "pa_agent.ai.qclaw_connector.apply_qclaw_provider_to_settings"
-            ) as apply:
-                sync_qclaw_agent_provider_on_load(settings)
-                apply.assert_not_called()
+    with patch("pa_agent.ai.qclaw_connector.detect_qclaw", return_value=True), patch(
+        "pa_agent.ai.qclaw_connector._get_qclaw_gateway_info",
+        return_value=("127.0.0.1", 58579, "qclaw-tok"),
+    ), patch(
+        "pa_agent.ai.qclaw_connector.apply_qclaw_provider_to_settings"
+    ) as apply:
+        sync_qclaw_agent_provider_on_load(settings)
+        apply.assert_not_called()
 
     assert settings.provider.model == "openclaw_wb"
     assert settings.provider.api_key == "wb-token"
