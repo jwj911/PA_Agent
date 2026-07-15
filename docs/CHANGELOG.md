@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第五十四轮：继续 L7，扩大 Ruff 门禁并清理目标测试 lint）
+
+本轮继续推进 **L7：CI 增强**。第五十三轮留下的直接问题是 Black 门禁尚未启用，因为本机 `black --check` 会卡住。本轮先复核 Black 工具链：当前全局 `black 26.5.1` 连 `--version` 都无法稳定返回；把 `black>=24.4,<26` 安装到仓库临时 target 后，隔离的 `black 25.12.0` 同样在 `--version` / `--check` 卡住。因此本轮不再强行推进 Black CI，而是选择可验证的 L7 切片：把上一轮新增到 CI 的 M3/M5 目标测试和 `ProviderSyncService` 纳入 Ruff 门禁，并清理这些文件中的真实 lint。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/ai/provider_sync_service.py`、`tests/unit/test_order_method_router.py`、`test_trend_context.py`、`test_decision_nodes_orchestrator.py`、`test_provider_sync_service.py`、`test_qclaw_auto_fallback.py`。CI 现在不仅测试这些路径，也对对应测试/服务文件执行 lint。
+- **清理目标测试 lint**：删除 `test_decision_nodes_orchestrator.py` 中未使用的 `call` import，把未使用的解包变量改为 `_assembler` / `_writer` / `_client`；删除 `test_trend_context.py` 中未使用的 `compute_background_direction` import；把 `test_qclaw_auto_fallback.py` 中预期的 `APIConnectionError` 吞掉逻辑改为 `contextlib.suppress(...)`，并按 Ruff 建议合并 `with` 语句。
+- **清理 `ProviderSyncService` 冗余 noqa**：当前 Ruff 配置未启用 `BLE001`，`# noqa: BLE001` 会触发 RUF100；移除 `finish_provider_fallback()` 保存失败兜底分支上的冗余 noqa，保留原有 `except Exception as save_exc` 行为和 warning 日志。
+- **暂不纳入决策源文件 Ruff**：`order_method_router.py` 与 `decision_node_engine.py` 仍有随中文 reason 串存在的历史 RUF001 标点告警，本轮不把这些源文件加入 CI Ruff，避免 L7 门禁被历史中文文案噪声卡死。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_data_source_forming_bar.py tests/unit/test_bar_close_wait.py tests/unit/test_snapshot_closed_only_buffer.py tests/unit/test_build_analysis_frame.py tests/unit/test_snapshot_indicator_warmup.py tests/unit/test_data_source_factory.py tests/unit/test_mt5_clock_skew.py tests/unit/test_order_method_router.py tests/unit/test_trend_context.py tests/unit/test_decision_nodes_orchestrator.py tests/unit/test_provider_sync_service.py tests/unit/test_qclaw_auto_fallback.py --tb=line -q -p no:cacheprovider` → **60 passed**。
+- `py -3.12 -m ruff check pa_agent/data/base.py pa_agent/data/snapshot.py pa_agent/data/mt5.py pa_agent/data/yfinance_source.py pa_agent/ai/provider_sync_service.py tests/unit/test_data_source_forming_bar.py tests/unit/test_mt5_clock_skew.py tests/unit/test_order_method_router.py tests/unit/test_trend_context.py tests/unit/test_decision_nodes_orchestrator.py tests/unit/test_provider_sync_service.py tests/unit/test_qclaw_auto_fallback.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/ai/provider_sync_service.py tests/unit/test_decision_nodes_orchestrator.py tests/unit/test_qclaw_auto_fallback.py tests/unit/test_trend_context.py` → 通过。
+- Black 复核：全局 `black 26.5.1` 与临时 target 的 `black 25.12.0` 均会在 `--version` / `--check` 场景无输出卡住，已手动中断；本轮未启用 Black CI。
+
+---
+
 ## [Unreleased] — 2026-07-15（第五十三轮：继续 L7，扩大 CI 目标测试并整理 Black 前置格式）
 
 本轮继续推进 **L7：CI 增强**。第五十二轮已让 CI 从“安装 + import”升级为“目标 pytest + 聚焦 Ruff”；本轮在不触碰全仓历史基线的前提下，继续扩大目标 pytest 覆盖，把最近几轮已稳定的 M3/M5 核心路径纳入 CI。同时对上一轮 CI lint 文件集合执行 Black 机械格式化，作为后续启用 Black 门禁前的前置清理；但由于本机 `black --check` 对单文件与多文件均出现无输出卡住，本轮暂不把 Black 写入 CI。
