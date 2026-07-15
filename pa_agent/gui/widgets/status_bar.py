@@ -76,7 +76,7 @@ class EnhancedStatusBar(QWidget):
         self._message.setText(text)
 
     def set_progress(self, pct: float, label: str = "") -> None:
-        """Set the progress value (0–100) and optional label text.
+        """Set the progress value (0-100) and optional label text.
 
         Parameters
         ----------
