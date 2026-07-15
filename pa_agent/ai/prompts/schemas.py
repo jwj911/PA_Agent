@@ -408,7 +408,7 @@ _DECISION_BASE: dict = {
                 ],
             },
         },
-        # 突破单必须说明挂单依据，避免把 entry_price 填在 K 线中部。
+        # 突破单必须说明挂单依据, 避免把 entry_price 填在 K 线中部。
         {
             "if": {
                 "properties": {"order_type": {"const": "突破单"}},
@@ -515,7 +515,7 @@ _NEXT_CYCLE_PREDICTION: dict = {
     "properties": {
         "cycle": {
             "type": ["string", "null"],
-            "enum": list(_CYCLE_ENUM) + [None],
+            "enum": [*list(_CYCLE_ENUM), None],
         },
         "direction": {
             "type": ["string", "null"],
