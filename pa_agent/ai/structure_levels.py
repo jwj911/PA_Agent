@@ -20,7 +20,7 @@ def _price_text(value: float, tick: float | None) -> str:
     if tick is None or tick <= 0:
         text = f"{value:.6f}".rstrip("0").rstrip(".")
         return "0" if text in ("", "-0") else text
-    decimals = max(0, min(6, int(round(-math.log10(tick))) if tick < 1 else 0))
+    decimals = max(0, min(6, round(-math.log10(tick)) if tick < 1 else 0))
     text = f"{value:.{decimals}f}".rstrip("0").rstrip(".")
     return "0" if text in ("", "-0") else text
 
@@ -60,7 +60,7 @@ def _filter_valid_supports(
         bounds = _parse_level_bounds(raw)
         if bounds is None:
             continue
-        lo, hi = bounds
+        _lo, hi = bounds
         if hi < close - tolerance:
             valid.append((_level_mid(bounds), str(raw)))
     valid.sort(key=lambda x: x[0], reverse=True)
@@ -81,7 +81,7 @@ def _filter_valid_resistances(
         bounds = _parse_level_bounds(raw)
         if bounds is None:
             continue
-        lo, hi = bounds
+        lo, _hi = bounds
         if lo > close + tolerance:
             valid.append((_level_mid(bounds), str(raw)))
     valid.sort(key=lambda x: x[0])
@@ -92,18 +92,14 @@ def _is_swing_low(bars: tuple[Any, ...], idx: int) -> bool:
     low = float(bars[idx].low)
     if idx > 0 and low >= float(bars[idx - 1].low):
         return False
-    if idx + 1 < len(bars) and low >= float(bars[idx + 1].low):
-        return False
-    return True
+    return not (idx + 1 < len(bars) and low >= float(bars[idx + 1].low))
 
 
 def _is_swing_high(bars: tuple[Any, ...], idx: int) -> bool:
     high = float(bars[idx].high)
     if idx > 0 and high <= float(bars[idx - 1].high):
         return False
-    if idx + 1 < len(bars) and high <= float(bars[idx + 1].high):
-        return False
-    return True
+    return not (idx + 1 < len(bars) and high <= float(bars[idx + 1].high))
 
 
 def _recent_bars(bars: tuple[Any, ...], *, lookback: int = _SWING_LOOKBACK_BARS) -> tuple[Any, ...]:

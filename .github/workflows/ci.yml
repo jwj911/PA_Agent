@@ -48,6 +48,7 @@ jobs:
           tests/unit/test_atr_true_range.py
           tests/unit/test_kline_candle_direction.py
           tests/unit/test_kline_features.py
+          tests/unit/test_structure_levels.py
           tests/unit/test_cycle_enums.py
           tests/unit/test_response_extract.py
           tests/unit/test_mimo_compat.py
@@ -78,6 +79,7 @@ jobs:
           pa_agent/ai/response_extract.py
           pa_agent/ai/mimo_compat.py
           pa_agent/ai/kline_features.py
+          pa_agent/ai/structure_levels.py
           pa_agent/ai/provider_errors.py
           pa_agent/ai/retry_policy.py
           pa_agent/ai/client_factory.py
@@ -105,6 +107,7 @@ jobs:
           tests/unit/test_atr_true_range.py
           tests/unit/test_kline_candle_direction.py
           tests/unit/test_kline_features.py
+          tests/unit/test_structure_levels.py
           tests/unit/test_cycle_enums.py
           tests/unit/test_response_extract.py
           tests/unit/test_mimo_compat.py
