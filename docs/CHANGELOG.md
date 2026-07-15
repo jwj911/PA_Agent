@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第六十一轮：继续 L7，扩展 CI 到 validation retry 策略测试）
+
+本轮继续推进 **L7：CI 增强**。第六十轮已把 provider quota/402 检测纳入目标 CI；本轮继续评估校验/重试链。候选集中 `test_json_validator.py` 仍依赖缺失的 `tools/stage2_raw_sample.txt` 样本，`test_validation_lenient_fixes.py` 存在既有断言失败，`retry_feedback.py` 与 `stage2_normalizer.py` 仍有大量 prompt/中文文案 Ruff 噪声；因此本轮收窄到稳定的 `retry_policy.py` 与 `test_validation_retry.py`。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_validation_retry.py`。目标测试数量从 **146** 扩展到 **158**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `pa_agent/ai/retry_policy.py` 与 `tests/unit/test_validation_retry.py`，使 retry policy 的 category 重试决策、cheat 检测和 validation retry 反馈契约进入 lint 门禁。
+- **清理目标 lint**：将 `retry_policy.detect_cheat()` 中 gate_result raw weakening 检测的嵌套 `if` 改为等价组合条件，消除 SIM102；不改变 normalizer 修复 wait/unknown→proceed 时的跳过逻辑。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 validation retry/retry policy。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_validation_retry.py --tb=line -q -p no:cacheprovider` → **12 passed**。
+- 扩展后目标集：`py -3.12 -m pytest tests/unit/test_data_source_forming_bar.py tests/unit/test_bar_close_wait.py tests/unit/test_snapshot_closed_only_buffer.py tests/unit/test_build_analysis_frame.py tests/unit/test_snapshot_indicator_warmup.py tests/unit/test_data_source_factory.py tests/unit/test_mt5_clock_skew.py tests/unit/test_order_method_router.py tests/unit/test_trend_context.py tests/unit/test_decision_nodes_orchestrator.py tests/unit/test_provider_sync_service.py tests/unit/test_qclaw_auto_fallback.py tests/unit/test_secret_store.py tests/unit/test_settings_round_trip.py tests/unit/test_pending_writer_sanitize.py tests/unit/test_pending_writer_no_plaintext_key.py tests/unit/test_datetime_ts.py tests/unit/test_kline_bar_normalize.py tests/unit/test_atr_true_range.py tests/unit/test_kline_candle_direction.py tests/unit/test_kline_features.py tests/unit/test_cycle_enums.py tests/unit/test_response_extract.py tests/unit/test_mimo_compat.py tests/unit/test_provider_errors.py tests/unit/test_validation_retry.py --tb=line -q -p no:cacheprovider` → **158 passed**。
+- 扩展后 Ruff：`py -3.12 -m ruff check pa_agent/data/base.py pa_agent/data/snapshot.py pa_agent/data/mt5.py pa_agent/data/yfinance_source.py pa_agent/data/datetime_ts.py pa_agent/ai/provider_sync_service.py pa_agent/ai/cycle_enums.py pa_agent/ai/response_extract.py pa_agent/ai/mimo_compat.py pa_agent/ai/kline_features.py pa_agent/ai/provider_errors.py pa_agent/ai/retry_policy.py pa_agent/security/secret_store.py pa_agent/records/pending_writer.py tests/unit/test_data_source_forming_bar.py tests/unit/test_mt5_clock_skew.py tests/unit/test_order_method_router.py tests/unit/test_trend_context.py tests/unit/test_decision_nodes_orchestrator.py tests/unit/test_provider_sync_service.py tests/unit/test_qclaw_auto_fallback.py tests/unit/test_secret_store.py tests/unit/test_settings_round_trip.py tests/unit/test_pending_writer_sanitize.py tests/unit/test_pending_writer_no_plaintext_key.py tests/unit/test_datetime_ts.py tests/unit/test_kline_bar_normalize.py tests/unit/test_atr_true_range.py tests/unit/test_kline_candle_direction.py tests/unit/test_kline_features.py tests/unit/test_cycle_enums.py tests/unit/test_response_extract.py tests/unit/test_mimo_compat.py tests/unit/test_provider_errors.py tests/unit/test_validation_retry.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\ai\retry_policy.py tests\unit\test_validation_retry.py` → 通过。
+
+---
+
 ## [Unreleased] — 2026-07-15（第六十轮：继续 L7，扩展 CI 到 provider quota 检测）
 
 本轮继续推进 **L7：CI 增强**。第五十九轮已把 K 线几何特征测试纳入目标 CI；本轮继续评估 provider 与连续性相关小模块。候选集中 `decision_continuity.py` 仍有既有测试失败和大量 prompt 文案 Ruff 噪声，`provider_override_by_model` 受 connector/环境状态影响仍不适合直接纳入 CI；因此本轮收窄到稳定的 provider quota/402 检测路径。
