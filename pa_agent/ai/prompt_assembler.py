@@ -9,6 +9,12 @@ from pathlib import Path
 from typing import Any
 
 from pa_agent.ai import strategy_files as sf
+from pa_agent.ai.chain_context import (
+    compact_stage1_for_stage2,
+    normalize_prev_stage1_assistant_for_incremental,
+    normalize_stage1_assistant_for_chain,
+    render_previous_prediction,
+)
 from pa_agent.ai.decision_stance import build_decision_stance_guidance, normalize_stance
 from pa_agent.ai.experience_renderer import render_experience
 from pa_agent.ai.pattern_routing import (
@@ -1002,29 +1008,6 @@ class PromptAssembler:
             {"role": "user", "content": user_content},
         ]
 
-    @staticmethod
-    def _normalize_prev_stage1_assistant_for_incremental(
-        previous_record: AnalysisRecord,
-        raw_content: str,
-    ) -> str:
-        """Use validated diagnosis JSON in incremental context, not prose/markdown replies."""
-        from pa_agent.ai.json_validator import format_model_json_for_context
-
-        diag = getattr(previous_record, "stage1_diagnosis", None) or {}
-        if isinstance(diag, dict) and diag:
-            return json.dumps(diag, ensure_ascii=False, indent=2)
-
-        formatted = format_model_json_for_context(raw_content)
-        if formatted:
-            return formatted
-
-        logger.warning(
-            "incremental stage1: could not normalize previous assistant to JSON; "
-            "using raw stage1_response content (%d chars)",
-            len(raw_content or ""),
-        )
-        return raw_content
-
     def build_incremental_stage1(
         self,
         frame: KlineFrame,
@@ -1443,55 +1426,6 @@ class PromptAssembler:
             {"role": "user", "content": user_content},
         ]
 
-    @staticmethod
-    def _render_previous_prediction(previous_record: Any) -> str:
-        """Render previous-bar prediction summary for incremental context (R5.2)."""
-        if previous_record is None:
-            return ""
-        # previous_record may be AnalysisRecord or dict-like
-        s2 = getattr(previous_record, "stage2_decision", None)
-        if s2 is None and isinstance(previous_record, dict):
-            s2 = previous_record.get("stage2_decision")
-        if not isinstance(s2, dict):
-            return ""
-        pred = s2.get("next_bar_prediction")
-        if not isinstance(pred, dict):
-            return ""
-
-        unpredictable = bool(pred.get("unpredictable", False))
-        if unpredictable:
-            return (
-                "## 上一轮下一根K线预测\n\n"
-                "上一轮标记为不可预测；本轮请独立判断。\n"
-            )
-
-        direction = pred.get("direction") or "—"
-        probs = pred.get("probabilities") or {}
-        bull = probs.get("bullish", "?")
-        bear = probs.get("bearish", "?")
-        neut = probs.get("neutral", "?")
-        dir_zh = {"bullish": "阳线", "bearish": "阴线", "neutral": "中性"}.get(direction, direction)
-        return (
-            "## 上一轮下一根K线预测\n\n"
-            f"方向：{dir_zh}（阳 {bull}% / 阴 {bear}% / 中性 {neut}%）。"
-            "本轮请基于最新数据独立重新预测，不必延续上轮结论。\n"
-        )
-
-    @staticmethod
-    def _normalize_stage1_assistant_for_chain(
-        stage1_json: dict,
-        stage1_reply_content: str,
-    ) -> str:
-        """Compact validated Stage 1 JSON for assistant turn in prefix-chain mode."""
-        from pa_agent.ai.json_validator import format_model_json_for_context
-
-        if isinstance(stage1_json, dict) and stage1_json:
-            return json.dumps(stage1_json, ensure_ascii=False, indent=2)
-        formatted = format_model_json_for_context(stage1_reply_content)
-        if formatted:
-            return formatted
-        return stage1_reply_content or ""
-
     def build_stage2_continuation(
         self,
         *,
@@ -1697,32 +1631,14 @@ class PromptAssembler:
         """Return the shared system prompt used by Stage 2 requests."""
         return self._build_stage2_system_prompt()
 
-    @staticmethod
-    def _compact_stage1_for_stage2(stage1_json: dict) -> dict:
-        """Subset of Stage 1 fields needed for Stage 2 (reduces prompt noise)."""
-        keys = (
-            "cycle_position",
-            "alternative_cycle_position",
-            "direction",
-            "diagnosis_confidence",
-            "spike_stage",
-            "market_phase",
-            "transition_risk",
-            "detected_patterns",
-            "key_signals",
-            "htf_context",
-            "trend_context",
-            "entry_setup",
-            "support_levels",
-            "resistance_levels",
-            "strategy_files_needed",
-            "risk_warning",
-            "bar_analysis",
-            "bar_by_bar_summary",
-            "gate_trace",
-            "gate_result",
-        )
-        return {k: stage1_json[k] for k in keys if k in stage1_json}
+    # ── Cross-stage carryover context ─────────────────────────────────────────
+
+    _normalize_prev_stage1_assistant_for_incremental = staticmethod(
+        normalize_prev_stage1_assistant_for_incremental
+    )
+    _render_previous_prediction = staticmethod(render_previous_prediction)
+    _normalize_stage1_assistant_for_chain = staticmethod(normalize_stage1_assistant_for_chain)
+    _compact_stage1_for_stage2 = staticmethod(compact_stage1_for_stage2)
 
     # ── Stage-2 contextual guidance rendering ─────────────────────────────────
 
