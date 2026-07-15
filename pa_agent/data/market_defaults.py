@@ -184,7 +184,7 @@ def is_numeric_tv_equity_symbol(symbol: str) -> bool:
 
 def infer_ashare_tv_exchange(code: str) -> str:
     """Infer SSE vs SZSE from a 6-digit stock/index code."""
-    # STAR 科创板 (688/689) — TradingView 仅 SSE，填 SZSE 会 0 根 K 线
+    # STAR 科创板 (688/689) — TradingView 仅 SSE，填 SZSE 会 0 根 K 线  # noqa: RUF003
     if code.startswith(("688", "689")):
         return "SSE"
     if code in TV_SSE_INDEX_CODES or code.startswith(
@@ -240,7 +240,7 @@ def tv_auto_probe_plan(symbol: str) -> list[tuple[str, str]]:
 
 def equity_tv_auto_probe_plan(symbol: str) -> list[tuple[str, str]]:
     """Ordered (exchange, symbol) attempts for auto-detect equity feeds."""
-    from pa_agent.data.tv_symbol_lookup import lookup_tv_symbol_by_name, is_tv_name_input
+    from pa_agent.data.tv_symbol_lookup import is_tv_name_input, lookup_tv_symbol_by_name
 
     # 1. Known index tickers (SPX, NDX, VIX, futures, etc.)
     upper = (symbol or "").strip().upper()

@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from pa_agent.data.market_defaults import (
     GOLD_MT5_SYMBOL,
-    GOLD_TV_EXCHANGE,
     GOLD_TV_SYMBOL,
+    TV_GOLD_SYMBOL_BY_EXCHANGE,
     ashare_tv_probe_order,
     infer_ashare_tv_exchange,
     is_partial_tv_symbol_input,
@@ -39,11 +39,7 @@ def test_tv_exchange_auto_preserved():
 def test_tv_forex_auto_probe_tries_all_forex_presets():
     plan = tv_forex_auto_probe_plan("XAUUSD")
     exchanges = [ex for ex, _ in plan]
-    assert exchanges == [
-        ex
-        for ex in TV_EXCHANGE_PRESETS
-        if ex and ex not in {"SSE", "SZSE", "HKEX"}
-    ]
+    assert exchanges == [ex for ex in TV_EXCHANGE_PRESETS if ex in TV_GOLD_SYMBOL_BY_EXCHANGE]
     assert ("OANDA", "XAUUSD") in plan
     assert ("TVC", "GOLD") in plan
 
@@ -106,13 +102,13 @@ def test_tradingview_kind_keeps_ashare_symbol():
 def test_numeric_hk_style_code_not_rewritten_to_xauusd():
     ex, sym, adjusted = resolve_tv_pair("", "00988")
     assert (ex, sym, adjusted) == ("", "00988", False)
-    ex2, sym2, adjusted2 = resolve_tv_gold_pair("OANDA", "00988")
+    _ex2, sym2, adjusted2 = resolve_tv_gold_pair("OANDA", "00988")
     assert sym2 == "00988" and adjusted2 is False
 
 
 def test_partial_digit_input_not_forced_to_gold():
     assert is_partial_tv_symbol_input("00")
-    ex, sym, adjusted = resolve_tv_pair("", "009")
+    _ex, sym, adjusted = resolve_tv_pair("", "009")
     assert sym == "009" and adjusted is False
 
 
