@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百零六轮：继续 L7，扩展 Ruff 到 demo 包）
+
+本轮继续推进 **L7：CI 增强**。第一百零五轮已把 `records` 提升为包级 focused Ruff；本轮继续处理已经部分覆盖且边界很小的 `pa_agent/demo`，将 demo 记录加载/回放从文件级 Ruff 提升为包级 Ruff。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 将 `pa_agent/demo/record_loader.py` 与 `pa_agent/demo/replayer.py` 合并提升为 `pa_agent/demo`。
+- **保持运行逻辑不变**：`pa_agent/demo` 当前已满足 Ruff 包级检查，本轮只调整 CI 覆盖范围，不修改 demo loader/replayer 业务代码。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 `demo` 包。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/demo` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\demo\__init__.py pa_agent\demo\record_loader.py pa_agent\demo\replayer.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_demo_record_loader.py tests/unit/test_demo_replayer.py --tb=line -q -p no:cacheprovider` → **6 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+- `git diff --check` → 通过。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百零五轮：继续 L7，扩展 Ruff 到 records 包）
 
 本轮继续推进 **L7：CI 增强**。第一百零四轮已把 focused Ruff 扩展到 `security` 与 `gui/theme`；本轮转向记录持久化包，把此前已覆盖的 `pending_writer.py` / `analysis_history.py` 提升为整个 `pa_agent/records` 包级门禁。
