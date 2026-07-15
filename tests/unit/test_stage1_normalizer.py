@@ -1,10 +1,10 @@
 """Tests for Stage 1 JSON normalization."""
 from __future__ import annotations
 
-from tests.fixtures.validators import schema_test_validator
 from pa_agent.ai.coherence_checks import validate_stage1_coherence
 from pa_agent.ai.stage1_normalizer import normalize_stage1
 from pa_agent.data.base import IndicatorBundle, KlineBar, KlineFrame
+from tests.fixtures.validators import schema_test_validator
 from tests.integration.conftest import VALID_STAGE1
 
 
@@ -74,10 +74,10 @@ def test_repair_gate_23_neutral_answer_with_bearish_branch() -> None:
     raw["gate_trace"] = [
         {
             "node_id": "2.3",
-            "question": "当前方向是多头还是空头？",
+            "question": "当前方向是多头还是空头？",  # noqa: RUF001
             "answer": "中性",
             "branch": "bearish",
-            "reason": "波段高低点下移，判定为空头。",
+            "reason": "波段高低点下移，判定为空头。",  # noqa: RUF001
             "bar_range": "K10-K1",
         }
     ]
@@ -93,7 +93,7 @@ def test_normalizes_gate_2_3_directional_answer() -> None:
     raw["gate_trace"] = [
         {
             "node_id": "2.3",
-            "question": "当前方向是多头还是空头？",
+            "question": "当前方向是多头还是空头？",  # noqa: RUF001
             "answer": "空头",
             "reason": "EMA下倾",
             "bar_range": "K20-K1",
@@ -140,7 +140,7 @@ def test_normalizes_context_effect_typos_and_gate_12_branch() -> None:
         "gate_trace": [
             {
                 "node_id": "1.2",
-                "question": "是否能识别市场周期？",
+                "question": "是否能识别市场周期？",  # noqa: RUF001
                 "answer": "是",
                 "branch": "yes",
                 "reason": "宽通道",
@@ -175,7 +175,7 @@ def test_validator_accepts_normalized_user_payload() -> None:
         "gate_trace": [
             {
                 "node_id": "2.3",
-                "question": "当前方向是多头还是空头？",
+                "question": "当前方向是多头还是空头？",  # noqa: RUF001
                 "answer": "空头",
                 "reason": "bear",
                 "bar_range": "K20-K1",
@@ -258,7 +258,7 @@ def test_normalize_signal_bar_quality_null_when_bar_null() -> None:
         "signal_bar": {
             "bar": None,
             "quality": None,
-            "reason": "当前无有效信号棒，K2空头信号后K1反弹未确认",
+            "reason": "当前无有效信号棒，K2空头信号后K1反弹未确认",  # noqa: RUF001
         },
         "entry_setup_type": "none",
         "follow_through": "pending",
@@ -371,7 +371,7 @@ def test_fill_incremental_delta_from_risk_warning() -> None:
             "direction": "bullish",
             "diagnosis_confidence": 60,
             "gate_result": "proceed",
-            "risk_warning": "相对上一轮：新增K1突破，方向由中性转偏多。",
+            "risk_warning": "相对上一轮：新增K1突破，方向由中性转偏多。",  # noqa: RUF001
             "gate_trace": [{"node_id": "0.1", "answer": "是", "reason": "x", "bar_range": "K1"}],
             "bar_by_bar_summary": [{"bar": "K1", "role": "structure", "bar_type": "doji",
                 "context_effect": "neutral", "follow_through": "no", "trapped_side": "none", "reason": "x"}],
