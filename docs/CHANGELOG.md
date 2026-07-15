@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第六十六轮：继续 L7，扩展 CI 到 Stage 1 支撑/阻力刷新测试）
+
+本轮继续推进 **L7：CI 增强**。第六十五轮已把 trade metrics helper 纳入目标 CI；本轮继续筛选非 GUI、非网络、低 Ruff 噪声的小模块。`test_structure_levels.py` 覆盖 Stage 1 支撑/阻力位刷新、破位过滤、swing pivot 回填与近远排序，测试稳定且 lint 清理范围小，适合进入目标 CI。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_structure_levels.py`。目标测试数量从 **185** 扩展到 **190**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `pa_agent/ai/structure_levels.py` 与 `tests/unit/test_structure_levels.py`。
+- **清理目标 lint**：移除 `structure_levels.py` 中冗余的 `int(round(...))` 包装，将未使用解包变量改为 `_lo` / `_hi`，并把 swing high/low 判断中的尾部条件改为等价布尔返回；运行逻辑保持不变。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 Stage 1 支撑/阻力刷新。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_structure_levels.py --tb=line -q -p no:cacheprovider` → **5 passed**。
+- 扩展后目标集：`py -3.12 -m pytest tests/unit/test_data_source_forming_bar.py tests/unit/test_bar_close_wait.py tests/unit/test_snapshot_closed_only_buffer.py tests/unit/test_build_analysis_frame.py tests/unit/test_snapshot_indicator_warmup.py tests/unit/test_data_source_factory.py tests/unit/test_mt5_clock_skew.py tests/unit/test_mt5_symbol_available.py tests/unit/test_order_method_router.py tests/unit/test_trend_context.py tests/unit/test_decision_nodes_orchestrator.py tests/unit/test_provider_sync_service.py tests/unit/test_qclaw_auto_fallback.py tests/unit/test_secret_store.py tests/unit/test_settings_round_trip.py tests/unit/test_pending_writer_sanitize.py tests/unit/test_pending_writer_no_plaintext_key.py tests/unit/test_datetime_ts.py tests/unit/test_kline_bar_normalize.py tests/unit/test_atr_true_range.py tests/unit/test_kline_candle_direction.py tests/unit/test_kline_features.py tests/unit/test_structure_levels.py tests/unit/test_cycle_enums.py tests/unit/test_response_extract.py tests/unit/test_mimo_compat.py tests/unit/test_client_factory.py tests/unit/test_cost_and_ledger.py tests/unit/test_trade_metrics.py tests/unit/test_provider_errors.py tests/unit/test_validation_retry.py tests/unit/test_analysis_history.py tests/unit/test_demo_record_loader.py tests/unit/test_demo_replayer.py --tb=line -q -p no:cacheprovider` → **190 passed**。
+- 扩展后 Ruff：`py -3.12 -m ruff check pa_agent/data/base.py pa_agent/data/snapshot.py pa_agent/data/mt5.py pa_agent/data/yfinance_source.py pa_agent/data/datetime_ts.py pa_agent/ai/provider_sync_service.py pa_agent/ai/cycle_enums.py pa_agent/ai/response_extract.py pa_agent/ai/mimo_compat.py pa_agent/ai/kline_features.py pa_agent/ai/structure_levels.py pa_agent/ai/provider_errors.py pa_agent/ai/retry_policy.py pa_agent/ai/client_factory.py pa_agent/ai/session_ledger.py pa_agent/util/trade_metrics.py pa_agent/security/secret_store.py pa_agent/records/pending_writer.py pa_agent/records/analysis_history.py pa_agent/demo/record_loader.py pa_agent/demo/replayer.py tests/unit/test_data_source_forming_bar.py tests/unit/test_mt5_clock_skew.py tests/unit/test_mt5_symbol_available.py tests/unit/test_order_method_router.py tests/unit/test_trend_context.py tests/unit/test_decision_nodes_orchestrator.py tests/unit/test_provider_sync_service.py tests/unit/test_qclaw_auto_fallback.py tests/unit/test_secret_store.py tests/unit/test_settings_round_trip.py tests/unit/test_pending_writer_sanitize.py tests/unit/test_pending_writer_no_plaintext_key.py tests/unit/test_datetime_ts.py tests/unit/test_kline_bar_normalize.py tests/unit/test_atr_true_range.py tests/unit/test_kline_candle_direction.py tests/unit/test_kline_features.py tests/unit/test_structure_levels.py tests/unit/test_cycle_enums.py tests/unit/test_response_extract.py tests/unit/test_mimo_compat.py tests/unit/test_client_factory.py tests/unit/test_cost_and_ledger.py tests/unit/test_trade_metrics.py tests/unit/test_provider_errors.py tests/unit/test_validation_retry.py tests/unit/test_analysis_history.py tests/unit/test_demo_record_loader.py tests/unit/test_demo_replayer.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\ai\structure_levels.py tests\unit\test_structure_levels.py` → 通过。
+
+---
+
 ## [Unreleased] — 2026-07-15（第六十五轮：继续 L7，扩展 CI 到 trade metrics helper 测试）
 
 本轮继续推进 **L7：CI 增强**。第六十四轮已把 AI client factory 与 SessionTokenLedger 纳入目标 CI；本轮继续评估交易指标相关测试。`test_trade_metrics.py` 稳定且 Ruff 清理量小，适合先纳入目标 CI；`test_trade_metrics_validation.py` 虽然测试通过，但包含大量中文决策 trace 样例 Ruff 噪声，暂不纳入本轮门禁。
