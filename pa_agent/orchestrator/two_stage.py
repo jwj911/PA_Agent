@@ -494,6 +494,54 @@ class TwoStageOrchestrator:
         on_event(OrchestratorEvent.RecordSaved)
         return record
 
+    def _build_stage2_messages(
+        self,
+        *,
+        frame: KlineFrame,
+        messages_s1: list[dict],
+        reply_s1: Any,
+        stage1_json: dict,
+        strategy_files: list[str],
+        experience_entries: list[Any],
+        record: AnalysisRecord,
+        previous_record: AnalysisRecord | None,
+    ) -> tuple[list[dict], bool, int]:
+        """Build the Stage-2 continuation prompt (Step 14).
+
+        Resolves the two settings-derived flags used across the rest of
+        Stage 2 (``enable_next_bar_prediction`` and
+        ``structure_flip_cooldown_bars``) and assembles the Stage-2 message
+        list via the prompt assembler. Pure: no closures, no early-return,
+        no side effects. Returns ``(messages_s2, enable_next_bar,
+        flip_cooldown)`` so the caller can reuse the flags at validation and
+        prediction-logging time.
+        """
+        enable_next_bar = bool(
+            getattr(getattr(self._settings, "general", None), "enable_next_bar_prediction", False)
+        )
+        flip_cooldown = int(
+            getattr(
+                getattr(self._settings, "general", None),
+                "structure_flip_cooldown_bars",
+                3,
+            )
+            or 3
+        )
+        messages_s2 = self._assembler.build_stage2_continuation(
+            frame=frame,
+            stage1_messages=messages_s1,
+            stage1_reply_content=reply_s1.content,
+            stage1_json=stage1_json,
+            strategy_files=strategy_files,
+            experience_entries=experience_entries,
+            decision_stance=record.meta.decision_stance,
+            previous_record=previous_record,
+            enable_next_bar_prediction=enable_next_bar,
+            provider_settings=getattr(self._settings, "provider", None),
+            structure_flip_cooldown_bars=flip_cooldown,
+        )
+        return messages_s2, enable_next_bar, flip_cooldown
+
     # ── Public API ────────────────────────────────────────────────────────────
 
     def submit(
@@ -798,29 +846,15 @@ class TwoStageOrchestrator:
             return _gate_record
 
         # ── Step 14: Build Stage 2 messages ───────────────────────────────────
-        _enable_next_bar = bool(
-            getattr(getattr(self._settings, "general", None), "enable_next_bar_prediction", False)
-        )
-        _flip_cooldown = int(
-            getattr(
-                getattr(self._settings, "general", None),
-                "structure_flip_cooldown_bars",
-                3,
-            )
-            or 3
-        )
-        messages_s2 = self._assembler.build_stage2_continuation(
+        messages_s2, _enable_next_bar, _flip_cooldown = self._build_stage2_messages(
             frame=frame,
-            stage1_messages=messages_s1,
-            stage1_reply_content=reply_s1.content,
+            messages_s1=messages_s1,
+            reply_s1=reply_s1,
             stage1_json=stage1_json,
             strategy_files=strategy_files,
             experience_entries=experience_entries,
-            decision_stance=record.meta.decision_stance,
+            record=record,
             previous_record=previous_record,
-            enable_next_bar_prediction=_enable_next_bar,
-            provider_settings=getattr(self._settings, "provider", None),
-            structure_flip_cooldown_bars=_flip_cooldown,
         )
 
         # ── Step 15: Call AI for Stage 2 ──────────────────────────────────────
