@@ -222,6 +222,25 @@ class EastMoneySource(DataSource):
         self._snap_cache_bars = list(bars)
         return bars
 
+    def has_forming_bar_at_head(
+        self,
+        bars_newest_first: list[KlineBar],
+        timeframe: str | None = None,
+        *,
+        now_ms: int | None = None,
+        symbol: str | None = None,
+    ) -> bool:
+        """Use EastMoney A-share session semantics for the live head bar."""
+        if not bars_newest_first or bars_newest_first[0].closed:
+            return False
+        now = None
+        if now_ms is not None:
+            from datetime import datetime
+            from zoneinfo import ZoneInfo
+
+            now = datetime.fromtimestamp(int(now_ms) / 1000, tz=ZoneInfo("Asia/Shanghai"))
+        return _ashare_head_bar_live(timeframe or self._timeframe, now)
+
     def _fetch_history(self, symbol: str, timeframe: str, n: int) -> list[dict[str, Any]]:
         if timeframe in ("1d", "1w", "1M"):
             return self._fetch_daily(symbol, n, timeframe=timeframe)

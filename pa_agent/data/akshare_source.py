@@ -336,6 +336,24 @@ class AkShareSource(DataSource):
 
         return _rows_to_kline_bars(rows_newest, n)
 
+    def has_forming_bar_at_head(
+        self,
+        bars_newest_first: list[KlineBar],
+        timeframe: str | None = None,
+        *,
+        now_ms: int | None = None,
+        symbol: str | None = None,
+    ) -> bool:
+        """Use AkShare's current A-share session rule for the live head bar."""
+        if not bars_newest_first or bars_newest_first[0].closed:
+            return False
+        now = (
+            datetime.fromtimestamp(int(now_ms) / 1000, tz=_CN_TZ)
+            if now_ms is not None
+            else None
+        )
+        return _ashare_session_open(now)
+
     # ── Fetch ─────────────────────────────────────────────────────────────────
 
     @staticmethod

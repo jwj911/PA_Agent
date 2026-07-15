@@ -1,8 +1,13 @@
 """Tests for DataSource-level forming-bar semantics."""
 from __future__ import annotations
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+from pa_agent.data.akshare_source import AkShareSource
 from pa_agent.data.bar_close_wait import has_forming_bar_at_head
 from pa_agent.data.base import DataSource, KlineBar
+from pa_agent.data.eastmoney_source import EastMoneySource
 from pa_agent.data.snapshot import build_analysis_frame
 
 
@@ -54,6 +59,26 @@ def _bar(ts_ms: float, *, close: float, closed: bool = False) -> KlineBar:
     )
 
 
+def _cn_ms(
+    year: int,
+    month: int,
+    day: int,
+    hour: int,
+    minute: int,
+) -> int:
+    return int(
+        datetime(
+            year,
+            month,
+            day,
+            hour,
+            minute,
+            tzinfo=ZoneInfo("Asia/Shanghai"),
+        ).timestamp()
+        * 1000
+    )
+
+
 def test_data_source_default_forming_detection_matches_shared_helper() -> None:
     ts_open = 1_700_000_000_000.0
     now_ms = int(ts_open) + 30 * 60 * 1000
@@ -94,3 +119,29 @@ def test_snapshot_uses_data_source_forming_override() -> None:
 
     assert frame is not None
     assert frame.bars[0].close == 9.0
+
+
+def test_eastmoney_daily_head_stays_forming_during_lunch_break() -> None:
+    """EastMoney daily bars stay live through the A-share lunch break."""
+    lunch_ms = _cn_ms(2026, 7, 13, 12, 0)
+    source = EastMoneySource()
+
+    assert source.has_forming_bar_at_head(
+        [_bar(float(lunch_ms), close=10.0)],
+        "1d",
+        now_ms=lunch_ms,
+        symbol="600519",
+    )
+
+
+def test_akshare_daily_head_is_not_forming_during_lunch_break() -> None:
+    """AkShare keeps its existing continuous-session-only live-head rule."""
+    lunch_ms = _cn_ms(2026, 7, 13, 12, 0)
+    source = AkShareSource()
+
+    assert not source.has_forming_bar_at_head(
+        [_bar(float(lunch_ms), close=10.0)],
+        "1d",
+        now_ms=lunch_ms,
+        symbol="600519",
+    )
