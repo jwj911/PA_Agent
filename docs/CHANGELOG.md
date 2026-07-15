@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第九十七轮：继续 L7，扩展 CI 到 decision panel UI 合同测试）
+
+本轮继续推进 **L7：CI 增强**。第九十六轮已把 DeepSeekClient provider 参数测试纳入目标 CI；本轮处理剩余 GUI 测试中的 `test_decision_panel.py`。旧测试仍依赖已移除的 `_prediction_group` / `_prediction_direction_label` 等私有 next-bar prediction 控件；当前 `DecisionPanel` 合同已转为市场诊断 chips、交易结论、置信度、价格行与分析理由区。测试因此重写为覆盖当前 UI 合同，而不是恢复已废弃的私有控件。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_decision_panel.py`。目标测试数量从 **659** 扩展到 **668**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `tests/unit/test_decision_panel.py`。
+- **重写过期 GUI 测试**：覆盖 no-order 观望状态、诊断摘要与市场判断置信度、多头限价单价格/盈亏比/胜率展示、低置信度门禁改写、下跌交易区间中文标签、clear 重置、渲染性能，以及垃圾 `next_bar_prediction` 输入不破坏当前渲染。
+- **保留 prediction helper 合同**：测试仍直接覆盖 `_format_prediction_probs_line()` 与 `_dominant_prediction_direction()`，防止后续 helper 文案或 dominant 方向解析漂移。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 decision panel 当前 UI 合同。
+
+### 验证
+
+- 新增测试：`py -3.12 -m pytest tests/unit/test_decision_panel.py --tb=line -q -p no:cacheprovider`（带 `QT_QPA_PLATFORM=offscreen`、临时 `pytest-qt` / `hypothesis` `PYTHONPATH`）→ **9 passed**。
+- `py -3.12 -m ruff check tests/unit/test_decision_panel.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests\unit\test_decision_panel.py` → 通过。
+- 扩展后目标集：从 `.github/workflows/ci.yml` 解析 targeted pytest 清单（本地 `pytest_cov` 插件仍受用户 site-packages 权限问题影响，沿用无 coverage 插件行为验证）→ `py -3.12 -m pytest ... --tb=line -q -p no:cacheprovider` → **668 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第九十六轮：继续 L7，扩展 CI 到 DeepSeekClient provider 参数测试）
 
 本轮继续推进 **L7：CI 增强**。第九十五轮已把 free chat reasoning resend 测试纳入目标 CI；本轮处理剩余 mock 型 AI client 测试中的 `test_deepseek_client.py`。该测试覆盖 DeepSeekClient 的 provider 参数合同，包括 DeepSeek v4 adaptive thinking、Packy Claude system hoist / output cap、KKAI Claude thinking budget、Yunwu adaptive thinking、OpenClaw tool choice、MiMo thinking extra body 与 tool-call message patch。
