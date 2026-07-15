@@ -63,7 +63,7 @@ def compute_risk_reward(
 
 
 def format_estimated_win_rate(decision: dict[str, Any]) -> str | None:
-    """Format model-provided estimated_win_rate (0–100) for display."""
+    """Format model-provided estimated_win_rate (0-100) for display."""
     value = decision.get("estimated_win_rate")
     if value is None or value == "":
         return None
@@ -229,7 +229,7 @@ def passes_trader_equation(
     risk: float,
     reward: float,
 ) -> bool:
-    """Brooks equation: win_rate × reward > (1 - win_rate) × risk."""
+    """Brooks equation: win_rate * reward > (1 - win_rate) * risk."""
     if risk <= 0 or reward <= 0:
         return False
     p = max(0.0, min(100.0, float(win_rate_pct))) / 100.0
@@ -446,7 +446,7 @@ def validate_order_trade_metrics(
     win_rate = _parse_win_rate(decision.get("estimated_win_rate"))
     if win_rate is None:
         errors.append(
-            "decision.estimated_win_rate: required integer 0–100 when placing an order"
+            "decision.estimated_win_rate: required integer 0-100 when placing an order"
         )
     elif not passes_trader_equation(win_rate, risk, reward):
         ev = win_rate / 100.0 * reward - (1.0 - win_rate / 100.0) * risk

@@ -53,6 +53,7 @@ jobs:
           tests/unit/test_mimo_compat.py
           tests/unit/test_client_factory.py
           tests/unit/test_cost_and_ledger.py
+          tests/unit/test_trade_metrics.py
           tests/unit/test_provider_errors.py
           tests/unit/test_validation_retry.py
           tests/unit/test_analysis_history.py
@@ -81,6 +82,7 @@ jobs:
           pa_agent/ai/retry_policy.py
           pa_agent/ai/client_factory.py
           pa_agent/ai/session_ledger.py
+          pa_agent/util/trade_metrics.py
           pa_agent/security/secret_store.py
           pa_agent/records/pending_writer.py
           pa_agent/records/analysis_history.py
@@ -108,6 +110,7 @@ jobs:
           tests/unit/test_mimo_compat.py
           tests/unit/test_client_factory.py
           tests/unit/test_cost_and_ledger.py
+          tests/unit/test_trade_metrics.py
           tests/unit/test_provider_errors.py
           tests/unit/test_validation_retry.py
           tests/unit/test_analysis_history.py

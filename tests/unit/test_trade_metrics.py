@@ -72,7 +72,7 @@ def test_adjust_decision_stop_for_tp1_rr_cap_mutates_decision():
 def test_format_estimated_win_rate_from_model_field():
     decision = {
         "estimated_win_rate": 47,
-        "estimated_win_rate_reasoning": "宽通道顺势，方程用 47%",
+        "estimated_win_rate_reasoning": "宽通道顺势, 方程用 47%",
     }
     assert format_estimated_win_rate(decision) == "47%"
     assert "47" in format_estimated_win_rate_reasoning(decision)
