@@ -17,7 +17,7 @@ from pa_agent.data.eastmoney_quote_api import (
 @dataclass(frozen=True)
 class OrderBookLevel:
     price: float
-    volume: int  # 手（与东财网页一致）
+    volume: int  # 手(与东财网页一致)
 
 
 @dataclass
@@ -123,7 +123,7 @@ def parse_order_book_payload(
     *,
     fltt: int | None = None,
 ) -> StockOrderBook | None:
-    """Parse ``/api/qt/stock/get`` — 五档 + 可选 L2 六~十档（f21–f30 / f1–f10）。"""
+    """Parse ``/api/qt/stock/get`` — 五档 + 可选 L2 六~十档(f21-f30 / f1-f10)."""
     if not payload:
         return None
     flt = fltt or _infer_fltt(payload)

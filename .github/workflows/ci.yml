@@ -40,6 +40,7 @@ jobs:
           tests/unit/test_refresh_loop_warmup.py
           tests/unit/test_akshare_source.py
           tests/unit/test_tushare_source.py
+          tests/unit/test_eastmoney_quote.py
           tests/unit/test_tradingview_socket.py
           tests/unit/test_tradingview_errors.py
           tests/unit/test_tradingview_connectivity.py
@@ -142,6 +143,7 @@ jobs:
           pa_agent/data/factory.py
           pa_agent/data/snapshot.py
           pa_agent/data/ashare_common.py
+          pa_agent/data/eastmoney_quote.py
           pa_agent/data/mt5.py
           pa_agent/data/yfinance_source.py
           pa_agent/data/datetime_ts.py
@@ -198,6 +200,7 @@ jobs:
           tests/unit/test_refresh_loop_warmup.py
           tests/unit/test_akshare_source.py
           tests/unit/test_tushare_source.py
+          tests/unit/test_eastmoney_quote.py
           tests/unit/test_tradingview_socket.py
           tests/unit/test_tradingview_errors.py
           tests/unit/test_tradingview_connectivity.py
