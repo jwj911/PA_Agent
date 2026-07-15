@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第五十七轮：继续 L7，扩展 CI 到时间戳与 KlineBar 工具测试）
+
+本轮继续推进 **L7：CI 增强**。第五十六轮已把安全/配置/记录写入路径纳入目标 CI；本轮继续评估纯后端工具测试。候选集中 `price_tick` 与 `market_defaults` 暴露既有测试失败，`trade_metrics` / `price_tick` 相关文件仍有大量中文标点 Ruff 基线噪声，因此本轮收窄到稳定且低噪声的时间戳与 KlineBar 归一化工具测试。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_datetime_ts.py` 与 `tests/unit/test_kline_bar_normalize.py`。目标测试数量从 **105** 扩展到 **118**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `pa_agent/data/datetime_ts.py` 与上述两个测试文件；`pa_agent/data/base.py` 已在既有门禁中覆盖，继续守护 `KlineBar` normalize 路径。
+- **清理 `datetime_ts` 目标 lint**：`pa_agent/data/datetime_ts.py` 和 `test_datetime_ts.py` 改用 `datetime.UTC`，并把 pandas `Timestamp` 的 UTC 归一分支收敛为等价三元表达式；同时修正测试中一处错位注释缩进。时间戳语义保持不变：naive datetime 仍按 UTC wall clock，`naive_local_to_utc()` 仍按主机本地 offset 转 UTC。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖时间戳转换与 KlineBar 归一化。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_datetime_ts.py tests/unit/test_kline_bar_normalize.py --tb=line -q -p no:cacheprovider` → **13 passed**。
+- 扩展后目标集：`py -3.12 -m pytest tests/unit/test_data_source_forming_bar.py tests/unit/test_bar_close_wait.py tests/unit/test_snapshot_closed_only_buffer.py tests/unit/test_build_analysis_frame.py tests/unit/test_snapshot_indicator_warmup.py tests/unit/test_data_source_factory.py tests/unit/test_mt5_clock_skew.py tests/unit/test_order_method_router.py tests/unit/test_trend_context.py tests/unit/test_decision_nodes_orchestrator.py tests/unit/test_provider_sync_service.py tests/unit/test_qclaw_auto_fallback.py tests/unit/test_secret_store.py tests/unit/test_settings_round_trip.py tests/unit/test_pending_writer_sanitize.py tests/unit/test_pending_writer_no_plaintext_key.py tests/unit/test_datetime_ts.py tests/unit/test_kline_bar_normalize.py --tb=line -q -p no:cacheprovider` → **118 passed**。
+- 扩展后 Ruff：`py -3.12 -m ruff check pa_agent/data/base.py pa_agent/data/snapshot.py pa_agent/data/mt5.py pa_agent/data/yfinance_source.py pa_agent/data/datetime_ts.py pa_agent/ai/provider_sync_service.py pa_agent/security/secret_store.py pa_agent/records/pending_writer.py tests/unit/test_data_source_forming_bar.py tests/unit/test_mt5_clock_skew.py tests/unit/test_order_method_router.py tests/unit/test_trend_context.py tests/unit/test_decision_nodes_orchestrator.py tests/unit/test_provider_sync_service.py tests/unit/test_qclaw_auto_fallback.py tests/unit/test_secret_store.py tests/unit/test_settings_round_trip.py tests/unit/test_pending_writer_sanitize.py tests/unit/test_pending_writer_no_plaintext_key.py tests/unit/test_datetime_ts.py tests/unit/test_kline_bar_normalize.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/data/datetime_ts.py tests/unit/test_datetime_ts.py tests/unit/test_kline_bar_normalize.py` → 通过。
+
+---
+
 ## [Unreleased] — 2026-07-15（第五十六轮：继续 L7，扩展 CI 到安全配置与记录写入目标测试）
 
 本轮继续推进 **L7：CI 增强**。第五十五轮已为现有目标测试增加覆盖率报告；本轮继续扩大目标 pytest 的业务覆盖面，纳入此前已稳定的安全/配置/记录写入路径：API Key 至静态加密、settings load/save round-trip、PendingWriter 递归脱敏和记录文件名安全。这些路径与项目安全边界直接相关，且测试稳定，不依赖 GUI 或真实网络，适合纳入 CI 目标集。
