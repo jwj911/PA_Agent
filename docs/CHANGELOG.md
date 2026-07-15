@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第三十九轮：完成 TwoStageOrchestrator.submit() 第六刀，提取 _run_stage1 收官 M4）
+
+本轮为**大文件拆分 M4 的第六刀 / 收官刀**（第三十八轮第五刀已切 `_run_stage2`，`submit()` 从 538 行降至 334 行），完成 roadmap §5.2 中 `TwoStageOrchestrator.submit()` 的四个目标拆分：`_route_and_load_experience`、`_persist_result`、`_run_stage2`、`_run_stage1` 均已落位。与 `_run_stage2` 不同，Stage 1 的 happy path 不能直接返回最终记录，而必须继续进入 Steps 10-24；因此 `_run_stage1` 设计为返回 **终局 `AnalysisRecord` 或成功元组**：网络错误、调用后取消、校验失败三条终局路径返回 partial record；校验通过路径返回 `(stage1_json, messages_s1, reply_s1, s1_usage_calls, _thinking, _effort)`，由 `submit()` 判断 `isinstance(_s1, AnalysisRecord)` 后继续解包。Stage 1 两组 `nonlocal` 流式闭包（`_on_s1_reasoning`/`_on_s1_content` 与 retry 闭包 `_call_s1_retry`）随方法整体搬迁，Steps 3-9 主体经 anchored block 对比确认与拆分前逐字节一致。至此 `submit()` 已从 M4 起点约 647 行降至 151 行，保留 Steps 1-2 / 2.5 的入口守卫和后续阶段方法编排。
+
+### 代码清理
+
+- **`pa_agent/orchestrator/two_stage.py` 新增实例方法 `_run_stage1(self, *, record, on_event, on_stage_prompt, on_stage1_reasoning, on_stage1_content, cancel_token, frame, previous_record, incremental_new_bar_count) -> AnalysisRecord | tuple[dict, list[dict], Any, list[Any], bool, str]`**：把 `submit()` 内 Steps 3-9（Stage 1 started、analysis mode 解析、Stage 1 prompt 组装、Stage 1 模型调用、调用后取消检查、Stage 1 校验与 retry、Stage1Done 事件）整体搬迁为独立方法。网络错误终局仍执行 `save_partial(record, "network_error")` + `Stage1Failed`；调用后取消终局仍执行 `save_partial(record, "user_cancelled")` + `Cancelled`；校验失败终局仍执行 `save_partial(record, f"stage1_{err.category}")` + `Stage1Failed`；happy path 返回 Stage 2 所需的 Stage 1 成功上下文。
+- **`submit()` 内 Steps 3-9 替换为 `_run_stage1` 调用与分派**：`_s1 = self._run_stage1(...)` 后，若 `_s1` 是 `AnalysisRecord` 则直接返回；否则解包出 `stage1_json, messages_s1, reply_s1, s1_usage_calls, _thinking, _effort` 继续 Step 10-24。`submit()` 从 334 行降至 151 行，M4 收官后成为薄编排层。
+
+### 验证
+
+- `py_compile` 通过（`two_stage.py`，EXIT=0）。
+- **AST 结构核验**：`ast.walk` 确认 `TwoStageOrchestrator` 类体已含 `_run_stage1` 方法，`_run_stage1` 跨 805-1027 行（222 行），`submit()` 现跨 1031-1182 行（151 行）。
+- **逐字节搬迁核验**：从 HEAD（第三十八轮文档同步后）提取 `submit()` 内 Steps 3-9 的 198 行主体，与工作区 `_run_stage1` 内对应主体 anchored block 对比，结果 `BYTE-IDENTICAL: True`。
+- **集成测试基线对比**：核心 submit-path 套件（`test_gate_shortcircuit` + `test_two_stage_happy_path`/`_no_order_with_prices`/`_stage1_syntax`（**Stage 1 语法失败终局专项**）/`_stage1_missing_field`（**Stage 1 缺字段终局专项**）/`_stage2_invalid_value`/`_network_timeout`（覆盖 Stage 1/2 网络错误终局）/`_user_cancel`（覆盖取消终局）+ `test_decision_nodes_orchestrator`）**13 passed / 1 failed**，进度串 `..F...........`。唯一失败 `test_no_order_with_non_null_price_fails_stage2` 仍为**既有失败**（该测试用不含业务规则的 `schema_test_validator()`，与第三十四~三十八轮记录一致）。
+- `ruff check` 对比基线：`git show HEAD:two_stage.py` 与拆分后同为 **40 条**，逐类别 Counter 完全一致（`E402:11, I001:1, RUF001:22, RUF100:1, UP037:5`），**零净新增告警**。
+- `git diff` 密钥扫描（`api_key`/`sk-`/`secret`/`Bearer`/`password`/`token`）无真实密钥命中——仅 `cancel_token` / token 计数字段等代码标识符。
+
+---
+
 ## [Unreleased] — 2026-07-15（第三十八轮：完成 TwoStageOrchestrator.submit() 第五刀，提取 _run_stage2 收官 Stage 2 拆解）
 
 本轮为**大文件拆分 M4 的第五刀**（第三十七轮第四刀已切纯函数 `_build_stage2_messages`，`submit()` 从 552 行降至 538 行），**完成 Stage 2 区的整体拆解**。前四刀已把 Stage 2 的**闸门短路终局**（第三刀 `_try_gate_short_circuit`）与**纯函数 prompt 组装**（第四刀 `_build_stage2_messages`）分别外提，Stage 2 区仅余最难的**含闭包调用/校验核心**（Steps 15-24）。第三十六轮曾评估此块「须引入新控制流信号类型、风险过高」而暂缓；但第三十五轮 `_persist_result` 外提后，该结论已**不再成立**——Steps 15-24 的**全部四条路径都返回 `AnalysisRecord`**（网络错误终局、调用后取消终局、校验失败终局三终局 + happy-path 委托 `_persist_result`），故整块可干净外提为 `_run_stage2 -> AnalysisRecord`，`submit()` 尾部以 `return self._run_stage2(...)` **尾调**，**无需任何新类型**。两组 `nonlocal` 流式闭包（`_on_s2_reasoning`/`_on_s2_content` 共享 `s2_streamed_*` 标志、retry 闭包 `_call_s2_retry`）随方法**整体搬迁**、闭包捕获关系不变；in-body 形参名保持与原局部逐字一致（`_enable_next_bar`/`_flip_cooldown`/`_thinking`/`_effort`），使方法体逐字节等价。至此 `submit()` 仅余 Steps 1-14（Stage 1 全流程 + 路由/经验加载 + 闸门守卫 + Stage 2 prompt 组装），Stage 2 调用/校验/落盘已全部下沉。
