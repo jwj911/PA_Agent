@@ -17,8 +17,8 @@ from pa_agent.data.market_defaults import (
     resolve_tv_fetch_pair,
     tv_auto_probe_plan,
 )
-from pa_agent.data.tv_symbol_lookup import TvSymbolNotFoundError
 from pa_agent.data.tradingview_errors import format_tradingview_fetch_error
+from pa_agent.data.tv_symbol_lookup import TvSymbolNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -114,15 +114,15 @@ class TradingViewSource(DataSource):
             # connection fails faster instead of freezing the UI.
             try:
                 setattr(self._tv, _TV_WS_TIMEOUT_ATTR, _TV_WS_TIMEOUT_S)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.debug("Could not override tvDatafeed ws timeout", exc_info=True)
             self._connected = True
             logger.info("TradingViewSource connected (anonymous=%s)", not self._username)
         except Exception as exc:
             self._connected = False
             raise DataSourceTransientError(
-                f"TradingView 连接失败：{exc}（若未安装请执行 "
-                "pip install git+https://github.com/rongardF/tvdatafeed.git）"
+                f"TradingView 连接失败：{exc}（若未安装请执行 "  # noqa: RUF001
+                "pip install git+https://github.com/rongardF/tvdatafeed.git）"  # noqa: RUF001
             ) from exc
 
     def disconnect(self) -> None:
@@ -153,12 +153,12 @@ class TradingViewSource(DataSource):
             return
         try:
             ws.close()
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.debug("tvDatafeed socket close failed", exc_info=True)
         finally:
             try:
                 tv.ws = None
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.debug("tvDatafeed socket reference reset failed", exc_info=True)
 
     # ── Discovery ─────────────────────────────────────────────────────────────
@@ -265,9 +265,9 @@ class TradingViewSource(DataSource):
         """Try each (exchange, symbol) in *plan* until one returns bars."""
         if not plan:
             raise DataSourceTransientError(
-                f"TradingView 无法识别品种「{symbol}」；"
-                "请用 A 股 6 位代码、港股代码（如 1810）、"
-                "指数代码（如 SPX、NDX、VIX）、"
+                f"TradingView 无法识别品种「{symbol}」；"  # noqa: RUF001
+                "请用 A 股 6 位代码、港股代码（如 1810）、"  # noqa: RUF001
+                "指数代码（如 SPX、NDX、VIX）、"  # noqa: RUF001
                 "外汇/黄金代码或已支持的股票名称"
             )
         last_exc: BaseException | None = None
@@ -279,7 +279,7 @@ class TradingViewSource(DataSource):
             if self.on_probe_status is not None:
                 try:
                     self.on_probe_status(symbol, exchange, label)
-                except Exception:  # noqa: BLE001
+                except Exception:
                     logger.debug(
                         "on_probe_status callback failed for %s", label, exc_info=True
                     )
@@ -304,7 +304,7 @@ class TradingViewSource(DataSource):
         if last_exc is not None:
             raise last_exc
         raise DataSourceTransientError(
-            f"TradingView 自动探测失败（{symbol}）：已尝试 {', '.join(tried)} 均无 K 线"
+            f"TradingView 自动探测失败（{symbol}）：已尝试 {', '.join(tried)} 均无 K 线"  # noqa: RUF001
         )
 
     def latest_snapshot(self, n: int) -> list[KlineBar]:
@@ -321,7 +321,7 @@ class TradingViewSource(DataSource):
     def _latest_snapshot_inner(self, n: int) -> list[KlineBar]:
         """Actual snapshot logic — caller holds ``_snapshot_lock``."""
         if self._tv is None:
-            raise DataSourceTransientError("TradingView 未连接，请先选择数据来源 TradingView")
+            raise DataSourceTransientError("TradingView 未连接，请先选择数据来源 TradingView")  # noqa: RUF001
         if not self._symbol or not self._timeframe:
             raise DataSourceTransientError("TradingView 未订阅品种/周期")
 

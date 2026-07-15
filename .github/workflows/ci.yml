@@ -160,6 +160,7 @@ jobs:
           pa_agent/data/refresh_policy.py
           pa_agent/data/refresh_loop.py
           pa_agent/data/ashare_limits.py
+          pa_agent/data/tradingview.py
           pa_agent/data/tradingview_connectivity.py
           pa_agent/data/tv_symbol_lookup.py
           pa_agent/data/market_defaults.py
