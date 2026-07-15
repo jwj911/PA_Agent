@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百一十七轮：继续 L7，扩展 Ruff 到验证重试编排）
+
+本轮继续推进 **L7：CI 增强**。第一百一十六轮已把配置路径常量纳入 focused Ruff；本轮继续评估剩余 orchestrator / util / notify / config 候选后，选择仅有机械 lint 问题且已有验证重试测试覆盖的 `pa_agent/orchestrator/validation_retry.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/orchestrator/validation_retry.py`。
+- **清理验证重试 lint**：`Callable` 改从 `collections.abc` 导入；重复 assistant turn 判断合并为单个条件；两处列表拼接改为解包列表，消除 `UP035` / `SIM102` / `RUF005`。
+- **保持业务语义不变**：本轮不改 retry policy、retry feedback、MiMo reasoning preserve、cheat detection、API retry 调用顺序或返回结构。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖验证重试编排。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/orchestrator/validation_retry.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\orchestrator\validation_retry.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_validation_retry.py tests/unit/test_validation_lenient_fixes.py --tb=line -q -p no:cacheprovider` → **19 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+- `git diff --check` → 通过（仅显示 Windows 行尾提示）。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百一十六轮：继续 L7，扩展 Ruff 到配置路径常量）
 
 本轮继续推进 **L7：CI 增强**。第一百一十五轮已把 QClaw relay 脚本纳入 focused Ruff；本轮评估数据层、orchestrator、notify、config 与 util 剩余候选后，多数文件仍有较多中文文案或结构性历史噪声，因此收窄到仅有 import 格式问题的 `pa_agent/config/paths.py`。
