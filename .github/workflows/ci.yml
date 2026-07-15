@@ -153,6 +153,10 @@ jobs:
           pa_agent/ai/session_ledger.py
           pa_agent/ai/cursor_sdk_client.py
           pa_agent/gui/chart_decision_overlay.py
+          pa_agent/util/safe_filename.py
+          pa_agent/util/mask_secret.py
+          pa_agent/util/timefmt.py
+          pa_agent/util/threading.py
           pa_agent/util/trade_metrics.py
           pa_agent/security
           pa_agent/records
