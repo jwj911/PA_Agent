@@ -13,6 +13,30 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第九十八轮：继续 L7，扩展 CI 到 CursorSdkClient bridge patch 合同测试）
+
+本轮继续推进 **L7：CI 增强**。第九十七轮已把 DecisionPanel 当前 UI 合同测试纳入目标 CI；本轮处理最后一组因外部 SDK 依赖暂未纳入 CI 的 `test_cursor_sdk_client.py`。旧测试会直接导入真实 `cursor_sdk` 并调用 `CursorClient.launch_bridge()`，在本地和 CI 依赖缺失或 bridge 环境不稳定时容易失败。本轮将测试改为注入 fake `cursor_sdk` 模块，验证 PA Agent 自身的 bridge patch 合同，而不启动真实 Cursor bridge。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_cursor_sdk_client.py`。目标测试数量从 **668** 扩展到 **674**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `pa_agent/ai/cursor_sdk_client.py` 与 `tests/unit/test_cursor_sdk_client.py`。
+- **隔离 Cursor SDK 外部依赖**：测试内用 `ModuleType` 注入 `cursor_sdk._tool_callback`、`cursor_sdk._store_callback`、`cursor_sdk._bridge` 与 `cursor_sdk.errors`，并在每个测试前重置 `_PATCHED_CURSOR_SDK_*` 标志，确保补丁合同可重复验证。
+- **替代真实 bridge 启动测试**：移除对 `CursorClient.launch_bridge(workspace=".")` 的真实调用，改为验证 `_ensure_cursor_sdk_patches()` 会修正 callback auth token、bridge argv、subprocess `Popen` 启动参数，以及 Windows discovery reader patch。
+- **清理 CursorSdkClient lint**：将 `Callable` 改从 `collections.abc` 导入，移除当前 Ruff 配置下冗余的 `# noqa`，修正 quoted annotation、异常链与 import 排序；运行逻辑保持不变。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 CursorSdkClient bridge patch 合同，Ruff 门禁同步覆盖 `cursor_sdk_client`。
+
+### 验证
+
+- 新增测试：`py -3.12 -m pytest tests/unit/test_cursor_sdk_client.py --tb=line -q -p no:cacheprovider` → **6 passed**。
+- `py -3.12 -m ruff check pa_agent/ai/cursor_sdk_client.py tests/unit/test_cursor_sdk_client.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\ai\cursor_sdk_client.py tests\unit\test_cursor_sdk_client.py` → 通过。
+- `git diff --check` → 通过。
+- 扩展后目标集：从 `.github/workflows/ci.yml` 解析 targeted pytest 清单（本地 `pytest_cov` 插件仍受用户 site-packages 权限问题影响，沿用无 coverage 插件行为验证；本机通过临时 `pytest-qt` / `hypothesis` `PYTHONPATH` 补齐开发依赖）→ `py -3.12 -m pytest ... --tb=line -q -p no:cacheprovider` → **通过**（目标测试数量 **674**）。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第九十七轮：继续 L7，扩展 CI 到 decision panel UI 合同测试）
 
 本轮继续推进 **L7：CI 增强**。第九十六轮已把 DeepSeekClient provider 参数测试纳入目标 CI；本轮处理剩余 GUI 测试中的 `test_decision_panel.py`。旧测试仍依赖已移除的 `_prediction_group` / `_prediction_direction_label` 等私有 next-bar prediction 控件；当前 `DecisionPanel` 合同已转为市场诊断 chips、交易结论、置信度、价格行与分析理由区。测试因此重写为覆盖当前 UI 合同，而不是恢复已废弃的私有控件。
