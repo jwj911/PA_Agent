@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第六十四轮：继续 L7，扩展 CI 到 AI client factory 与 SessionTokenLedger 测试）
+
+本轮继续推进 **L7：CI 增强**。第六十三轮已把 MT5 symbol availability 纳入目标 CI；本轮继续筛选 AI 层小模块。`client_factory` 路由测试和 `SessionTokenLedger` 阈值测试稳定，且清理后 Ruff 噪声可控，适合进入目标 CI。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_client_factory.py` 与 `tests/unit/test_cost_and_ledger.py`。目标测试数量从 **171** 扩展到 **178**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `pa_agent/ai/client_factory.py`、`pa_agent/ai/session_ledger.py` 以及上述两组测试文件。
+- **清理目标 lint**：将 `session_ledger.py` 的 PyQt import 移到模块 import 区，并把 `parent` 参数注解从字符串改为 `QObject | None`；删除 `test_cost_and_ledger.py` 未使用的 `pytest` import。运行逻辑保持不变。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 AI client factory 路由与 SessionTokenLedger。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_client_factory.py tests/unit/test_cost_and_ledger.py --tb=line -q -p no:cacheprovider` → **7 passed**。
+- 扩展后目标集：`py -3.12 -m pytest tests/unit/test_data_source_forming_bar.py tests/unit/test_bar_close_wait.py tests/unit/test_snapshot_closed_only_buffer.py tests/unit/test_build_analysis_frame.py tests/unit/test_snapshot_indicator_warmup.py tests/unit/test_data_source_factory.py tests/unit/test_mt5_clock_skew.py tests/unit/test_mt5_symbol_available.py tests/unit/test_order_method_router.py tests/unit/test_trend_context.py tests/unit/test_decision_nodes_orchestrator.py tests/unit/test_provider_sync_service.py tests/unit/test_qclaw_auto_fallback.py tests/unit/test_secret_store.py tests/unit/test_settings_round_trip.py tests/unit/test_pending_writer_sanitize.py tests/unit/test_pending_writer_no_plaintext_key.py tests/unit/test_datetime_ts.py tests/unit/test_kline_bar_normalize.py tests/unit/test_atr_true_range.py tests/unit/test_kline_candle_direction.py tests/unit/test_kline_features.py tests/unit/test_cycle_enums.py tests/unit/test_response_extract.py tests/unit/test_mimo_compat.py tests/unit/test_client_factory.py tests/unit/test_cost_and_ledger.py tests/unit/test_provider_errors.py tests/unit/test_validation_retry.py tests/unit/test_analysis_history.py tests/unit/test_demo_record_loader.py tests/unit/test_demo_replayer.py --tb=line -q -p no:cacheprovider` → **178 passed**。
+- 扩展后 Ruff：`py -3.12 -m ruff check pa_agent/data/base.py pa_agent/data/snapshot.py pa_agent/data/mt5.py pa_agent/data/yfinance_source.py pa_agent/data/datetime_ts.py pa_agent/ai/provider_sync_service.py pa_agent/ai/cycle_enums.py pa_agent/ai/response_extract.py pa_agent/ai/mimo_compat.py pa_agent/ai/kline_features.py pa_agent/ai/provider_errors.py pa_agent/ai/retry_policy.py pa_agent/ai/client_factory.py pa_agent/ai/session_ledger.py pa_agent/security/secret_store.py pa_agent/records/pending_writer.py pa_agent/records/analysis_history.py pa_agent/demo/record_loader.py pa_agent/demo/replayer.py tests/unit/test_data_source_forming_bar.py tests/unit/test_mt5_clock_skew.py tests/unit/test_mt5_symbol_available.py tests/unit/test_order_method_router.py tests/unit/test_trend_context.py tests/unit/test_decision_nodes_orchestrator.py tests/unit/test_provider_sync_service.py tests/unit/test_qclaw_auto_fallback.py tests/unit/test_secret_store.py tests/unit/test_settings_round_trip.py tests/unit/test_pending_writer_sanitize.py tests/unit/test_pending_writer_no_plaintext_key.py tests/unit/test_datetime_ts.py tests/unit/test_kline_bar_normalize.py tests/unit/test_atr_true_range.py tests/unit/test_kline_candle_direction.py tests/unit/test_kline_features.py tests/unit/test_cycle_enums.py tests/unit/test_response_extract.py tests/unit/test_mimo_compat.py tests/unit/test_client_factory.py tests/unit/test_cost_and_ledger.py tests/unit/test_provider_errors.py tests/unit/test_validation_retry.py tests/unit/test_analysis_history.py tests/unit/test_demo_record_loader.py tests/unit/test_demo_replayer.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\ai\client_factory.py pa_agent\ai\session_ledger.py tests\unit\test_client_factory.py tests\unit\test_cost_and_ledger.py` → 通过。
+
+---
+
 ## [Unreleased] — 2026-07-15（第六十三轮：继续 L7，扩展 CI 到 MT5 symbol availability 测试）
 
 本轮继续推进 **L7：CI 增强**。第六十二轮已把分析历史与 demo record/replay 纳入目标 CI；本轮继续筛选数据源相关的小型稳定测试。候选集中 TradingView connectivity 依赖本机缺失的 `tvDatafeed`，TradingView 错误提示/别名模块和 provider connector 模块仍有大量用户可见中文文案 Ruff 噪声；因此本轮收窄到稳定且低噪声的 MT5 symbol availability 测试。
