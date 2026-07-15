@@ -13,6 +13,25 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第四十四轮：继续 M5，下沉 provider fallback 共享尾部到 ProviderSyncService）
+
+本轮继续推进 **M5：提取 `ProviderSyncService`**。第四十三轮已把启动期 QClaw / WorkBuddy / Cursor provider 同步编排从 `AppContext.bootstrap()` 下沉到 `ProviderSyncService.sync_on_load()`；本轮处理 M5 的另一半职责——`TwoStageOrchestrator._finish_provider_fallback()` 中的 provider fallback 共享尾部。三个 per-provider 包装器（`_try_workbuddy_fallback` / `_try_cursor_fallback` / `_try_qclaw_fallback`）继续保留 call-time connector import、route guard 与 `apply_*_provider_to_settings()` 调用，确保测试 patch 点与尝试顺序不变；成功 apply 之后的通用副作用（`update_provider`、`save_settings`、`update_api_key`、`pending_writer.set_api_key`、切换日志）统一委托服务层执行。
+
+### 代码清理
+
+- **`ProviderSyncService` 新增 `finish_provider_fallback(...) -> bool`**：参数接收 `provider_name`、`err`、`settings`、`client`、`pending_writer`、`logger`，按原 `_finish_provider_fallback` 顺序执行：`err` 非空时 warning 并返回 `False`；否则 `client.update_provider(settings.provider)`；读取新 `settings.provider.api_key`；best-effort `save_settings(settings, save_path)` + `update_api_key(new_key)`；保存失败时 warning 但继续；若 writer 有 `set_api_key` 则同步新 key；最后记录 `"%s auto-fallback: model=%s base_url=%s"` 并返回 `True`。服务保持不负责 connector guard/apply，避免破坏现有 fallback patch 点。
+- **`TwoStageOrchestrator._finish_provider_fallback()` 改为兼容 wrapper**：方法签名和三个 `_try_*_fallback` 调用点保持不变，仅构造 `ProviderSyncService(save_path=SETTINGS_JSON_PATH).finish_provider_fallback(...)` 并传入 `self._settings`、`self._client`、`self._pending_writer` 与模块 logger。`_stream_chat_resilient` 的 WorkBuddy → Cursor → QClaw 尝试顺序、`tried_*` 标志、网络错误判定均不变。
+- **扩展 `tests/unit/test_provider_sync_service.py`**：在原启动同步顺序测试之外，新增 fallback 尾部成功路径、`err` 提前返回、保存失败仍同步 writer、writer 无 `set_api_key` 四类测试。
+
+### 验证
+
+- `py_compile` 通过（`provider_sync_service.py`、`two_stage.py`、`test_provider_sync_service.py`，EXIT=0）。
+- `py -3.12 -m pytest tests/unit/test_provider_sync_service.py tests/unit/test_qclaw_auto_fallback.py --tb=line -q -p no:cacheprovider` → **8 passed**。
+- ruff 对比基线：HEAD 的 `provider_sync_service.py` + `two_stage.py` + 既有测试，与拆分后三文件均为 `E402:11, I001:1, RUF001:22, RUF100:1, UP037:5`，逐类别 Counter 完全一致，**零净新增告警**。
+- diff 密钥扫描（`api_key`/`sk-`/`secret`/`Bearer`/`password`/`token`）仅命中 `api_key` / `set_api_key` / `update_api_key` 标识符与测试假值 `new-key`，无真实明文密钥。
+
+---
+
 ## [Unreleased] — 2026-07-15（第四十三轮：启动 M5，提取 ProviderSyncService 启动期 provider 同步）
 
 本轮启动后端审查报告 §5.2 的 **M5：提取 `ProviderSyncService`**。M5 目标是把 QClaw / WorkBuddy / Cursor provider 同步与持久化职责从 `AppContext.bootstrap()` 与 `TwoStageOrchestrator` 中下沉。第一刀先切启动期路径：`AppContext.bootstrap()` 原本直接 import 并顺序调用 `sync_qclaw_agent_provider_on_load()`、`sync_workbuddy_provider_on_load()`、`sync_cursor_provider_on_load()`，这让依赖容器承担了特殊 provider 同步编排职责。本轮新增薄服务集中这段顺序编排；各 connector 仍保留自身的 route 检测、provider mutation、`save_settings` 持久化与日志逻辑，避免一次性触碰自动降级 fallback 尾部。
