@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百三十轮：继续 L7，扩展 Ruff 到 East Money Baostock fallback）
+
+本轮继续推进 **L7：CI 增强**。第一百二十九轮已把 East Money quote API 常量纳入 focused Ruff；本轮继续沿数据层低风险边界推进，选择 `pa_agent/data/eastmoney_baostock.py` 及其无网络 helper 测试。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/data/eastmoney_baostock.py` 与 `tests/unit/test_eastmoney_baostock.py`，目标 pytest 清单同步新增该测试。
+- **补充 Baostock fallback 测试**：新增测试覆盖 East Money 滚动窗口上限、Baostock fallback 触发窗口、A 股代码前缀归一化，以及指数分钟线在导入真实 `baostock` 前的拒绝路径。
+- **清理 Baostock fallback lint**：将 `Callable` 移至 `collections.abc`、移除 stale `BLE001` noqa、用属性赋值替代 `setattr`、将静态列名拆分改为 list literal，并保留指数分钟线中文报错中的全角逗号显示语义。
+- **保持业务语义不变**：本轮不改 Baostock 登录/重连/登出、日线/分钟线查询参数、4h 重采样、East Money fallback 触发阈值或网络调用路径。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试与 Ruff 门禁已覆盖 East Money Baostock fallback helper。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/data/eastmoney_baostock.py tests/unit/test_eastmoney_baostock.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\data\eastmoney_baostock.py tests\unit\test_eastmoney_baostock.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_eastmoney_baostock.py --tb=line -q -p no:cacheprovider` → **4 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百二十九轮：继续 L7，扩展 Ruff 到 East Money quote API 常量）
 
 本轮继续推进 **L7：CI 增强**。第一百二十八轮已补齐收盘等待与快照 warmup 测试 Ruff 覆盖；本轮继续沿 East Money quote 解析边界推进，选择只包含协议常量和字段说明的 `pa_agent/data/eastmoney_quote_api.py`。
