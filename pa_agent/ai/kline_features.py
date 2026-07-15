@@ -299,11 +299,11 @@ def _follow_through_1_2(bars: tuple[KlineBar, ...], idx: int) -> str:
     opposite = 0
     for nbar in newer:
         if direction > 0:
-            # 多头信号棒：收盘继续走高 = 有跟随；收盘跌破开盘价 = 反向失败。
+            # 多头信号棒: 收盘继续走高 = 有跟随; 收盘跌破开盘价 = 反向失败。
             same += int(nbar.close > bar.close)
             opposite += int(nbar.close < bar.open)
         else:
-            # 空头信号棒：收盘继续走低 = 有跟随；收盘高于开盘价 = 反向失败。
+            # 空头信号棒: 收盘继续走低 = 有跟随; 收盘高于开盘价 = 反向失败。
             same += int(nbar.close < bar.close)
             opposite += int(nbar.close > bar.open)
     if same > 0:

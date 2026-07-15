@@ -106,8 +106,8 @@ def test_flat_bar_type_when_zero_range_and_not_inside() -> None:
 
 
 def test_follow_through_1_2_uses_direction_not_extreme() -> None:
-    """Follow-through should treat收盘反向为失败，而不是必须穿越极值."""
-    # 多头信号棒：open=10, high=12, low=9, close=11
+    """Follow-through should treat 收盘反向 as failed, not require crossing extremes."""
+    # 多头信号棒: open=10, high=12, low=9, close=11
     # 后一根K线收盘跌破开盘价但未跌破低点 → 视为反向失败
     frame_bull = KlineFrame(
         symbol="X",
@@ -122,7 +122,7 @@ def test_follow_through_1_2_uses_direction_not_extreme() -> None:
     feats_bull = compute_kline_geometry_features(frame_bull)
     assert feats_bull[1].follow_through_1_2 == "failed"
 
-    # 空头信号棒：open=10, high=11, low=8, close=9
+    # 空头信号棒: open=10, high=11, low=8, close=9
     # 后一根K线收盘高于开盘价但未突破高点 → 视为反向失败
     frame_bear = KlineFrame(
         symbol="X",

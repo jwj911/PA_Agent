@@ -44,6 +44,9 @@ jobs:
           tests/unit/test_pending_writer_no_plaintext_key.py
           tests/unit/test_datetime_ts.py
           tests/unit/test_kline_bar_normalize.py
+          tests/unit/test_atr_true_range.py
+          tests/unit/test_kline_candle_direction.py
+          tests/unit/test_kline_features.py
           tests/unit/test_cycle_enums.py
           tests/unit/test_response_extract.py
           tests/unit/test_mimo_compat.py
@@ -65,6 +68,7 @@ jobs:
           pa_agent/ai/cycle_enums.py
           pa_agent/ai/response_extract.py
           pa_agent/ai/mimo_compat.py
+          pa_agent/ai/kline_features.py
           pa_agent/security/secret_store.py
           pa_agent/records/pending_writer.py
           tests/unit/test_data_source_forming_bar.py
@@ -80,6 +84,9 @@ jobs:
           tests/unit/test_pending_writer_no_plaintext_key.py
           tests/unit/test_datetime_ts.py
           tests/unit/test_kline_bar_normalize.py
+          tests/unit/test_atr_true_range.py
+          tests/unit/test_kline_candle_direction.py
+          tests/unit/test_kline_features.py
           tests/unit/test_cycle_enums.py
           tests/unit/test_response_extract.py
           tests/unit/test_mimo_compat.py
