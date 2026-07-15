@@ -802,69 +802,30 @@ class TwoStageOrchestrator:
             _enable_next_bar=_enable_next_bar,
         )
 
-    # ── Public API ────────────────────────────────────────────────────────────
-
-    def submit(
+    def _run_stage1(
         self,
-        frame: KlineFrame,
-        cancel_token: CancelToken,
-        on_event: Callable[[OrchestratorEvent], None],
         *,
-        on_stage1_reasoning: Callable[[str], None] | None = None,
-        on_stage1_content: Callable[[str], None] | None = None,
-        on_stage2_reasoning: Callable[[str], None] | None = None,
-        on_stage2_content: Callable[[str], None] | None = None,
-        on_stage_prompt: Callable[[str, str, str], None] | None = None,
-        on_stage2_files: Callable[[list[str]], None] | None = None,
-        previous_record: AnalysisRecord | None = None,
-        incremental_new_bar_count: int | None = None,
-    ) -> AnalysisRecord:
-        """Run the two-stage analysis pipeline and return an AnalysisRecord.
+        record: AnalysisRecord,
+        on_event: Callable[[OrchestratorEvent], None],
+        on_stage_prompt: Callable[[str, str, str], None] | None,
+        on_stage1_reasoning: Callable[[str], None] | None,
+        on_stage1_content: Callable[[str], None] | None,
+        cancel_token: CancelToken,
+        frame: KlineFrame,
+        previous_record: AnalysisRecord | None,
+        incremental_new_bar_count: int | None,
+    ) -> AnalysisRecord | tuple[dict, list[dict], Any, list[Any], bool, str]:
+        """Build, call, and validate Stage 1 (Steps 3-9).
 
-        The ``on_event`` callback is called synchronously at each pipeline
-        milestone.  The returned record is always fully populated with
-        whatever data was collected before the pipeline terminated (whether
-        by success, validation failure, cancellation, or network error).
-
-        Parameters
-        ----------
-        frame:
-            Immutable KlineFrame snapshot to analyse.
-        cancel_token:
-            Token checked before each stage and after each API call.
-        on_event:
-            Callback invoked with OrchestratorEvent values.
-
-        Returns
-        -------
-        AnalysisRecord
-            Fully or partially populated record.
+        Owns the Stage-1 streaming closures (``_on_s1_reasoning`` /
+        ``_on_s1_content`` and the retry closure ``_call_s1_retry`` share the
+        ``s1_streamed_*`` flags via ``nonlocal``), the resilient API call, the
+        network-error / post-call-cancel / validation-failure terminals, and
+        the validate-with-retry loop. Terminal paths return a partial
+        ``AnalysisRecord``; the happy path returns the tuple
+        ``(stage1_json, messages_s1, reply_s1, s1_usage_calls, _thinking,
+        _effort)`` for ``submit()`` to carry into Steps 10-24.
         """
-        # ── Step 1: Build partial record ──────────────────────────────────────
-        record = _build_empty_record(frame, self._settings)
-
-        # ── Step 2: Pre-Stage-1 cancel check ─────────────────────────────────
-        if cancel_token.is_set():
-            self._pending_writer.save_partial(record, "user_cancelled")
-            on_event(OrchestratorEvent.Cancelled)
-            return record
-
-        # ── Step 2.5: Preflight data gate (before Stage1Started) ─────────────
-        from pa_agent.ai.decision_nodes import check_preflight_data
-        pf = check_preflight_data(frame)
-        if not pf.ok:
-            record = record.model_copy(update={
-                "exception": {
-                    "type": "insufficient_data",
-                    "stage": "preflight",
-                    "failed_check": pf.failed_check,
-                    "message": pf.reason,
-                }
-            })
-            self._pending_writer.save_partial(record, "insufficient_data")
-            on_event(OrchestratorEvent.InsufficientData)
-            return record
-
         # ── Step 3: Stage 1 started ───────────────────────────────────────────
         on_event(OrchestratorEvent.Stage1Started)
 
@@ -1063,6 +1024,86 @@ class TwoStageOrchestrator:
 
         # ── Step 9: Stage 1 done ──────────────────────────────────────────────
         on_event(OrchestratorEvent.Stage1Done)
+        return stage1_json, messages_s1, reply_s1, s1_usage_calls, _thinking, _effort
+
+    # ── Public API ────────────────────────────────────────────────────────────
+
+    def submit(
+        self,
+        frame: KlineFrame,
+        cancel_token: CancelToken,
+        on_event: Callable[[OrchestratorEvent], None],
+        *,
+        on_stage1_reasoning: Callable[[str], None] | None = None,
+        on_stage1_content: Callable[[str], None] | None = None,
+        on_stage2_reasoning: Callable[[str], None] | None = None,
+        on_stage2_content: Callable[[str], None] | None = None,
+        on_stage_prompt: Callable[[str, str, str], None] | None = None,
+        on_stage2_files: Callable[[list[str]], None] | None = None,
+        previous_record: AnalysisRecord | None = None,
+        incremental_new_bar_count: int | None = None,
+    ) -> AnalysisRecord:
+        """Run the two-stage analysis pipeline and return an AnalysisRecord.
+
+        The ``on_event`` callback is called synchronously at each pipeline
+        milestone.  The returned record is always fully populated with
+        whatever data was collected before the pipeline terminated (whether
+        by success, validation failure, cancellation, or network error).
+
+        Parameters
+        ----------
+        frame:
+            Immutable KlineFrame snapshot to analyse.
+        cancel_token:
+            Token checked before each stage and after each API call.
+        on_event:
+            Callback invoked with OrchestratorEvent values.
+
+        Returns
+        -------
+        AnalysisRecord
+            Fully or partially populated record.
+        """
+        # ── Step 1: Build partial record ──────────────────────────────────────
+        record = _build_empty_record(frame, self._settings)
+
+        # ── Step 2: Pre-Stage-1 cancel check ─────────────────────────────────
+        if cancel_token.is_set():
+            self._pending_writer.save_partial(record, "user_cancelled")
+            on_event(OrchestratorEvent.Cancelled)
+            return record
+
+        # ── Step 2.5: Preflight data gate (before Stage1Started) ─────────────
+        from pa_agent.ai.decision_nodes import check_preflight_data
+        pf = check_preflight_data(frame)
+        if not pf.ok:
+            record = record.model_copy(update={
+                "exception": {
+                    "type": "insufficient_data",
+                    "stage": "preflight",
+                    "failed_check": pf.failed_check,
+                    "message": pf.reason,
+                }
+            })
+            self._pending_writer.save_partial(record, "insufficient_data")
+            on_event(OrchestratorEvent.InsufficientData)
+            return record
+
+        # ── Steps 3-9: Build/call/validate Stage 1 ───────────────────────────
+        _s1 = self._run_stage1(
+            record=record,
+            on_event=on_event,
+            on_stage_prompt=on_stage_prompt,
+            on_stage1_reasoning=on_stage1_reasoning,
+            on_stage1_content=on_stage1_content,
+            cancel_token=cancel_token,
+            frame=frame,
+            previous_record=previous_record,
+            incremental_new_bar_count=incremental_new_bar_count,
+        )
+        if isinstance(_s1, AnalysisRecord):
+            return _s1
+        stage1_json, messages_s1, reply_s1, s1_usage_calls, _thinking, _effort = _s1
 
         # ── Step 10-11: Route strategy files + load experience entries ────────
         strategy_files, experience_entries = self._route_and_load_experience(stage1_json)
