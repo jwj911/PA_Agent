@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第四十二轮：继续拆分 PromptAssembler，提取 Stage2PromptBuilder）
+
+本轮继续推进后端审查报告 §5.2 的 **M1：拆分 `PromptAssembler`**。第四十一轮已提取 `Stage1PromptBuilder`，本轮切剩余的 Stage 2 builder 主体：独立阶段二请求、前缀链 continuation 请求、以及 Stage 2 user prompt 渲染。`PromptAssembler` 继续保留对外 `build_stage2()` / `build_stage2_continuation()` / `stage2_system_prompt_only()` API、进程级系统 prompt 缓存、以及既有私有 wrapper 名称，避免影响 orchestrator、测试和工具调用点。新模块通过构造参数接收 system prompt 构建函数、txt 加载函数、策略文件列表函数、预测说明/输出契约常量、Stage 2 guidance/experience/carryover/market-feature/K 线表渲染 callable，避免反向 import `prompt_assembler.py` 形成循环依赖。
+
+### 代码清理
+
+- **新增 `pa_agent/ai/stage2_prompt_builder.py`**：提供 `Stage2PromptBuilder`，负责 `build_stage2()`、`build_stage2_continuation()`、`build_stage2_user_prompt()` 三类 Stage 2 构建职责。原 `_build_stage2_user_prompt()` 中的 stance guidance、continuity block、trend conflict/transition/planned-limit guidance、strategy txt 加载、experience 渲染、next-bar/next-cycle 指令、prefix-chain kline 省略逻辑、breakout tick hint、previous prediction block、compact Stage 1 JSON、Stage 2 tail reminder 均整体迁入。
+- **`pa_agent/ai/prompt_assembler.py` 改为 Stage 2 薄包装**：新增 `_stage2_prompt_builder()` 工厂，`build_stage2()` / `build_stage2_continuation()` / `_build_stage2_user_prompt()` 仅委托 `Stage2PromptBuilder`；`stage2_system_prompt_only()` 保持原实现，继续返回共享 system prompt。随依赖下沉，`prompt_assembler.py` 不再直接 import `json`、`build_decision_stance_guidance`、`normalize_stance`，Stage 2 相关复杂依赖收束到新模块。`prompt_assembler.py` 从 1398 行降至 1275 行，`PromptAssembler` 类体从 507 行降至 385 行，新模块 293 行。
+
+### 验证
+
+- `py_compile` 通过（`prompt_assembler.py`、`stage2_prompt_builder.py`，EXIT=0）。
+- import 核验通过：`PromptAssembler` 与 `Stage2PromptBuilder` 均可正常 import。
+- AST 结构核验：`prompt_assembler.py` 现 1275 行，`PromptAssembler` 跨 890-1275 行（385 行）；`stage2_prompt_builder.py` 现 293 行，含 `Stage2PromptBuilder`（20-293）。
+- `pytest tests/unit/test_prompt_assembler.py --tb=line -q -p no:cacheprovider` → **31 passed**。
+- `ruff check` 对比基线：HEAD 的 `prompt_assembler.py` + `stage1_prompt_builder.py` 与拆分后三文件（再加 `stage2_prompt_builder.py`）均为 `RUF001:1270, RUF003:2, RUF100:1`，逐类别 Counter 完全一致，**零净新增告警**。
+- staged diff 密钥扫描（`api_key`/`sk-`/`secret`/`Bearer`/`password`/`token`）无命中。
+
+---
+
 ## [Unreleased] — 2026-07-15（第四十一轮：继续拆分 PromptAssembler，提取 Stage1PromptBuilder）
 
 本轮转入后端审查报告 §5.2 的 **M1：拆分 `PromptAssembler`** 后续阶段。此前 M1 已完成 KlineTableRenderer、ExperienceRenderer、Stage 2 guidance、chain context、program prefill hint 五个叶子簇；`prompt_assembler.py` 中仍保留 Stage 1 user prompt 三个大方法（全量阶段一、增量阶段一、增量 continuation）以及 market-features 包装。R41 将这些 Stage 1 user-turn 构建职责下沉到新模块 `stage1_prompt_builder.py`，`PromptAssembler` 继续保留对外 `build_stage1()` / `build_incremental_stage1()` API、系统 prompt 缓存、Stage 2 构建与兼容性薄包装。此切口避免一次性改动 Stage 2 大 prompt，同时兑现 AGENTS 中“market-feature 包装待切 Stage1/Stage2PromptBuilder 时处理”的约定。
