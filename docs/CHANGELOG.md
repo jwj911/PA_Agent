@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百一十四轮：继续 L7，扩展 Ruff 到 AI business rules）
+
+本轮继续推进 **L7：CI 增强**。第一百一十三轮已把 AI token/signal 辅助文件纳入 focused Ruff；本轮继续评估 AI 源码侧候选后，`coherence_checks`、`trace_normalize`、`retry_feedback`、`qclaw_relay_manager` 等仍有较多中文业务文案或结构性 lint 噪声，因此本轮收窄到仅有一处机械 Ruff 问题的 `business_rules.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/ai/business_rules.py`。
+- **清理 business rules lint**：`check_next_cycle_prediction()` 中 `errors + [...]` 改为解包列表，消除 Ruff `RUF005`。
+- **保持业务语义不变**：本轮不改 Stage 2 no-order invariant、突破单依据、交易指标、下一周期/下一棒预测、信号链校验或错误文案。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 AI business rules。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/ai/business_rules.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\ai\business_rules.py` → 通过。
+- 相关测试：`$env:PYTHONPATH="$env:TEMP\pa_agent_hypothesis_dep"; py -3.12 -m pytest tests/unit/test_json_validator.py tests/unit/test_trade_metrics_validation.py tests/unit/test_stage2_normalizer.py tests/property/test_stage2_no_order_invariant.py --tb=line -q -p no:cacheprovider` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+- `git diff --check` → 通过（仅显示 Windows 行尾提示）。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百一十三轮：继续 L7，扩展 Ruff 到 AI token/signal 辅助文件）
 
 本轮继续推进 **L7：CI 增强**。第一百一十二轮已把 AI schema/routing 辅助文件纳入 focused Ruff；本轮继续选择小型、低风险的 AI 辅助模块，收窄到 token 估算与 signal/limit context 两个确定性工具文件。
