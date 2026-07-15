@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百二十四轮：继续 L7，扩展 Ruff 到数据源工厂）
+
+本轮继续推进 **L7：CI 增强**。第一百二十三轮已把 util EventBus 纳入 focused Ruff；本轮继续评估数据层低风险候选，选择已有目标测试覆盖、且只需 docstring / import 机械清理的数据源工厂。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/data/factory.py` 与 `tests/unit/test_data_source_factory.py`。
+- **清理数据源工厂 lint**：`default_tradingview_exchange()` docstring 中的 UI 示例括号改为 ASCII；`test_data_source_factory.py` import 顺序交由 Ruff 整理。
+- **保持业务语义不变**：本轮不改数据源 kind 归一化、隐藏数据源集合、默认 symbol、TradingView 自动交易所语义、Tushare settings 加载 fallback 或实例化路径。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖数据源工厂。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/data/factory.py tests/unit/test_data_source_factory.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\data\factory.py tests\unit\test_data_source_factory.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_data_source_factory.py --tb=line -q -p no:cacheprovider` → **8 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百二十三轮：继续 L7，扩展 Ruff 到 EventBus）
 
 本轮继续推进 **L7：CI 增强**。第一百二十二轮已把刷新循环纳入 focused Ruff；本轮继续从 util 基础设施中选择低风险候选，纳入已经 Ruff clean 且由 `util.__init__` 暴露的 `pa_agent/util/event_bus.py`。
