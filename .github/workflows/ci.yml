@@ -97,6 +97,7 @@ jobs:
           tests/unit/test_token_indicator_thresholds.py
           tests/unit/test_free_chat_resend_drops_reasoning.py
           tests/unit/test_free_chat_keeps_reasoning_when_toggled.py
+          tests/unit/test_deepseek_client.py
           tests/unit/test_client_factory.py
           tests/unit/test_cost_and_ledger.py
           tests/unit/test_trade_metrics.py
@@ -204,6 +205,7 @@ jobs:
           tests/unit/test_token_indicator_thresholds.py
           tests/unit/test_free_chat_resend_drops_reasoning.py
           tests/unit/test_free_chat_keeps_reasoning_when_toggled.py
+          tests/unit/test_deepseek_client.py
           tests/unit/test_client_factory.py
           tests/unit/test_cost_and_ledger.py
           tests/unit/test_trade_metrics.py
