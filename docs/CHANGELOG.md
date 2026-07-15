@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第七十六轮：继续 L7，扩展 CI 到 Stage 1 pattern routing 测试）
+
+本轮继续推进 **L7：CI 增强**。第七十五轮已把 chart decision overlay 测试纳入目标 CI；本轮继续筛选纯后端、低依赖的 Stage 1 路由测试。`test_pattern_routing.py` 覆盖 `detected_patterns` 与 `entry_setup_type` 的同步、特殊形态策略文件路由、H1/H2/L1/L2 计数误判防护，以及铁丝网/区间中部标签的保守补全逻辑。该测试不启动 GUI，也不访问真实网络。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_pattern_routing.py`。目标测试数量从 **282** 扩展到 **294**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `tests/unit/test_pattern_routing.py`。
+- **清理目标测试 lint**：删除 `test_pattern_routing.py` 中未使用的 `sync_detected_patterns_field` import；为需保留的中文 key signal / risk warning 样例添加行级 `# noqa: RUF001`。测试逻辑保持不变。
+- **暂不纳入源文件 Ruff**：`pa_agent/ai/pattern_routing.py` 包含大量面向 prompt/playbook 的中文说明文本，仍作为历史 Ruff 基线暂缓进入 focused Ruff；本轮只扩展测试文件 Ruff 门禁。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 Stage 1 pattern routing。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_pattern_routing.py --tb=line -q -p no:cacheprovider` → **12 passed**。
+- `py -3.12 -m ruff check tests/unit/test_pattern_routing.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests\unit\test_pattern_routing.py` → 通过。
+- 扩展后目标集：从 `.github/workflows/ci.yml` 解析 `Run targeted unit tests` 清单并执行 `py -3.12 -m pytest @tests --tb=line -q -p no:cacheprovider` → **294 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单并执行 `py -3.12 -m ruff check @argsList` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-15（第七十五轮：继续 L7，扩展 CI 到 chart decision overlay 测试）
 
 本轮继续推进 **L7：CI 增强**。第七十四轮已把 TradingView/PushPlus/API key 辅助测试纳入目标 CI；本轮继续筛选低依赖的小型纯逻辑测试。`test_chart_decision_overlay.py` 覆盖图表决策覆盖层的 continuity enrichment：上一轮限价计划仍有效时沿用旧价格、上一轮计划失效时不补画 overlay、当前仍有交易计划时保留当前价格。该测试不启动 Qt widget，也不访问真实网络。
