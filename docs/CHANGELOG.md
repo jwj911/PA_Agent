@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第八十二轮：继续 L7，扩展 CI 到 lenient validation auto-fix 测试）
+
+本轮继续推进 **L7：CI 增强**。第八十一轮已把 JSON validator 测试纳入目标 CI；本轮继续筛选校验归一化链路中的稳定后端测试。`test_validation_lenient_fixes.py` 覆盖 Stage 1/Stage 2 lenient normalizer、pending answer synonym、市场单 entry_bar 修复、pending entry freshness 修复，以及 OpenClaw/Agent 常见枚举滑移。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_validation_lenient_fixes.py`。目标测试数量从 **338** 扩展到 **345**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `tests/unit/test_validation_lenient_fixes.py`。
+- **修正过期测试 helper 边界**：`entry_bar.strength/freshness` 枚举别名当前由 `_normalize_stage2_bar_analysis_enums()` 负责，而 `_normalize_stage2_enum_aliases()` 只处理 `order_direction`、`always_in`、`terminal.outcome` 等通用 Stage 2 枚举滑移；两个相关断言改为显式调用这两个 helper，避免把职责边界误判为实现回归。
+- **清理目标测试 lint**：合并重复 import，移除未使用的 `normalize_stage2` 与 `schema_test_validator` import，并按 Ruff 整理导入顺序。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 lenient validation auto-fixes。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_validation_lenient_fixes.py --tb=line -q -p no:cacheprovider` → **7 passed**。
+- `py -3.12 -m ruff check tests/unit/test_validation_lenient_fixes.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests\unit\test_validation_lenient_fixes.py` → 通过。
+- 扩展后目标集：执行 `.github/workflows/ci.yml` 的 targeted pytest 清单（本地因 `pytest_cov` 缺失且 `pip install -e ".[dev]"` 被 Windows 用户 site-packages 权限拒绝，改用无 coverage 插件等价行为验证）→ `py -3.12 -m pytest ... --tb=line -q -p no:cacheprovider` → **345 passed**。
+- 扩展后 Ruff：执行 `.github/workflows/ci.yml` 的 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第八十一轮：继续 L7，扩展 CI 到 JSON validator 测试）
 
 本轮继续推进 **L7：CI 增强**。第八十轮已把 market defaults 测试纳入目标 CI；本轮继续筛选纯后端 validator 测试。`test_json_validator.py` 覆盖 JSON fence stripping、unescaped quote repair、truncated string repair、Stage 2 prediction 兼容填充，以及 next-bar prediction 校验规则。
