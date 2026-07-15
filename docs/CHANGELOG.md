@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百三十二轮：继续 L7，扩展 Ruff 到 AkShare source）
+
+本轮继续推进 **L7：CI 增强**。第一百三十一轮已把 TradingView symbol lookup 纳入 focused Ruff；本轮继续筛选数据层剩余候选，选择已有无网络 helper 测试覆盖、lint 面可控的 `pa_agent/data/akshare_source.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/data/akshare_source.py`。
+- **清理 AkShare source lint**：将预设指数注释和 A 股交易时段 docstring 标点改为 ASCII，把 pandas `Timestamp` 时区本地化/转换分支改为等价三元表达式，并移除 Baostock logout 的 stale `BLE001` noqa。
+- **保留中文用户提示**：AkShare 未安装、A 股代码无效、Baostock 指数分钟线不可用三处中文提示属于用户可见文案，本轮使用行级 `# noqa: RUF001` 保留原显示语义。
+- **保持业务语义不变**：本轮不改 AkShare / Baostock 连接、订阅、fallback 开关、历史数据查询、forming bar 现价刷新、4h 重采样或 symbol/index 归一化逻辑。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 AkShare source。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/data/akshare_source.py tests/unit/test_akshare_source.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\data\akshare_source.py tests\unit\test_akshare_source.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_akshare_source.py --tb=line -q -p no:cacheprovider` → **4 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百三十一轮：继续 L7，扩展 Ruff 到 TradingView symbol lookup）
 
 本轮继续推进 **L7：CI 增强**。第一百三十轮已把 East Money Baostock fallback 纳入 focused Ruff；本轮继续筛选数据层剩余小模块，选择已由无网络单测覆盖的 `pa_agent/data/tv_symbol_lookup.py`。
