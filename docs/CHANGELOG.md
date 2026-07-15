@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第四十一轮：继续拆分 PromptAssembler，提取 Stage1PromptBuilder）
+
+本轮转入后端审查报告 §5.2 的 **M1：拆分 `PromptAssembler`** 后续阶段。此前 M1 已完成 KlineTableRenderer、ExperienceRenderer、Stage 2 guidance、chain context、program prefill hint 五个叶子簇；`prompt_assembler.py` 中仍保留 Stage 1 user prompt 三个大方法（全量阶段一、增量阶段一、增量 continuation）以及 market-features 包装。R41 将这些 Stage 1 user-turn 构建职责下沉到新模块 `stage1_prompt_builder.py`，`PromptAssembler` 继续保留对外 `build_stage1()` / `build_incremental_stage1()` API、系统 prompt 缓存、Stage 2 构建与兼容性薄包装。此切口避免一次性改动 Stage 2 大 prompt，同时兑现 AGENTS 中“market-feature 包装待切 Stage1/Stage2PromptBuilder 时处理”的约定。
+
+### 代码清理
+
+- **新增 `pa_agent/ai/stage1_prompt_builder.py`**：提供 `Stage1PromptBuilder`，负责构建三类 Stage 1 user prompt：`build_stage1_user_prompt()`、`build_incremental_stage1_user_prompt()`、`build_incremental_stage1_continuation_user_prompt()`；同时迁入 `render_simple_market_features_block()` / `inject_market_features_block()` 两个 market-feature 包装函数。新 builder 通过构造参数接收 `load`、prompt settings、Stage 1 txt 文件列表、输出提醒函数、尾部提醒/增量硬规则/market-feature authority note 以及 K 线表/预填提示渲染 callable，避免新模块 import `prompt_assembler.py` 造成循环依赖。
+- **`pa_agent/ai/prompt_assembler.py` 改为薄包装调用**：移除 Stage 1 user prompt 三个大方法体和直接 `pattern_routing` / `market_features` import，新增 `_stage1_prompt_builder()` 工厂；`_build_stage1_user_prompt()`、`_build_incremental_stage1_user_prompt()`、`_build_incremental_stage1_continuation_user_prompt()` 仅委托 `Stage1PromptBuilder`。`_render_simple_market_features_block` / `_inject_market_features_block` 继续以 staticmethod 形式绑定到 `PromptAssembler` 类体，保持私有兼容入口；`build_incremental_stage1()` 的四消息链编排逻辑暂留 `PromptAssembler`。`prompt_assembler.py` 从 1570 行降至 1398 行，新模块 288 行。
+
+### 验证
+
+- `py_compile` 通过（`prompt_assembler.py`、`stage1_prompt_builder.py`，EXIT=0）。
+- import 核验通过：`PromptAssembler` 与 `Stage1PromptBuilder` 均可正常 import。
+- AST 结构核验：`PromptAssembler` 类体从 675 行降至 507 行；`stage1_prompt_builder.py` 含 2 个模块函数与 `Stage1PromptBuilder`（52-288）。
+- `pytest tests/unit/test_prompt_assembler.py --tb=line -q -p no:cacheprovider` → **31 passed**。
+- `ruff check` 对比基线：HEAD 单文件 `prompt_assembler.py` 为 `I001:1, RUF001:1270, RUF003:2, RUF100:1`；拆分后 `prompt_assembler.py` + `stage1_prompt_builder.py` 为 `RUF001:1270, RUF003:2, RUF100:1`，**零净新增告警**，并随 import 清理减少 1 条既有 I001。
+- staged diff 密钥扫描（`api_key`/`sk-`/`secret`/`Bearer`/`password`/`token`）无命中。
+
+---
+
 ## [Unreleased] — 2026-07-15（第四十轮：继续拆分 JsonValidator，提取 schema_validator 结构校验器）
 
 本轮回到后端审查报告 §5.2 的 **M2：拆分 `JsonValidator`**。此前第十六轮已将 JSON 文本提取/修复函数拆出至 `json_repair.py`，第二十八轮已将 Stage 2 业务规则跨字段校验簇拆出至 `business_rules.py`；本轮继续切第三块——**JSON Schema 结构校验层**。该层位于 `JsonValidator.validate()` 的 normalizer 之后、显式跨字段检查之前，职责是调用 `jsonschema.Draft7Validator(schema).iter_errors(obj)`，并把 schema 错误归类为 `missing_fields`、`invalid_fields`、`allowed_values`、首个 validator 与首条错误消息。为避免新模块反向 import `json_validator.py` 产生循环依赖，本轮不把 `ValidationError` 结果类型迁出，而是新建轻量结果 `SchemaValidationResult`；`JsonValidator` 继续负责最终 category 判定和 `ValidationError` 组装，业务一致性检查、normalizer 与 `business_rules` 调用保持原位。
