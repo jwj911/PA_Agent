@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百二十五轮：继续 L7，扩展 Ruff 到 validation messages）
+
+本轮继续推进 **L7：CI 增强**。第一百二十四轮已把数据源工厂纳入 focused Ruff；本轮继续评估 AI 辅助小文件，选择仅有一处中文状态文案分隔符 Ruff 命中的 `pa_agent/ai/validation_messages.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/ai/validation_messages.py`。
+- **保留中文状态文案**：`format_validation_errors()` 的全角分号分隔符属于用户可见中文摘要，本轮使用行级 `# noqa: RUF001` 保留原显示语义。
+- **保持业务语义不变**：本轮不改 validation prefix 映射、missing / invalid 字段摘要、最大展示条数、额外条数提示或调用路径。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 AI validation messages。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/ai/validation_messages.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\ai\validation_messages.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_validation_retry.py tests/unit/test_json_validator.py --tb=line -q -p no:cacheprovider` → **23 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百二十四轮：继续 L7，扩展 Ruff 到数据源工厂）
 
 本轮继续推进 **L7：CI 增强**。第一百二十三轮已把 util EventBus 纳入 focused Ruff；本轮继续评估数据层低风险候选，选择已有目标测试覆盖、且只需 docstring / import 机械清理的数据源工厂。
