@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第四十轮：继续拆分 JsonValidator，提取 schema_validator 结构校验器）
+
+本轮回到后端审查报告 §5.2 的 **M2：拆分 `JsonValidator`**。此前第十六轮已将 JSON 文本提取/修复函数拆出至 `json_repair.py`，第二十八轮已将 Stage 2 业务规则跨字段校验簇拆出至 `business_rules.py`；本轮继续切第三块——**JSON Schema 结构校验层**。该层位于 `JsonValidator.validate()` 的 normalizer 之后、显式跨字段检查之前，职责是调用 `jsonschema.Draft7Validator(schema).iter_errors(obj)`，并把 schema 错误归类为 `missing_fields`、`invalid_fields`、`allowed_values`、首个 validator 与首条错误消息。为避免新模块反向 import `json_validator.py` 产生循环依赖，本轮不把 `ValidationError` 结果类型迁出，而是新建轻量结果 `SchemaValidationResult`；`JsonValidator` 继续负责最终 category 判定和 `ValidationError` 组装，业务一致性检查、normalizer 与 `business_rules` 调用保持原位。
+
+### 代码清理
+
+- **新增 `pa_agent/ai/schema_validator.py`**：提供 `SchemaValidationResult` dataclass 与 `collect_schema_errors(obj, schema) -> SchemaValidationResult | None`。新模块仅依赖 stdlib `logging`/`dataclasses`/`typing`，`jsonschema` 仍为函数体内 import；若本地未安装 `jsonschema`，保持原行为 `logger.warning("jsonschema not installed; skipping schema validation")` 并返回 `None`，由 `JsonValidator.validate()` 继续 `return Ok(obj=obj)`。
+- **`pa_agent/ai/json_validator.py` 改为委托 schema 结构校验**：删除 `validate()` 内直接 import `jsonschema`、收集 `errors`、分类 missing/invalid/allowed 的内联代码，替换为 `schema_result = collect_schema_errors(obj, schema)`；随后复制 `schema_result.missing_fields` / `invalid_fields` / `allowed_values` 供后续 Stage 1/Stage 2 显式检查继续追加。最终 `Ok` 判定、category 判定与 `ValidationError(message=f"{schema_result.error_count} schema error(s): ...")` 语义保持一致。`json_validator.py` 从 415 行降至 405 行，新模块 61 行。
+
+### 验证
+
+- `py_compile` 通过（`schema_validator.py`、`json_validator.py`，EXIT=0）。
+- import 核验通过：`collect_schema_errors` 可调用，`JsonValidator.validate` 仍存在。
+- AST 结构核验：`json_validator.py` 现 405 行，`JsonValidator` 跨 81-405 行；`schema_validator.py` 现 61 行，含 `SchemaValidationResult`（18-30）与 `collect_schema_errors`（33-61）。
+- `ruff check` 对比基线：HEAD 单文件 `json_validator.py` 与拆分后 `json_validator.py` + `schema_validator.py` 均为 **2 条 I001**，逐类别 Counter 完全一致，**零净新增告警**。
+- schema 分类直接断言通过：required 缺失 + enum 非法样例输出 `missing=['a']`、`invalid=['b']`、`allowed={'b': ['x', 'y']}`、`error_count=2`。
+- focused 单测通过：`pytest tests/unit/test_json_validator.py -k "next_bar_prediction or invalid_fields_prefix"` → **5 passed**。
+- `tests/property/test_json_validator_categories.py` 仍为 **3 failed**；经 `git stash` 回到 HEAD 复跑确认三项失败完全一致，均为既有基线（`test_no_order_with_non_null_price_is_category_c` 与两项截断 Stage 1 修复断言），非本轮引入。
+- staged diff 密钥扫描（`api_key`/`sk-`/`secret`/`Bearer`/`password`/`token`）无命中。
+
+---
+
 ## [Unreleased] — 2026-07-15（第三十九轮：完成 TwoStageOrchestrator.submit() 第六刀，提取 _run_stage1 收官 M4）
 
 本轮为**大文件拆分 M4 的第六刀 / 收官刀**（第三十八轮第五刀已切 `_run_stage2`，`submit()` 从 538 行降至 334 行），完成 roadmap §5.2 中 `TwoStageOrchestrator.submit()` 的四个目标拆分：`_route_and_load_experience`、`_persist_result`、`_run_stage2`、`_run_stage1` 均已落位。与 `_run_stage2` 不同，Stage 1 的 happy path 不能直接返回最终记录，而必须继续进入 Steps 10-24；因此 `_run_stage1` 设计为返回 **终局 `AnalysisRecord` 或成功元组**：网络错误、调用后取消、校验失败三条终局路径返回 partial record；校验通过路径返回 `(stage1_json, messages_s1, reply_s1, s1_usage_calls, _thinking, _effort)`，由 `submit()` 判断 `isinstance(_s1, AnalysisRecord)` 后继续解包。Stage 1 两组 `nonlocal` 流式闭包（`_on_s1_reasoning`/`_on_s1_content` 与 retry 闭包 `_call_s1_retry`）随方法整体搬迁，Steps 3-9 主体经 anchored block 对比确认与拆分前逐字节一致。至此 `submit()` 已从 M4 起点约 647 行降至 151 行，保留 Steps 1-2 / 2.5 的入口守卫和后续阶段方法编排。
