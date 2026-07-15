@@ -53,15 +53,16 @@ def test_play_order_alert_sound_uses_wav_on_windows(monkeypatch) -> None:
     class FakeWinsound:
         SND_FILENAME = 1
         SND_ALIAS = 2
+        SND_ASYNC = 4
         SND_NODEFAULT = 4
         MB_ICONEXCLAMATION = 48
 
         @staticmethod
-        def PlaySound(name, flags):  # noqa: ANN001
+        def PlaySound(name, flags) -> None:
             played.append(str(name))
 
         @staticmethod
-        def MessageBeep(_kind):  # noqa: ANN001
+        def MessageBeep(_kind) -> None:
             played.append("MessageBeep")
 
     monkeypatch.setattr("sys.platform", "win32")
