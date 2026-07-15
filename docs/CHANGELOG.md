@@ -13,6 +13,32 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百轮：继续 L7，启用非 live 非 e2e 回归门禁）
+
+本轮继续推进 **L7：CI 增强**。第九十九轮已把无网络 property suite 纳入 CI；本轮继续处理完整 `pytest -m "not e2e"` 的剩余阻塞。复核后确认无网络失败集中在 `test_next_bar_prediction.py` 与 `test_two_stage_no_order_with_prices.py` 的旧合同，真实网络失败集中在 AkShare live 测试。因此本轮先修正无网络 integration 合同，并在 CI 中新增 `pytest -m "not e2e and not live"`，把完整非 live 回归升级为稳定门禁。
+
+### 工程治理
+
+- **CI 新增非 live 非 e2e 门禁**：`.github/workflows/ci.yml` 新增 `Run non-live non-e2e tests`，执行 `python -m pytest -m "not e2e and not live" --tb=line -q`，并沿用 `QT_QPA_PLATFORM=offscreen`。
+- **CI 目标 pytest 扩容**：`Run targeted tests` 新增 `tests/integration/test_next_bar_prediction.py` 与 `tests/integration/test_two_stage_no_order_with_prices.py`。目标测试数量从 **728** 扩展到 **737**。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增上述两个 integration 测试文件。
+- **修正 next-bar integration 旧合同**：需要保留 `next_bar_prediction` 的 orchestrator 用例显式传入 `Settings(general.enable_next_bar_prediction=True)`；legacy DecisionPanel replay 用例不再访问已移除的 `_prediction_group` 私有控件，改为验证当前 UI 可正常渲染。
+- **修正 no-order prices integration 旧期望**：当前 lenient normalizer 会把 `order_type=不下单` 下的非空价格清空并保存成功；测试改为验证 `Stage2Done` / `RecordSaved` 和归一化后的 `entry_price is None`。
+- **明确 live 边界**：完整 `pytest -m "not e2e"` 复跑后只剩 `tests/integration/test_akshare_live.py` 的真实网络失败；live 与 e2e 仍不进入默认 CI 门禁。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确已启用非 live 非 e2e 回归门禁，live/e2e、Black、覆盖率阈值仍属后续增强。
+
+### 验证
+
+- 无网络 integration 切片：`py -3.12 -m pytest tests/integration/test_next_bar_prediction.py tests/integration/test_two_stage_no_order_with_prices.py --tb=line -q -p no:cacheprovider`（带 `QT_QPA_PLATFORM=offscreen`、临时 `pytest-qt` / `hypothesis` `PYTHONPATH`）→ **9 passed**。
+- `py -3.12 -m ruff check tests/integration/test_next_bar_prediction.py tests/integration/test_two_stage_no_order_with_prices.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests\integration\test_next_bar_prediction.py tests\integration\test_two_stage_no_order_with_prices.py` → 通过。
+- 非 live 非 e2e 门禁：`py -3.12 -m pytest -m "not e2e and not live" --tb=line -q -p no:cacheprovider` → **通过**（收集 **749** 项）。
+- 完整非 e2e 审计：`py -3.12 -m pytest -m "not e2e" --tb=line -q -p no:cacheprovider` → 当前仅剩 **4 failed**，均来自 `tests/integration/test_akshare_live.py` 的真实 AkShare 网络拉取。
+- 扩展后目标集：从 `.github/workflows/ci.yml` 解析 targeted pytest 清单（本地 `pytest_cov` 插件仍受用户 site-packages 权限问题影响，沿用无 coverage 插件行为验证；本机通过临时 `pytest-qt` / `hypothesis` `PYTHONPATH` 补齐开发依赖）→ `py -3.12 -m pytest ... --tb=line -q -p no:cacheprovider` → **通过**（目标测试数量 **737**）。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第九十九轮：继续 L7，扩展 CI 到 property suite）
 
 本轮继续推进 **L7：CI 增强**。第九十八轮已把最后一组 unit 测试 `test_cursor_sdk_client.py` 纳入目标 CI；本轮转向完整 `pytest -m "not e2e"` 前的下一层门禁。实测完整非 e2e 当前仍有 integration/live 和历史 property 合同漂移失败，因此本轮先治理无网络、可重复的 `tests/property`，把 property suite 纳入 CI，作为后续治理 integration 的前置基线。
