@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第八十轮：继续 L7，扩展 CI 到 market defaults 测试）
+
+本轮继续推进 **L7：CI 增强**。第七十九轮已把 order opportunity 测试纳入目标 CI；本轮继续筛选数据源默认值与 symbol/exchange 归一化相关的纯后端测试。`test_market_defaults.py` 覆盖黄金默认 symbol、TradingView gold/forex auto probe、A 股与港股数字代码保护、TVC/XAUUSD 迁移，以及 A 股交易所推断顺序。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_market_defaults.py`。目标测试数量从 **310** 扩展到 **327**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `pa_agent/data/market_defaults.py` 与 `tests/unit/test_market_defaults.py`。
+- **修正过期测试期望**：`test_tv_forex_auto_probe_tries_all_forex_presets` 更新为按 `TV_GOLD_SYMBOL_BY_EXCHANGE` 验证当前 gold/forex auto-probe 合同。当前实现只对已知可映射黄金 feed 的 exchange 生成探测计划，而不是遍历所有非股票/非加密 preset。
+- **清理目标 lint**：`market_defaults.py` 为需保留的中文注释添加行级 `# noqa: RUF003` 并整理局部 import；`test_market_defaults.py` 删除未使用 import，并将未使用的解包变量改为 `_` 前缀。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 market defaults，Ruff 门禁同步覆盖 `market_defaults`。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_market_defaults.py --tb=line -q -p no:cacheprovider` → **17 passed**。
+- `py -3.12 -m ruff check pa_agent/data/market_defaults.py tests/unit/test_market_defaults.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\data\market_defaults.py tests\unit\test_market_defaults.py` → 通过。
+- 扩展后目标集：从 `.github/workflows/ci.yml` 解析 `Run targeted unit tests` 清单并执行 `py -3.12 -m pytest @tests --tb=line -q -p no:cacheprovider` → **327 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单并执行 `py -3.12 -m ruff check @argsList` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第七十九轮：继续 L7，扩展 CI 到 order opportunity 测试）
 
 本轮继续推进 **L7：CI 增强**。第七十八轮已把 TradingView connectivity 测试纳入目标 CI；本轮继续筛选轻量 GUI helper 测试。`test_order_opportunity.py` 覆盖订单机会识别、提示文案、自动关闭时长，以及 Windows 下单提示音选择逻辑。该测试不启动 Qt widget，也不访问真实网络。
