@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-14（第二十九轮：拆分 PromptAssembler，提取 kline_table_renderer K 线表渲染器簇 R-M1-1）
+
+本轮为**大文件拆分 M1 的第一刀**（对应后端审查报告 §5.2 M1「拆分 `PromptAssembler`，产出 `Stage1PromptBuilder`/`Stage2PromptBuilder`/`KlineTableRenderer`/`ExperienceRenderer`」）。`prompt_assembler.py` 是 AI 层超大文件（1963 行，CRLF），此前 M2/M3 各轮未触碰。本刀先切报告明确点名的 **KlineTableRenderer 产出**——即把喂给模型「阶段一/阶段二 user 消息」的两张纯文本 K 线表渲染器抽成独立叶子模块。它们是把结构化 K 线「落地成模型逐字节对齐的 OHLC/EMA20/ATR14 表 + 单棒几何特征表」的确定性文本生成器：`_render_kline_table`（价量指标表，含 EMA/ATR 的 `N/A` warm-up 分支）、`_render_kline_feature_table`（几何特征表，逐字段用 `_fmt_feature` 格式化），配套 `_fmt_feature` 辅助与 `_KLINE_INDICATOR_NOTE` 中文说明常量。选它作为 M1 第一刀的关键动机：① 它是一个**高内聚自足簇**——两个渲染器 + 一个格式化辅助 + 一个常量逻辑闭环，除 `PromptAssembler` 内部调用与测试外不被其他逻辑纠缠；② 依赖**全为 PyQt6-free 叶子模块**——`kline_features`（`bar_candle_direction_label`/`compute_kline_geometry_features`）、`data.base`（`KlineFrame`）、`data.datetime_ts`（`format_epoch_for_display`）均验证 `import` 期不触 PyQt6，故新模块可**独立 import 并运行真实 runtime 等价验证**（区别于经 `market_features`→`util/__init__`→`event_bus`→PyQt6 触链的 market-feature 包装方法——那两个方法本刀**暂留** `prompt_assembler.py`，待后续切 Stage1/Stage2PromptBuilder 时一并处理）；③ `kline_table_renderer` ← `prompt_assembler` **无环**（新模块不回依赖 `prompt_assembler`）。
+
+### 代码清理
+
+- **新增 `pa_agent/ai/kline_table_renderer.py`（K 线表渲染器簇模块，PyQt6-free 叶子）**：把 `_KLINE_INDICATOR_NOTE` 常量、`_fmt_feature` 辅助、`_render_kline_table`/`_render_kline_feature_table` 两个渲染器（去掉 `@staticmethod` 装饰降为模块函数、更名去掉前导下划线为 `render_kline_table`/`render_kline_feature_table`）**逐字节搬迁**至新模块（保留全部表头列宽、中文列名、`f"{...:<4}"` 对齐格式、`Render方案 A` 混排 docstring、`math.isnan(...)→"N/A"` warm-up 分支、`str(feat.ioi_pattern)` 渲染）。import 仅 `from __future__ import annotations` + `math` + 3 个 PyQt6-free 叶子 import，无其他 import 期项目依赖、无副作用。模块 docstring 说明其「K 线表渲染器」定位、PyQt6-free 叶子依赖、`PromptAssembler` staticmethod 重绑定约束、以及「表格布局/列宽/中文表头/说明常量须逐字节一致（模型按此表形对齐）」的约束。
+- **`prompt_assembler.py` 改为从 `kline_table_renderer` 导入并重绑定 staticmethod**：删除原 `_KLINE_INDICATOR_NOTE` 常量、`_fmt_feature` 模块函数、两个渲染器方法体（共约 60 行）；把顶部 `from pa_agent.ai.kline_features import ...`（两名只被渲染器用）替换为 `from pa_agent.ai.kline_table_renderer import render_kline_feature_table, render_kline_table`，并删除已成孤儿的 `from pa_agent.data.datetime_ts import format_epoch_for_display`；在 `PromptAssembler` 类体「K-line table rendering」区以 2 行 `_render_kline_table = staticmethod(render_kline_table)` / `_render_kline_feature_table = staticmethod(render_kline_feature_table)` **重绑定**，使 `PromptAssembler._render_kline_table(...)`（`main_window.py` 类名调用）、`assembler._render_kline_feature_table(...)`（`test_prompt_assembler.py` 实例调用）等既有站点**逐字节兼容**。`import math` 保留（market-feature 分支仍用）。文件从 1963 行降至 1902 行。
+- **调用站点零改动**：`PromptAssembler` 内 8 处 `self._render_kline_table(...)` / `self._render_kline_feature_table(...)` 调用、`main_window.py` 的 `PromptAssembler._render_kline_table(export_frame)`、`test_prompt_assembler.py`/`test_kline_candle_direction.py` 的类名/实例调用因 staticmethod 重绑定仍从 `PromptAssembler` 命名空间取到同一函数。
+
+### 验证
+
+- `py_compile` 通过（`kline_table_renderer.py`、`prompt_assembler.py`，EXIT=0）。
+- **AST 结构核验**：`ast.walk` 确认 `prompt_assembler.py` 中已无 `render_kline*`/`_fmt_feature` 函数定义残留（渲染器已全部迁出，仅余 2 行 staticmethod 重绑定）。
+- **真实 runtime 等价对比**（新模块 PyQt6-free 可独立 import）：从 `git show HEAD:prompt_assembler.py` 用正则提取拆分前的常量/`_fmt_feature`/两个渲染器方法 `exec` 重建为 `old_*`，与新模块 `render_*` 在真实 `KlineFrame`（含 nan EMA/ATR 触发 `N/A` 路径）上对比 **4 组返回值**——full 表、limited×2（`limit=2`）——`TABLE_EQ`/`FEAT_EQ`/`TABLE_LIM_EQ`/`FEAT_LIM_EQ` **全部 True**。
+- `ruff check` 对比基线：拆分前后总数 **1384** 保持不变；逐错误码 Counter 对比——新模块 `kline_table_renderer.py` 携 **11** 条（10×RUF001 全角逗号 + 1×RUF010，均随 feature table 迁入的既有类别），`prompt_assembler.py` 从 1384 降至 1373，合计 1384，**逐类别一致、零净新增告警**。
+- `git diff` 密钥扫描（`sk-...` / `api_key` / `Bearer` / `secret=` / `token=`）无命中——纯结构搬迁，无密钥。
+- **既有失败甄别**：`test_prompt_assembler.py` 因 import `PromptAssembler` 经 `market_features`→`util/__init__`→`event_bus`→PyQt6 在本机无法收集，属**既有环境缺口**（本机缺 PyQt6），与本轮纯结构搬迁无关；本轮迁出的渲染器已由 PyQt6-free 的 runtime 等价脚本独立验证。
+
+---
+
 ## [Unreleased] — 2026-07-14（第二十八轮：继续拆分 JsonValidator，提取 business_rules §9/§11 业务规则校验器簇 R-M2-2）
 
 本轮为**大文件拆分 M2 的第二刀**（第十六轮 `json_repair.py` 已把纯 JSON 文本提取/修复函数区拆出，`json_validator.py` 从 1023 行降至约 660 行；随 M3 各轮迭代该文件保持不变）。首刀抽走了「JSON 语法层（去 fence / 修引号 / 补括号 / 语法修复）」，本刀转向 `JsonValidator` 内**阶段二业务规则跨字段校验层**——`BusinessRuleValidator` 簇（对应后端审查报告 §5.2 M2 规划产出）。它是 `JsonValidator.validate` 在 schema 校验之后、对 stage2 输出施加的 7 个确定性 §9/§11 下单决策校验：`_check_no_order_invariant`（不下单↔null 铁律）、`_check_breakout_order_basis`（突破单必须绑定 K 线极值）、`_check_trade_metrics`（RR/交易者方程）、`_check_breakout_price_extreme`（突破入场价数值校验）、`_check_next_cycle_prediction`（周期预测 sum/argmax/null 规则）、`_check_next_bar_prediction`（下一棒预测 sum/argmax/null 规则）、`_check_signal_chain`（下单决策须以 §9 信号事实为依据）。选它作为下一刀的关键动机：① 它是一个**高内聚自足簇**——7 个 `_check_*` 校验器 + 3 个模块级辅助（`_parse_k_seq`/`_bar_by_seq`/`_all_stage2_reasons`）+ `_EXPLICIT_S9_TRADABLE_TOKENS` 令牌元组逻辑闭环、互相配合，除 `validate` 主方法与测试外**不被其他模块引用**；② 依赖近乎全为 stdlib——只 `re`/`typing.Any`，两个项目触点（`validate_order_trade_metrics` 来自 `pa_agent.util.trade_metrics`——经 `util/__init__`→`event_bus`→PyQt6，`CYCLE_ENUM`/`CYCLE_ORDER` 来自 `pa_agent.ai.cycle_enums`）均走**函数体内 call-time import**，故新模块 import 期**不触 PyQt6、不引入循环导入**（`business_rules` ← `json_validator` 无环）；③ `json_validator.py` 的 import 链本身**不经 PyQt6**，故本刀可运行**真实 pytest** 验证（区别于 M3 各轮只能靠运行时对比脚本）。
