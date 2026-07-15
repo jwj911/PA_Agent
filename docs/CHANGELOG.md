@@ -13,6 +13,25 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第三十八轮：完成 TwoStageOrchestrator.submit() 第五刀，提取 _run_stage2 收官 Stage 2 拆解）
+
+本轮为**大文件拆分 M4 的第五刀**（第三十七轮第四刀已切纯函数 `_build_stage2_messages`，`submit()` 从 552 行降至 538 行），**完成 Stage 2 区的整体拆解**。前四刀已把 Stage 2 的**闸门短路终局**（第三刀 `_try_gate_short_circuit`）与**纯函数 prompt 组装**（第四刀 `_build_stage2_messages`）分别外提，Stage 2 区仅余最难的**含闭包调用/校验核心**（Steps 15-24）。第三十六轮曾评估此块「须引入新控制流信号类型、风险过高」而暂缓；但第三十五轮 `_persist_result` 外提后，该结论已**不再成立**——Steps 15-24 的**全部四条路径都返回 `AnalysisRecord`**（网络错误终局、调用后取消终局、校验失败终局三终局 + happy-path 委托 `_persist_result`），故整块可干净外提为 `_run_stage2 -> AnalysisRecord`，`submit()` 尾部以 `return self._run_stage2(...)` **尾调**，**无需任何新类型**。两组 `nonlocal` 流式闭包（`_on_s2_reasoning`/`_on_s2_content` 共享 `s2_streamed_*` 标志、retry 闭包 `_call_s2_retry`）随方法**整体搬迁**、闭包捕获关系不变；in-body 形参名保持与原局部逐字一致（`_enable_next_bar`/`_flip_cooldown`/`_thinking`/`_effort`），使方法体逐字节等价。至此 `submit()` 仅余 Steps 1-14（Stage 1 全流程 + 路由/经验加载 + 闸门守卫 + Stage 2 prompt 组装），Stage 2 调用/校验/落盘已全部下沉。
+
+### 代码清理
+
+- **`pa_agent/orchestrator/two_stage.py` 新增实例方法 `_run_stage2(self, *, record, on_event, on_stage_prompt, on_stage2_reasoning, on_stage2_content, cancel_token, frame, messages_s1, reply_s1, stage1_json, strategy_files, experience_entries, messages_s2, previous_record, _enable_next_bar, _flip_cooldown, _thinking, _effort, s1_usage_calls) -> AnalysisRecord`**：把 `submit()` 内 Steps 15-24（`# ── Step 15: Call AI for Stage 2`→happy-path `return self._persist_result(...)`）**逐字节搬迁**为独立方法，放在 `_build_stage2_messages` 之后、`# ── Public API ──` 分隔线之前。逻辑完全不变：Stage 2 prompt DEBUG 日志与 `on_stage_prompt("stage2", ...)` 通知、两组 `nonlocal` 流式闭包 `_on_s2_reasoning`/`_on_s2_content`（共享 `s2_streamed_reasoning`/`s2_streamed_content`）、`self._stream_chat_resilient(...)` 弹性调用、网络错误终局（`_is_network_error`→`model_copy`→`save_partial("network_error")`→`Stage2Failed`→`return record`）、buffered-stream 兜底、Step 16 调用后取消终局（`model_copy`→`save_partial("user_cancelled")`→`Cancelled`→`return record`）、Step 17 校验（Stage 2 响应 DEBUG 日志、`_call_s2_retry` retry 闭包 + `s2_usage_calls` 累积、`validate_with_retry(...)`、校验失败终局 `model_copy`→`save_partial(f"stage2_{err.category}")`→`Stage2Failed`→`return record`）、`assert isinstance(result_s2, Ok)` 后 `stage2_json` 取值与 `not _enable_next_bar` 时 `deepcopy`+`pop("next_bar_prediction")`、Step 19 `Stage2Done` 事件，末尾 happy-path `return self._persist_result(...)`。
+- **`submit()` 内 Steps 15-24 替换为单次尾调**：`return self._run_stage2(record=..., on_event=..., on_stage_prompt=..., on_stage2_reasoning=..., on_stage2_content=..., cancel_token=..., frame=..., messages_s1=..., reply_s1=..., stage1_json=..., strategy_files=..., experience_entries=..., messages_s2=..., previous_record=..., _enable_next_bar=..., _flip_cooldown=..., _thinking=..., _effort=..., s1_usage_calls=...)`，紧跟 Step 14 `_build_stage2_messages` 三元解包之后。`submit()` 从 538 行降至 334 行。
+
+### 验证
+
+- `py_compile` 通过（`two_stage.py`，EXIT=0）。
+- **AST 结构核验**：`ast.walk` 确认 `TwoStageOrchestrator` 类体已含 `_run_stage2` 方法，`_run_stage2` 跨 545-803 行（258 行），`submit()` 现跨 807-1141 行（334 行）。
+- **集成测试基线对比**：核心 submit-path 套件（`test_gate_shortcircuit` + `test_two_stage_happy_path`/`_no_order_with_prices`/`_stage1_syntax`/`_stage1_missing_field`/`_stage2_invalid_value`（**校验失败终局专项，本刀关键守护**）/`_network_timeout`（**网络错误终局专项**）/`_user_cancel`（**取消终局专项**）+ `test_decision_nodes_orchestrator`）**13 passed / 1 failed**，进度串 `..F...........`——三条 Stage 2 终局用例全过，验证网络错误/取消/校验失败三路径逐字节等价；唯一失败 `test_no_order_with_non_null_price_fails_stage2` 为**既有失败**（该测试用不含业务规则的 `schema_test_validator()`，与第三十四~三十七轮记录一致）。
+- `ruff check` 对比基线：`git show HEAD:two_stage.py` 与拆分后同为 **40 条**，逐类别 Counter 完全一致（`E402:11, I001:1, RUF001:22, RUF100:1, UP037:5`），**零净新增告警**。
+- `git diff` 密钥扫描（`api_key`/`sk-`/`secret`/`Bearer`/`password`/`token`）无命中——纯结构搬迁。
+
+---
+
 ## [Unreleased] — 2026-07-15（第三十七轮：继续拆分 TwoStageOrchestrator.submit() 第四刀，提取 _build_stage2_messages 阶段二 prompt 组装）
 
 本轮为**大文件拆分 M4 的第四刀**（第三十六轮第三刀已切 `_try_gate_short_circuit`，`submit()` 从 575 行降至 552 行）。M4 剩余的 `_run_stage2` 主体（Steps 14-19）内，闸门短路终局已于上一轮外提；本轮继续剥离其中**纯函数片段** Step 14（阶段二 prompt 组装）。该段结构与第一刀 `_route_and_load_experience` 同构——**无闭包、无 early-return、无副作用**：先从 `self._settings.general` 解析两个 settings 标志（`enable_next_bar_prediction` → `_enable_next_bar`、`structure_flip_cooldown_bars` → `_flip_cooldown`，均带 `getattr` 兜底），再调 `self._assembler.build_stage2_continuation(...)` 组装 `messages_s2`。因 `_enable_next_bar`/`_flip_cooldown` 在后续 Step 17（校验 `validate_kwargs`）、Step 18（`stage2_json.pop("next_bar_prediction")`）、Step 19.5（`_persist_result` 的预测日志）均被复用，方法返回 `(messages_s2, enable_next_bar, flip_cooldown)` 三元组，`submit()` 内以三元解包接收。剥离本段后，Stage 2 区仅余不可再分的**含闭包调用/校验核心**（Steps 15-18 的两组 `nonlocal` 流式闭包 `_on_s2_reasoning`/`_on_s2_content`/`_call_s2_retry` + 网络错误/取消/校验失败三终局），留待后续轮次处理。
