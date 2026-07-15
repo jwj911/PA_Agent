@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 # (exchange, symbol) — verified via tvDatafeed get_hist where noted
 _BUILTIN_ALIASES: dict[str, tuple[str, str]] = {
-    # ── 港股 HKEX（代码勿加前导零，如 700 而非 0700）────────────────────────
+    # ── 港股 HKEX (代码勿加前导零, 如 700 而非 0700) ────────────────────────
     "小米": ("HKEX", "1810"),
     "小米集团": ("HKEX", "1810"),
     "xiaomi": ("HKEX", "1810"),
@@ -53,7 +53,7 @@ _BUILTIN_ALIASES: dict[str, tuple[str, str]] = {
     "nio": ("HKEX", "9866"),
     "小鹏汽车": ("HKEX", "9868"),
     "xpeng": ("HKEX", "9868"),
-    # ── A 股（6 位代码 + SSE/SZSE）──────────────────────────────────────────
+    # ── A 股 (6 位代码 + SSE/SZSE) ──────────────────────────────────────────
     "贵州茅台": ("SSE", "600519"),
     "茅台": ("SSE", "600519"),
     "宁德时代": ("SZSE", "300750"),
@@ -142,9 +142,7 @@ def is_tv_name_input(symbol: str) -> bool:
     # uppercase / mixed-case short strings are ticker symbols (e.g. "SPX", "NDX").
     if re.fullmatch(r"[a-z0-9.\-]+", s) and any(c.isalpha() for c in s):
         return len(s) >= 3
-    if re.search(r"[\u4e00-\u9fff]", s):
-        return True
-    return False
+    return bool(re.search(r"[\u4e00-\u9fff]", s))
 
 
 def lookup_tv_symbol_by_name(name: str) -> tuple[str, str] | None:
@@ -156,9 +154,8 @@ def lookup_tv_symbol_by_name(name: str) -> tuple[str, str] | None:
     if key in aliases:
         return aliases[key]
     for alias_key, pair in aliases.items():
-        if key in alias_key or alias_key in key:
-            if len(key) >= 2 and len(alias_key) >= 2:
-                return pair
+        if (key in alias_key or alias_key in key) and len(key) >= 2 and len(alias_key) >= 2:
+            return pair
     return None
 
 
@@ -168,7 +165,7 @@ def resolve_tv_symbol_name(name: str) -> tuple[str, str]:
     if hit is None:
         raise TvSymbolNotFoundError(
             f"未找到股票名称「{name.strip()}」。"
-            "请改用代码（港股 HKEX+1810、A 股 6 位），"
+            "请改用代码（港股 HKEX+1810、A 股 6 位），"  # noqa: RUF001
             "或在 config/tv_symbol_aliases.json 中添加别名。"
         )
     return hit
