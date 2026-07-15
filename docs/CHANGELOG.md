@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第四十八轮：继续 M7，让 YFinance 复用 DataSource 默认 forming 判定）
+
+本轮继续推进 **M7：统一 forming bar 判定**。前几轮已建立 `DataSource.has_forming_bar_at_head(...)` 入口，并将 A 股源与 TradingView 的特殊语义下沉。继续核查剩余数据源后，`YFinanceSource.latest_snapshot()` 仍硬编码 `closed=(i != 0)`：头部永远先标为未收盘，再依赖 snapshot 层复判。YFinance 没有 broker/server time，也没有 TradingView 的固定偏移取模需求，因此无需新增专门 override；直接复用 ABC 默认判定即可让源内构建与 snapshot 共享同一入口。
+
+### 代码清理
+
+- **`YFinanceSource.latest_snapshot()` 复用 `DataSource.has_forming_bar_at_head(...)`**：构造每根 `KlineBar` 后，头部 bar 仍先按旧规则临时 `closed=False`，随后调用 `self.has_forming_bar_at_head([bar], self._timeframe)`，按返回值写回最终 `closed=not is_forming`。非头部 bar 仍保持 `closed=True`，OHLCV/seq/normalize 流程不变。
+- **保持 YFinance 使用 ABC 默认语义**：不新增 `YFinanceSource` override；默认入口会用本地时间和 timeframe 判断头部周期是否已结束，能把 stale `closed=False` 头部在周期结束后视为已收盘。
+- **顺手清理同函数既有 SIM108**：把 `period` 的 intraday/daily 分支改为等价三元表达式，使 `pa_agent/data/yfinance_source.py` 全文件 ruff 通过。
+- **扩展 `tests/unit/test_data_source_forming_bar.py`**：新增无网络 YFinance 测试，stub `yfinance.Ticker.history()`，验证 `latest_snapshot()` 会调用数据源 forming 入口，并按 override 返回值写回头部 `closed`。
+
+### 验证
+
+- `py_compile` 通过（`yfinance_source.py`、`test_data_source_forming_bar.py`，EXIT=0）。
+- `py -3.12 -m pytest tests/unit/test_data_source_forming_bar.py tests/unit/test_bar_close_wait.py tests/unit/test_snapshot_closed_only_buffer.py tests/unit/test_build_analysis_frame.py tests/unit/test_snapshot_indicator_warmup.py tests/unit/test_data_source_factory.py --tb=line -q -p no:cacheprovider` → **36 passed**。
+- `py -3.12 -m ruff check pa_agent/data/yfinance_source.py tests/unit/test_data_source_forming_bar.py` → **All checks passed**。
+- `git diff --check` 通过；仅提示 Windows 工作树 LF/CRLF 规范化 warning，无 whitespace error。
+
+---
+
 ## [Unreleased] — 2026-07-15（第四十七轮：继续 M7，下沉 TradingView forming 倒计时判定）
 
 本轮继续推进 **M7：统一 forming bar 判定**。第四十五轮建立了 `DataSource.has_forming_bar_at_head(...)` 统一入口，第四十六轮已把 A 股源的 session 差异下沉为 override。本轮转向 `TradingViewSource`：它此前仍在 `latest_snapshot()` 内直接 import `seconds_until_bar_closes()` 并计算头部 bar 是否仍在形成。该逻辑属于 TradingView 数据源自身的时间戳语义（尤其是固定 exchange/broker offset 下的取模倒计时），应放到数据源 override 中，由 snapshot 和源内构建共享。
