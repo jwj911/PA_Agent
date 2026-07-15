@@ -15,23 +15,16 @@ from pa_agent.ai.pattern_routing import (
     STAGE1_DETECTED_PATTERNS_GUIDE,
     STAGE1_PATTERN_BRIEFS_BLOCK,
 )
-from pa_agent.ai.kline_features import bar_candle_direction_label, compute_kline_geometry_features
+from pa_agent.ai.kline_table_renderer import render_kline_feature_table, render_kline_table
 from pa_agent.ai.market_features import (
     compute_simple_market_features,
     inject_market_features_section,
     render_simple_market_features,
 )
 from pa_agent.data.base import KlineFrame
-from pa_agent.data.datetime_ts import format_epoch_for_display
 from pa_agent.records.schema import AnalysisRecord
 
 logger = logging.getLogger(__name__)
-
-_KLINE_INDICATOR_NOTE = (
-    "说明：下表仅含最近 N 根已收盘 K 线；几何特征亦基于此 N 根。"
-    "EMA20/ATR14 由程序在更老缓冲 K 线上预热后重算，与外盘图表「全历史延续」"
-    "指标可能略有差异，勿逐点对比。"
-)
 
 # ── Language (both stages, thinking + final output) ───────────────────────────
 
@@ -819,10 +812,6 @@ STAGE2_FULL_STRATEGY_PROMPT_TXT_FILES: tuple[str, ...] = (
 )
 
 
-def _fmt_feature(value: float | None) -> str:
-    return "N/A" if value is None else f"{value:.3f}"
-
-
 def stage1_prompt_txt_files() -> list[str]:
     """Return ordered .txt filenames injected in the Stage 1 prompt."""
     return [*COMMON_SYSTEM_STAGE1_TXT_FILES, *STAGE1_TASK_PROMPT_TXT_FILES]
@@ -974,58 +963,8 @@ class PromptAssembler:
 
     # ── K-line table rendering ────────────────────────────────────────────────
 
-    @staticmethod
-    def _render_kline_table(frame: KlineFrame, limit: int | None = None) -> str:
-        """Render the K-line data as a text table (newest bar first)."""
-        lines = [
-            "序号 | 时间                | 开盘价    | 最高价    | 最低价    | 收盘价    | 阳阴 | 成交量    | EMA20     | ATR14",
-            "-----+--------------------+----------+----------+----------+----------+------+----------+-----------+----------",
-        ]
-        bars = frame.bars[:limit] if limit is not None else frame.bars
-        for i, bar in enumerate(bars):
-            ema = frame.indicators.ema20[i]
-            atr = frame.indicators.atr14[i]
-            ema_str = f"{ema:.4f}" if not math.isnan(ema) else "N/A"
-            atr_str = f"{atr:.4f}" if not math.isnan(atr) else "N/A"
-            yang_yin = bar_candle_direction_label(bar)
-            dt = format_epoch_for_display(bar.ts_open, short=True)
-            lines.append(
-                f"{bar.seq:<4} | {dt:<19} | {bar.open:<9.4f} | {bar.high:<9.4f} | "
-                f"{bar.low:<9.4f} | {bar.close:<9.4f} | {yang_yin:<4} | {bar.volume:<9.0f} | "
-                f"{ema_str:<10} | {atr_str}"
-            )
-        lines.append(_KLINE_INDICATOR_NOTE)
-        return "\n".join(lines)
-
-    @staticmethod
-    def _render_kline_feature_table(frame: KlineFrame, limit: int | None = None) -> str:
-        """Render方案 A single-bar geometry features for prompt grounding."""
-        shown = limit if limit is not None else len(frame.bars)
-        lines = [
-            f"（几何特征：最近 {shown} 根已收盘 K 线；「类型」= 单字段 bar_type，优先级 inside/outside > doji/trend/flat/other；多棒形态已用完整窗口计算）",
-            "序号 | 类型          | 实体比 | 上影比 | 下影比 | 收盘位置 | Range/ATR | EMA关系 | 与前棒重叠 | ii/iii | ioi | 微双 | 缺口 | EMA缺口数 | 近5突破 | 后续",
-            "-----+---------------+--------+--------+--------+----------+-----------+---------+------------+--------+-----+------+-------+-----------+---------+------",
-        ]
-        for feat in compute_kline_geometry_features(frame, limit=limit):
-            lines.append(
-                f"{feat.seq:<4} | {feat.bar_type:<13} | "
-                f"{_fmt_feature(feat.body_ratio):<6} | "
-                f"{_fmt_feature(feat.upper_wick_ratio):<6} | "
-                f"{_fmt_feature(feat.lower_wick_ratio):<6} | "
-                f"{_fmt_feature(feat.close_position):<8} | "
-                f"{_fmt_feature(feat.range_atr_ratio):<9} | "
-                f"{feat.ema_relation:<7} | "
-                f"{_fmt_feature(feat.overlap_prev_ratio):<10} | "
-                f"{feat.inside_sequence:<6} | "
-                f"{str(feat.ioi_pattern):<3} | "
-                f"{feat.micro_double:<4} | "
-                f"{feat.gap_bar:<5} | "
-                f"{feat.ema_gap_count:<9} | "
-                f"{feat.breakout_prev:<7} | "
-                f"{feat.follow_through_1_2}"
-            )
-        lines.append(_KLINE_INDICATOR_NOTE)
-        return "\n".join(lines)
+    _render_kline_table = staticmethod(render_kline_table)
+    _render_kline_feature_table = staticmethod(render_kline_feature_table)
 
     @staticmethod
     def _render_simple_market_features_block(frame: KlineFrame) -> str:
