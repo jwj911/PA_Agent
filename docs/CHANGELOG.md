@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百一十六轮：继续 L7，扩展 Ruff 到配置路径常量）
+
+本轮继续推进 **L7：CI 增强**。第一百一十五轮已把 QClaw relay 脚本纳入 focused Ruff；本轮评估数据层、orchestrator、notify、config 与 util 剩余候选后，多数文件仍有较多中文文案或结构性历史噪声，因此收窄到仅有 import 格式问题的 `pa_agent/config/paths.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/config/paths.py`。
+- **清理路径常量 lint**：`paths.py` 在 `from __future__ import annotations` 后补标准空行，消除 Ruff `I001`。
+- **保持业务语义不变**：本轮不改 `PROJECT_ROOT`、`CONFIG_DIR`、`RECORDS_PENDING_DIR`、`SETTINGS_JSON_PATH`、日志路径或任何运行时目录。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖配置路径常量。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/config/paths.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\config\paths.py` → 通过。
+- 导入检查：`py -3.12 -c "from pa_agent.config.paths import PROJECT_ROOT, SETTINGS_JSON_PATH, RECORDS_PENDING_DIR; print(PROJECT_ROOT.name, SETTINGS_JSON_PATH.name, RECORDS_PENDING_DIR.name)"` → 输出 `price_action_agent settings.json pending`。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_demo_record_loader.py tests/unit/test_analysis_history.py --tb=line -q -p no:cacheprovider` → **8 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+- `git diff --check` → 通过（仅显示 Windows 行尾提示）。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百一十五轮：继续 L7，扩展 Ruff 到 QClaw relay 脚本）
 
 本轮继续推进 **L7：CI 增强**。第一百一十四轮已把 AI business rules 纳入 focused Ruff；本轮继续评估剩余 AI 源码侧候选后，`decision_stance`、`market_features`、`json_repair`、`override_arbiter`、connector 与 judge 模块仍有较多中文业务文案或结构性 lint 噪声，因此本轮收窄到已经 Ruff 干净、边界独立的 `qclaw_relay.py`。
