@@ -185,7 +185,7 @@ def test_latest_snapshot_fetches_minute_bars(
 def test_minute_rate_limit_error_is_user_facing(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeApi:
         def stk_mins(self, **kwargs):
-            raise Exception("抱歉，您访问接口(stk_mins)频率超限(1次/小时)")
+            raise Exception("抱歉，您访问接口(stk_mins)频率超限(1次/小时)")  # noqa: RUF001
 
     fake_tushare = types.SimpleNamespace(
         set_token=lambda token: None,
