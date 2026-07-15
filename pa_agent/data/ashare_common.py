@@ -78,7 +78,7 @@ def cn_now() -> datetime:
 
 
 def ashare_session_open(now: datetime | None = None) -> bool:
-    """True during A-share cash session (Mon–Fri, 09:30–11:30 & 13:00–15:00 CN)."""
+    """True during A-share cash session (Mon-Fri, 09:30-11:30 & 13:00-15:00 CN)."""
     now = now or cn_now()
     if now.weekday() >= 5:
         return False
@@ -89,7 +89,7 @@ def ashare_session_open(now: datetime | None = None) -> bool:
 
 
 def ashare_trading_day(now: datetime | None = None) -> bool:
-    """True on A-share cash days within 09:30–15:00 CN, including the lunch break."""
+    """True on A-share cash days within 09:30-15:00 CN, including the lunch break."""
     now = now or cn_now()
     if now.weekday() >= 5:
         return False
@@ -134,7 +134,7 @@ def ensure_today_forming_daily_bar(
     session_amount: float = 0.0,
     now: datetime | None = None,
 ) -> bool:
-    """交易时段若日线仍停在昨收，补一根「当日未收盘」K 线以便刷新现价。"""
+    """交易时段若日线仍停在昨收, 补一根「当日未收盘」K 线以便刷新现价。"""
     from datetime import time as time_cls
 
     if not rows_asc:
@@ -229,10 +229,7 @@ def row_time_to_ts_ms(value: Any) -> int:
 
         if isinstance(value, pd.Timestamp):
             ts = value
-            if ts.tz is None:
-                ts = ts.tz_localize(_CN_TZ)
-            else:
-                ts = ts.tz_convert(_CN_TZ)
+            ts = ts.tz_localize(_CN_TZ) if ts.tz is None else ts.tz_convert(_CN_TZ)
             return int(ts.timestamp() * 1000)
     except ImportError:
         pass
