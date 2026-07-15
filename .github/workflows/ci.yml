@@ -49,6 +49,8 @@ jobs:
           tests/unit/test_trend_context.py
           tests/unit/test_decision_tree.py
           tests/unit/test_decision_continuity.py
+          tests/unit/test_decision_nodes_preflight.py
+          tests/unit/test_decision_nodes_judges.py
           tests/unit/test_decision_nodes_orchestrator.py
           tests/unit/test_provider_sync_service.py
           tests/unit/test_qclaw_auto_fallback.py
@@ -144,6 +146,8 @@ jobs:
           tests/unit/test_trend_context.py
           tests/unit/test_decision_tree.py
           tests/unit/test_decision_continuity.py
+          tests/unit/test_decision_nodes_preflight.py
+          tests/unit/test_decision_nodes_judges.py
           tests/unit/test_decision_nodes_orchestrator.py
           tests/unit/test_provider_sync_service.py
           tests/unit/test_qclaw_auto_fallback.py

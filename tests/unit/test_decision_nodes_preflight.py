@@ -9,9 +9,6 @@ Tests cover:
 """
 from __future__ import annotations
 
-import math
-
-import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -71,7 +68,8 @@ def test_empty_bars_returns_bars_empty():
 def test_bar_with_high_less_than_low():
     bars = (
         KlineBar(seq=1, ts_open=1.0, open=100.0, high=90.0, low=110.0, close=100.0, volume=1.0, closed=True),
-    ) + tuple(_make_bar(i + 2) for i in range(20))
+        *(_make_bar(i + 2) for i in range(20)),
+    )
     frame = KlineFrame(
         symbol="TEST", timeframe="1h",
         bars=bars,

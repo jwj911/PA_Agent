@@ -2,24 +2,17 @@
 
 Covers Properties 2-10 and override Properties 15-22.
 """
+# ruff: noqa: RUF001
 from __future__ import annotations
 
-import math
-from unittest.mock import MagicMock
-
-import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from pa_agent.ai.decision_nodes import (
-    ALWAYS_IN_SAME_SIDE_RATIO,
-    BAR_COUNT_THRESHOLD,
     SIGNAL_BAR_LONG_ATR_RATIO,
     DecisionNodeEngine,
-    NodeFill,
     apply_overrides,
     judge_always_in,
-    judge_data_sufficiency,
     judge_direction,
     judge_follow_through,
     judge_signal_bar_closed,
@@ -226,9 +219,7 @@ class TestAlwaysInJudge:
             indicators=IndicatorBundle(ema20=ema, atr14=tuple([10.0] * n)),
         )
         fill = judge_always_in(frame)
-        if fill.branch == "AIL":
-            assert fill.answer == "是"
-        elif fill.branch == "AIS":
+        if fill.branch == "AIL" or fill.branch == "AIS":
             assert fill.answer == "是"
         else:
             assert fill.answer == "否"
@@ -628,7 +619,7 @@ def test_is_planned_limit_order_detects_weak_boundary_limit() -> None:
     assert is_planned_limit_order(obj) is True
 
 
-def test_normalize_stage2_upgrades_9_0_for_planned_limit() -> None:
+def test_normalize_stage2_rejects_invalid_planned_limit_signal() -> None:
     from pa_agent.ai.stage2_normalizer import normalize_stage2
 
     obj = {
@@ -704,7 +695,9 @@ def test_normalize_stage2_upgrades_9_0_for_planned_limit() -> None:
     )
     out = normalize_stage2(obj, kline_frame=frame, stage1_json=obj["diagnosis_summary"])
     node_90 = next(n for n in out["decision_trace"] if n["node_id"] == "9.0")
-    assert node_90["answer"] == "是"
+    assert node_90["answer"] == "否"
+    assert out["decision"]["order_type"] == "不下单"
+    assert out["terminal"]["outcome"] == "reject"
 
 
 def test_11_2_override_preserves_limit_order_without_basis() -> None:
