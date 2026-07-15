@@ -3,14 +3,10 @@ from __future__ import annotations
 
 import json
 
-from pa_agent.ai.json_validator import Ok
+from pa_agent.ai.json_validator import JsonValidator, Ok
 from pa_agent.ai.pattern_routing import ensure_detected_patterns_coherent
 from pa_agent.ai.stage1_normalizer import normalize_stage1
-from pa_agent.ai.stage2_normalizer import normalize_stage2
 from pa_agent.config.settings import ValidationSettings
-from pa_agent.ai.json_validator import JsonValidator
-
-from tests.fixtures.validators import schema_test_validator
 from tests.unit.test_trade_metrics_validation import _frame, _stage2_trade_obj
 
 validator = JsonValidator(ValidationSettings(normalization_mode="lenient"))
@@ -136,7 +132,10 @@ def test_lenient_validator_maps_expired_freshness_on_pending_entry() -> None:
 
 def test_lenient_validator_maps_openclaw_enum_slips() -> None:
     """OpenClaw agent often mixes stage1 English enums into stage2 fields."""
-    from pa_agent.ai.stage2_normalizer import _normalize_stage2_enum_aliases
+    from pa_agent.ai.stage2_normalizer import (
+        _normalize_stage2_bar_analysis_enums,
+        _normalize_stage2_enum_aliases,
+    )
 
     obj = _stage2_trade_obj(
         order_type="突破单",
@@ -164,6 +163,7 @@ def test_lenient_validator_maps_openclaw_enum_slips() -> None:
         "label": "§11.4突破单-空头延续",
     }
     assert _normalize_stage2_enum_aliases(obj) is True
+    assert _normalize_stage2_bar_analysis_enums(obj) is True
     assert obj["decision"]["order_direction"] == "做空"
     assert obj["bar_analysis"]["always_in"] == "neutral"
     assert obj["terminal"]["outcome"] == "trade"
@@ -179,7 +179,10 @@ def test_lenient_validator_maps_openclaw_enum_slips() -> None:
 
 
 def test_lenient_validator_maps_action_and_limit_order_pending() -> None:
-    from pa_agent.ai.stage2_normalizer import _normalize_stage2_enum_aliases
+    from pa_agent.ai.stage2_normalizer import (
+        _normalize_stage2_bar_analysis_enums,
+        _normalize_stage2_enum_aliases,
+    )
 
     obj = _stage2_trade_obj(
         order_type="限价单",
@@ -205,6 +208,7 @@ def test_lenient_validator_maps_action_and_limit_order_pending() -> None:
         "label": "限价做空",
     }
     assert _normalize_stage2_enum_aliases(obj) is True
+    assert _normalize_stage2_bar_analysis_enums(obj) is True
     assert obj["decision"]["order_direction"] == "做空"
     assert obj["terminal"]["outcome"] == "trade"
     assert obj["bar_analysis"]["entry_bar"]["freshness"] == "pending"
