@@ -11,6 +11,7 @@ from typing import Any
 
 from pa_agent.ai import strategy_files as sf
 from pa_agent.ai.decision_stance import build_decision_stance_guidance, normalize_stance
+from pa_agent.ai.experience_renderer import render_experience
 from pa_agent.ai.pattern_routing import (
     STAGE1_DETECTED_PATTERNS_GUIDE,
     STAGE1_PATTERN_BRIEFS_BLOCK,
@@ -1873,29 +1874,6 @@ class PromptAssembler:
             )
         return "\n".join(lines) + "\n"
 
-    @staticmethod
-    def _render_experience(
-        entries: list[Any],
-        *,
-        max_chars_per_entry: int = 400,
-    ) -> str:
-        """Render experience library entries as a text block."""
-        lines = [
-            "## 经验库(最近案例,供参考)",
-            "以下案例仅作对照，**不得**因相似就改变对本图结构/方向的独立判断。",
-        ]
-        for i, entry in enumerate(entries, 1):
-            if isinstance(entry, dict):
-                blob = json.dumps(entry, ensure_ascii=False, indent=2)
-            elif hasattr(entry, "content"):
-                blob = json.dumps(
-                    getattr(entry, "content", entry),
-                    ensure_ascii=False,
-                    indent=2,
-                )
-            else:
-                blob = str(entry)
-            if len(blob) > max_chars_per_entry:
-                blob = blob[: max_chars_per_entry - 3] + "..."
-            lines.append(f"\n### 案例 {i}\n```json\n{blob}\n```")
-        return "\n".join(lines)
+    # ── Experience library rendering ──────────────────────────────────────────
+
+    _render_experience = staticmethod(render_experience)
