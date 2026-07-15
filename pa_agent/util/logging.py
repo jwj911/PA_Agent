@@ -33,7 +33,7 @@ class MaskingFormatter(logging.Formatter):
         super().__init__(fmt)
         self._api_key = api_key
 
-    def format(self, record: logging.LogRecord) -> str:  # noqa: A003
+    def format(self, record: logging.LogRecord) -> str:
         message = super().format(record)
         if self._api_key:
             message = message.replace(self._api_key, mask_secret(self._api_key))
@@ -80,7 +80,7 @@ def configure_logging(api_key: str = "") -> None:
 
     If handlers were removed after a prior configure_logging call, re-attaches them.
     """
-    global _configured  # noqa: PLW0603
+    global _configured
 
     with _STATE_LOCK:
         if _configured:
