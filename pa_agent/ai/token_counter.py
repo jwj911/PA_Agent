@@ -25,7 +25,7 @@ def estimate_tokens(messages: list[dict], model_hint: str = "cl100k_base") -> in
     for msg in messages:
         # Each message has ~4 overhead tokens (role + separators)
         total += 4
-        for key, value in msg.items():
+        for _key, value in msg.items():
             if isinstance(value, str):
                 total += len(enc.encode(value))
     total += 2  # reply priming

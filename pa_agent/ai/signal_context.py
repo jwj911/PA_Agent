@@ -56,7 +56,7 @@ def _get_signal_seq(out: dict[str, Any], bars: Any) -> int:
 
                         return seq
 
-    except Exception:  # noqa: BLE001
+    except Exception:
 
         logger.debug("signal bar seq parse failed", exc_info=True)
 
@@ -104,7 +104,7 @@ def is_planned_limit_order(out: dict[str, Any]) -> bool:
     pattern = str(signal_bar.get("pattern", "") or "").strip().lower()
     if signal_bar.get("bar") is None and quality in ("invalid", "weak"):
         return True
-    if quality == "weak" and pattern in (
+    return quality == "weak" and pattern in (
         "",
         "none",
         "tr_boundary",
@@ -116,6 +116,4 @@ def is_planned_limit_order(out: dict[str, Any]) -> bool:
         "wedge",
         "mtr",
         "trendline",
-    ):
-        return True
-    return False
+    )
