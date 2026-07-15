@@ -42,6 +42,8 @@ jobs:
           tests/unit/test_settings_round_trip.py
           tests/unit/test_pending_writer_sanitize.py
           tests/unit/test_pending_writer_no_plaintext_key.py
+          tests/unit/test_datetime_ts.py
+          tests/unit/test_kline_bar_normalize.py
           --tb=line
           -q
           -p pytest_cov
@@ -55,6 +57,7 @@ jobs:
           pa_agent/data/snapshot.py
           pa_agent/data/mt5.py
           pa_agent/data/yfinance_source.py
+          pa_agent/data/datetime_ts.py
           pa_agent/ai/provider_sync_service.py
           pa_agent/security/secret_store.py
           pa_agent/records/pending_writer.py
@@ -69,3 +72,5 @@ jobs:
           tests/unit/test_settings_round_trip.py
           tests/unit/test_pending_writer_sanitize.py
           tests/unit/test_pending_writer_no_plaintext_key.py
+          tests/unit/test_datetime_ts.py
+          tests/unit/test_kline_bar_normalize.py
