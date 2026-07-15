@@ -134,6 +134,10 @@ jobs:
           pa_agent/__init__.py
           pa_agent/app_context.py
           pa_agent/main.py
+          pa_agent/ai/__init__.py
+          pa_agent/config/__init__.py
+          pa_agent/data/__init__.py
+          pa_agent/orchestrator/__init__.py
           pa_agent/data/base.py
           pa_agent/data/snapshot.py
           pa_agent/data/mt5.py
