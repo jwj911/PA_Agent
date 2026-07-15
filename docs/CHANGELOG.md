@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第九十六轮：继续 L7，扩展 CI 到 DeepSeekClient provider 参数测试）
+
+本轮继续推进 **L7：CI 增强**。第九十五轮已把 free chat reasoning resend 测试纳入目标 CI；本轮处理剩余 mock 型 AI client 测试中的 `test_deepseek_client.py`。该测试覆盖 DeepSeekClient 的 provider 参数合同，包括 DeepSeek v4 adaptive thinking、Packy Claude system hoist / output cap、KKAI Claude thinking budget、Yunwu adaptive thinking、OpenClaw tool choice、MiMo thinking extra body 与 tool-call message patch。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_deepseek_client.py`。目标测试数量从 **639** 扩展到 **659**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `tests/unit/test_deepseek_client.py`。
+- **修正过期测试期望**：DeepSeek v4 当前合同为 `thinking.type=adaptive` + `output_config.effort`，而非旧 `enabled`；Packy output cap 仅在 Claude 模型分支为 **128000**；KKAI Claude 测试需使用非 DeepSeek 模型名以进入 KKAI 分支，并按当前 practical unlimited cap 验证 `budget_tokens=524287`。
+- **清理目标测试 lint**：删除未使用 import，合并 nested `with`，并用 `contextlib.suppress(Exception)` 替代空 `try/except`。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 DeepSeekClient provider 参数合同。
+
+### 验证
+
+- 新增测试：`py -3.12 -m pytest tests/unit/test_deepseek_client.py --tb=line -q -p no:cacheprovider` → **20 passed**。
+- `py -3.12 -m ruff check tests/unit/test_deepseek_client.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests\unit\test_deepseek_client.py` → 通过。
+- 扩展后目标集：从 `.github/workflows/ci.yml` 解析 targeted pytest 清单（本地 `pytest_cov` 插件仍受用户 site-packages 权限问题影响，沿用无 coverage 插件行为验证）→ `py -3.12 -m pytest ... --tb=line -q -p no:cacheprovider` → **659 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第九十五轮：继续 L7，扩展 CI 到 free chat reasoning resend 测试）
 
 本轮继续推进 **L7：CI 增强**。第九十四轮已把 ChartWidget fit/overlay 测试纳入目标 CI；本轮转向自由追问会话的 reasoning resend 合同。`test_free_chat_resend_drops_reasoning.py` 覆盖默认情况下 API 历史不回传上一轮 reasoning、但 `history_full` 与 JSONL 持久化仍保留 reasoning；`test_free_chat_keeps_reasoning_when_toggled.py` 覆盖 `keep_reasoning_in_resend=True` 时后续自由追问 assistant turn 会带回 `reasoning_content`。
