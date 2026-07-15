@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第八十九轮：继续 L7，扩展 CI 到 trade metrics validation 测试）
+
+本轮继续推进 **L7：CI 增强**。第八十八轮已把 decision continuity 测试纳入目标 CI；本轮继续筛选纯后端交易指标与 Stage 2 validator 联动测试。`test_trade_metrics_validation.py` 覆盖 RR/交易者方程、坏 RR 自动改为不下单、突破价高点内侧修复、pending/stale entry_bar 兼容、计划型限价无信号棒/弱信号棒场景，以及强信号缺失 signal_bar 的拒绝路径。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_trade_metrics_validation.py`。目标测试数量从 **418** 扩展到 **432**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `tests/unit/test_trade_metrics_validation.py`。
+- **清理目标测试 lint**：通过 Ruff 自动整理 import，并为需保留的中文 trace question/reason、计划型限价说明样例添加行级 `# noqa: RUF001`。
+- **暂不纳入源文件 Ruff**：本轮只扩展测试文件 Ruff 门禁；`trade_metrics` 源文件此前已在 focused Ruff 范围内，相关 validator 源侧不新增范围。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 trade metrics validation。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_trade_metrics_validation.py --tb=line -q -p no:cacheprovider` → **14 passed**。
+- `py -3.12 -m ruff check tests/unit/test_trade_metrics_validation.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests\unit\test_trade_metrics_validation.py` → 通过。
+- 扩展后目标集：执行 `.github/workflows/ci.yml` 的 targeted pytest 清单（本地 `pytest_cov` 插件仍受用户 site-packages 权限问题影响，沿用无 coverage 插件行为验证）→ `py -3.12 -m pytest ... --tb=line -q -p no:cacheprovider` → **432 passed**。
+- 扩展后 Ruff：执行 `.github/workflows/ci.yml` 的 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第八十八轮：继续 L7，扩展 CI 到 decision continuity 测试）
 
 本轮继续推进 **L7：CI 增强**。第八十七轮已把 trace semantic checks 测试纳入目标 CI；本轮继续筛选纯后端决策连续性测试。`test_decision_continuity.py` 覆盖上一轮交易方案失效判断、限价触发判断、连续性 prompt 文案、同结构位反手冷却、neutral+AIS/AIL 方向守卫、连续性守卫改写 Stage 2 决策，以及未成交限价单的自动取消规则。
