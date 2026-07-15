@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百三十三轮：继续 L7，扩展 Ruff 到 Tushare source）
+
+本轮继续推进 **L7：CI 增强**。第一百三十二轮已把 AkShare source 纳入 focused Ruff；本轮继续沿 A 股数据源边界推进，选择已有 fake `tushare` 无网络测试覆盖、lint 面很小的 `pa_agent/data/tushare_source.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/data/tushare_source.py`。
+- **清理 Tushare source lint**：移除分钟线 lookback 计算中对 `math.ceil()` 结果的冗余 `int()` 转换。
+- **保留中文用户提示**：缺少 Tushare token、未安装 tushare、A 股代码无效、分钟线接口限频四处中文提示属于用户可见文案，本轮使用行级 `# noqa: RUF001` 保留原显示语义。
+- **保持业务语义不变**：本轮不改 token 优先级、Tushare API 调用、日线/分钟线缓存、时间戳转换、复权参数、限频错误处理或 symbol 归一化逻辑。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 Tushare source。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/data/tushare_source.py tests/unit/test_tushare_source.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\data\tushare_source.py tests\unit\test_tushare_source.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_tushare_source.py --tb=line -q -p no:cacheprovider` → **11 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百三十二轮：继续 L7，扩展 Ruff 到 AkShare source）
 
 本轮继续推进 **L7：CI 增强**。第一百三十一轮已把 TradingView symbol lookup 纳入 focused Ruff；本轮继续筛选数据层剩余候选，选择已有无网络 helper 测试覆盖、lint 面可控的 `pa_agent/data/akshare_source.py`。
