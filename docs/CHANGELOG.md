@@ -13,6 +13,24 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第三十四轮：启动 M4 里程碑，拆分 TwoStageOrchestrator.submit() 第一刀，提取 _route_and_load_experience）
+
+本轮**开启大文件拆分 M4 里程碑**（M1 已完成对 `prompt_assembler.py` 的五刀叶子提取，1963→1571 行；本轮转向 `orchestrator/two_stage.py` 的巨型方法 `TwoStageOrchestrator.submit()`——约 647 行、跨阶段流转、含多处 `nonlocal` 闭包与 early-return）。与 M1/M2/M3 的**叶子模块提取**本质不同，M4 是**同类内的方法级拆分**：子方法共享 `self` 与大量跨阶段流转的可变局部状态，无法用纯函数等价脚本验证，必须靠既有 mock-based 集成测试套件做 baseline 对比。roadmap（`docs/backend_review_report.md` §5 L262）将 M4 目标拆为 `_run_stage1`/`_run_stage2`/`_route_and_load_experience`/`_persist_result`。本刀先切最干净的一块——Steps 10-11（路由策略文件 + 加载经验条目）。选它作为 M4 第一刀的关键动机：① 它是 `submit()` 中**唯一零闭包、零 early-return、零副作用的自足片段**——只读 `stage1_json` 与 `self._router`/`self._settings`/`self._exp_reader`，输出 `(strategy_files, experience_entries)`；② 其中间局部变量 `cycle_position`/`direction`/`patterns` 经核查**只在该块内被引用**（Step 12+ 仅用 `strategy_files`/`experience_entries`），故可完整封装、不外泄；③ 因用 `self.*`，自然拆为实例方法而非模块函数，`submit()` 内替换为单行解包调用，行为逐字节一致。
+
+### 代码清理
+
+- **`pa_agent/orchestrator/two_stage.py` 新增实例方法 `_route_and_load_experience(self, stage1_json: dict) -> tuple[list[str], list[Any]]`**：把 `submit()` 内 Steps 10-11（`# ── Step 10: Route strategy files`+`# ── Step 11: Load experience entries` 两块，共 27 行）**逐字节搬迁**为独立方法，放在 `_validation_settings` 之后、`# ── Public API ──` 分隔线之前的辅助方法区。逻辑完全不变：router 分支（`callable(self._router) and not hasattr(self._router, "route")` → `self._router(stage1_json)`，否则 `self._router.route(stage1_json)`）、`cycle_position`/`direction`/`patterns` 提取、`prompt_cfg`/`max_exp`/`max_chars` 读取、经验加载三分支（`max_exp<=0`→`[]` / 有 `read_for_stage2`→`read_for_stage2(...)` / 否则 `read_top5(cycle_position)[:max_exp]`），末尾 `return strategy_files, experience_entries`。
+- **`submit()` 内 Steps 10-11 替换为单行调用**：`strategy_files, experience_entries = self._route_and_load_experience(stage1_json)`，保留 `strategy_files`/`experience_entries` 两个局部变量供后续 Step 12+（pre-Stage-2 cancel、Stage2 gate 短路、final record）使用。`submit()` 净减约 26 行。
+
+### 验证
+
+- `py_compile` 通过（`two_stage.py`，EXIT=0）。
+- **集成测试基线对比**（本会话已 `pip install PyQt6`，打通 `two_stage` 集成测试收集）：核心 submit-path 套件（`test_two_stage_happy_path`/`_no_order_with_prices`/`_stage1_syntax`/`_stage1_missing_field`/`_stage2_invalid_value`/`_network_timeout`/`_user_cancel` + `test_gate_shortcircuit` + `test_decision_nodes_orchestrator` + `test_qclaw_auto_fallback`）**16 passed / 1 failed**，唯一失败 `test_no_order_with_non_null_price_fails_stage2` 经 `git stash` 回退 HEAD 复跑确认为**既有失败**（该测试用 `schema_test_validator()`，不含业务规则校验，故 order_type=不下单+entry_price=0 走到 happy path 而非 Stage2Failed），与本刀无关——拆分前后行为逐字节一致。
+- `ruff check` 对比基线：`git show HEAD:two_stage.py` 与拆分后同为 **40 条**（全为既有 E402/RUF001/UP037/RUF100 类别，皆因该文件历史风格），**零净新增告警**。
+- `git diff` 密钥扫描（`api_key`/`sk-`/`secret`/`token`/`password`/`Bearer`）仅命中无关的 `cancel_token` 既有变量名，无密钥泄漏——纯结构搬迁。
+
+---
+
 ## [Unreleased] — 2026-07-15（第三十三轮：继续拆分 PromptAssembler，提取 program_prefill_hint 程序预填充节点提示渲染器 R-M1-5）
 
 本轮为**大文件拆分 M1 的第五刀**（第二十九轮切 `kline_table_renderer.py`、第三十轮切 `experience_renderer.py`、第三十一轮切 `stage2_guidance.py`、第三十二轮切 `chain_context.py`，`prompt_assembler.py` 从 1963→1902→1880→1736→1652 行）。前四刀分别切走 KlineTableRenderer、ExperienceRenderer、阶段二指导渲染器簇与跨阶段 carryover 上下文构建器簇；本刀转向阶段一 user 消息里**把确定性引擎（§1.1/§2.3/§2.4）预填充判定摊开给 AI 参考**的那个渲染器——`_render_program_prefill_hint`。它在阶段一 user prompt 里注入一个紧凑块，展示程序对「数据是否足够」「当前方向（多/空/中性，五信号投票）」「是否 Always In（三闸门）」的确定性判定与依据，让 AI 在做自己的判断前先看到程序算了什么（并可经 `node_overrides` 覆盖）。选它作为 M1 第五刀的关键动机：① 它是一个**自足的单函数渲染器**——`@staticmethod`、无实例状态，仅在 `_build_stage1_user_prompt`/`_build_incremental_stage1_user_prompt`/`_build_incremental_stage1_continuation_user_prompt` 三处经 `self._render_program_prefill_hint(frame)` 调用，不被其他逻辑纠缠；② 依赖近乎 stdlib——模块级仅 `logging`+`typing`（`KlineFrame` 仅注解用途置于 `TYPE_CHECKING` 块），唯一的项目触点（`decision_nodes` 的三个 judge 与 `trend_context` 的两个摘要辅助）沿用原有的**函数体内 call-time import**（这也正是打破 `prompt_assembler` ↔ `decision_nodes`/`trend_context` 循环依赖的既有手法），故新模块可**独立 import**；③ `program_prefill_hint` ← `prompt_assembler` **无环**（新模块不回依赖 `prompt_assembler`）。
