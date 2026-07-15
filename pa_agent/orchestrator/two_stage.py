@@ -306,6 +306,45 @@ class TwoStageOrchestrator:
 
         return ValidationSettings()
 
+    def _route_and_load_experience(
+        self, stage1_json: dict
+    ) -> tuple[list[str], list[Any]]:
+        """Route strategy files and load experience entries from Stage 1 diagnosis.
+
+        Steps 10-11 of the pipeline: pick strategy ``.txt`` files via the router
+        (function or object with ``.route()``), then fetch experience entries for
+        the diagnosed cycle/direction/patterns (bounded by prompt settings).
+        """
+        # ── Step 10: Route strategy files ─────────────────────────────────────
+        if callable(self._router) and not hasattr(self._router, "route"):
+            strategy_files: list[str] = self._router(stage1_json)
+        else:
+            strategy_files = self._router.route(stage1_json)
+
+        # ── Step 11: Load experience entries ──────────────────────────────────
+        cycle_position: str = stage1_json.get("cycle_position", "unknown")
+        direction = str(stage1_json.get("direction", "") or "")
+        patterns = stage1_json.get("detected_patterns") or []
+        prompt_cfg = getattr(self._settings, "prompt", None) if self._settings else None
+        max_exp = getattr(prompt_cfg, "experience_max_entries", 0) if prompt_cfg else 0
+        max_chars = (
+            getattr(prompt_cfg, "experience_max_chars_per_entry", 400) if prompt_cfg else 400
+        )
+        if max_exp <= 0:
+            experience_entries: list[Any] = []
+        elif hasattr(self._exp_reader, "read_for_stage2"):
+            experience_entries = self._exp_reader.read_for_stage2(
+                cycle_position,
+                direction=direction,
+                patterns=patterns,
+                max_entries=max_exp,
+                max_chars_per_entry=max_chars,
+            )
+        else:
+            experience_entries = self._exp_reader.read_top5(cycle_position)[:max_exp]
+
+        return strategy_files, experience_entries
+
     # ── Public API ────────────────────────────────────────────────────────────
 
     def submit(
@@ -568,33 +607,8 @@ class TwoStageOrchestrator:
         # ── Step 9: Stage 1 done ──────────────────────────────────────────────
         on_event(OrchestratorEvent.Stage1Done)
 
-        # ── Step 10: Route strategy files ─────────────────────────────────────
-        if callable(self._router) and not hasattr(self._router, "route"):
-            strategy_files: list[str] = self._router(stage1_json)
-        else:
-            strategy_files = self._router.route(stage1_json)
-
-        # ── Step 11: Load experience entries ──────────────────────────────────
-        cycle_position: str = stage1_json.get("cycle_position", "unknown")
-        direction = str(stage1_json.get("direction", "") or "")
-        patterns = stage1_json.get("detected_patterns") or []
-        prompt_cfg = getattr(self._settings, "prompt", None) if self._settings else None
-        max_exp = getattr(prompt_cfg, "experience_max_entries", 0) if prompt_cfg else 0
-        max_chars = (
-            getattr(prompt_cfg, "experience_max_chars_per_entry", 400) if prompt_cfg else 400
-        )
-        if max_exp <= 0:
-            experience_entries = []
-        elif hasattr(self._exp_reader, "read_for_stage2"):
-            experience_entries = self._exp_reader.read_for_stage2(
-                cycle_position,
-                direction=direction,
-                patterns=patterns,
-                max_entries=max_exp,
-                max_chars_per_entry=max_chars,
-            )
-        else:
-            experience_entries = self._exp_reader.read_top5(cycle_position)[:max_exp]
+        # ── Step 10-11: Route strategy files + load experience entries ────────
+        strategy_files, experience_entries = self._route_and_load_experience(stage1_json)
 
         # ── Step 12: Pre-Stage-2 cancel check ────────────────────────────────
         if cancel_token.is_set():
