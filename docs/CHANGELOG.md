@@ -13,6 +13,25 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第五十一轮：修复 §11 broad_channel 突破单被错误降级为限价单）
+
+本轮处理第五十轮 M3 收官验证中暴露出的既有失败：`test_order_method_router.py::test_model_breakout_preserved_for_broad_channel`。该用例描述的是 **broad_channel 默认偏限价，但模型若给出完整突破单依据（`entry_basis_bar` + `entry_basis_extreme`）且 §10.3 已通过，应保留模型明确的突破单选择**。实际代码中已写了保留分支，但 `_has_trade_prices()` 错把可选的 `take_profit_price_2` 当成必填价格，导致只有主止盈价的有效突破单未进入保留分支，随后被 broad_channel 默认路线改成 `限价单`。
+
+### 修复
+
+- **修正 `order_method_router._has_trade_prices()`**：核心交易价格只要求 `entry_price`、`stop_loss_price`、主 `take_profit_price` 三项非空；`take_profit_price_2` 是可选分批止盈，不再作为保留模型显式 `限价单` / `市价单` / `突破单` 选择的必要条件。
+- **保留既有安全边界**：突破单仍必须有 `entry_basis_bar` + `entry_basis_extreme`，否则继续走 `breakout_fallback_to_limit` 回退为限价单；§10.3=否 / §14 违规短路逻辑不变。
+
+### 验证
+
+- `py_compile` 通过（`order_method_router.py`、`test_order_method_router.py`，EXIT=0）。
+- `py -3.12 -m pytest tests/unit/test_order_method_router.py --tb=line -q -p no:cacheprovider` → **3 passed**。
+- 直接调用 `order_method_router.route_order_method()` 复核 broad_channel + 完整做空突破依据：输出 `decision["order_type"] == "突破单"`，最终节点 `11.2`，`answer="是"`。
+- `git diff --check` 通过。
+- `py -3.12 -m ruff check pa_agent/ai/order_method_router.py tests/unit/test_order_method_router.py` 仍只报 `order_method_router.py` 既有 RUF001 中文标点告警（随中文 reason 串存在），本轮未新增新的 ruff 类别。
+
+---
+
 ## [Unreleased] — 2026-07-15（第五十轮：完成 M3，提取 DecisionNodeEngine 编排层）
 
 本轮回到后端审查报告 §5.2 的 **M3：拆分 `decision_nodes.py`** 做收官。此前 M3 已陆续拆出阈值常量、几何原语、preflight、trace 结果层、全部 section-judge、override 裁决、§11 下单方式路由、§9 信号棒/限价单上下文辅助；`decision_nodes.py` 中仅剩最后的 `DecisionNodeEngine` 编排类。为完成 M3，本轮把 `DecisionNodeEngine.apply_stage1()` / `apply_stage2()` 移入独立模块 `decision_node_engine.py`，让 `decision_nodes.py` 退化为兼容 facade，继续稳定旧 import 路径。
