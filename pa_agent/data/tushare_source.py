@@ -154,13 +154,13 @@ class TushareSource(DataSource):
         token = self._configured_token()
         if not token:
             raise DataSourceTransientError(
-                "缺少 TUSHARE_TOKEN。请在 config/settings.json 的 tushare.token 填写，"
+                "缺少 TUSHARE_TOKEN。请在 config/settings.json 的 tushare.token 填写，"  # noqa: RUF001
                 "或设置本机环境变量后重启 PA Agent。"
             )
         try:
             import tushare as ts
         except ImportError as exc:
-            raise DataSourceTransientError("未安装 tushare，请执行: pip install tushare") from exc
+            raise DataSourceTransientError("未安装 tushare，请执行: pip install tushare") from exc  # noqa: RUF001
         ts.set_token(token)
         self._token = token
         self._connected = True
@@ -181,7 +181,7 @@ class TushareSource(DataSource):
             raise ValueError("Tushare 当前支持 1m / 5m / 15m / 30m / 1h / 1d")
         ts_code = normalize_tushare_symbol(symbol)
         if not _TS_CODE_RE.match(ts_code):
-            raise ValueError("A股代码无效，请输入 6 位代码，如 600519 或 000001")
+            raise ValueError("A股代码无效，请输入 6 位代码，如 600519 或 000001")  # noqa: RUF001
         self._symbol = ts_code
         self._timeframe = timeframe
         self._cache_key = None
@@ -263,7 +263,7 @@ class TushareSource(DataSource):
 
         freq = _MINUTE_FREQ_BY_TIMEFRAME[self._timeframe]
         bars_per_day = _MINUTE_BARS_PER_DAY[self._timeframe]
-        lookback_days = max(10, int(math.ceil(fetch_n / bars_per_day * 2.5)) + 7)
+        lookback_days = max(10, math.ceil(fetch_n / bars_per_day * 2.5) + 7)
         end_dt = datetime.now(tz=_CN_TZ)
         start_dt = end_dt - timedelta(days=lookback_days)
         start = start_dt.strftime("%Y-%m-%d 09:00:00")
@@ -282,7 +282,7 @@ class TushareSource(DataSource):
             msg = str(exc)
             if "频率超限" in msg:
                 raise DataSourceTransientError(
-                    f"Tushare 分钟线接口限频: {msg}。PA Agent 已缓存同一品种/周期，"
+                    f"Tushare 分钟线接口限频: {msg}。PA Agent 已缓存同一品种/周期，"  # noqa: RUF001
                     "请等待限频窗口结束后重试。"
                 ) from exc
             raise DataSourceTransientError(f"Tushare stk_mins 调用失败: {exc}") from exc
