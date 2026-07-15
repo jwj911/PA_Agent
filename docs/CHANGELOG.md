@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百一十一轮：继续 L7，扩展 Ruff 到 AI 基础叶子模块）
+
+本轮继续推进 **L7：CI 增强**。第一百一十轮已把 `ai/prompts` 纳入 focused Ruff；本轮继续评估 AI 源码侧剩余小范围。`decision_thresholds`、judge 相关模块、`trend_context`、`order_method_router` 等仍含较多中文业务 reason/prompt 文案与注释基线，因此本轮收窄到低风险的 AI 基础叶子模块 `bar_geometry.py` 与 `trace_nodes.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/ai/bar_geometry.py` 与 `pa_agent/ai/trace_nodes.py`。
+- **清理 trace 节点 lint**：移除 `trace_nodes.py` 中两处过期的 `# noqa: BLE001`，保留 `node_label` 惰性查询失败时的 fallback 行为。
+- **保持业务语义不变**：本轮不改 K 线几何计算、不改 `NodeFill` 字段、不改 trace dict 键序、不改 decision tree label fallback。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 AI 基础叶子模块。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/ai/bar_geometry.py pa_agent/ai/trace_nodes.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\ai\bar_geometry.py pa_agent\ai\trace_nodes.py` → 通过。
+- 相关测试：`$env:PYTHONPATH="$env:TEMP\pa_agent_hypothesis_dep"; py -3.12 -m pytest tests/unit/test_decision_tree.py tests/unit/test_decision_nodes_preflight.py tests/unit/test_decision_nodes_judges.py tests/unit/test_trend_context.py --tb=line -q -p no:cacheprovider` → **91 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+- `git diff --check` → 通过（仅显示 Windows 行尾提示）。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百一十轮：继续 L7，扩展 Ruff 到 ai/prompts 包）
 
 本轮继续推进 **L7：CI 增强**。第一百零九轮已把数据层小文件组纳入 focused Ruff；本轮继续收窄 AI 源码侧 Ruff 缺口，选择低噪声且直接承载 JSON schema 合同的 `pa_agent/ai/prompts` 包。
