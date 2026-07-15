@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第四十七轮：继续 M7，下沉 TradingView forming 倒计时判定）
+
+本轮继续推进 **M7：统一 forming bar 判定**。第四十五轮建立了 `DataSource.has_forming_bar_at_head(...)` 统一入口，第四十六轮已把 A 股源的 session 差异下沉为 override。本轮转向 `TradingViewSource`：它此前仍在 `latest_snapshot()` 内直接 import `seconds_until_bar_closes()` 并计算头部 bar 是否仍在形成。该逻辑属于 TradingView 数据源自身的时间戳语义（尤其是固定 exchange/broker offset 下的取模倒计时），应放到数据源 override 中，由 snapshot 和源内构建共享。
+
+### 代码清理
+
+- **`TradingViewSource.has_forming_bar_at_head(...)` override**：新增数据源级 forming 判定。空列表返回 `False`；缺少 timeframe 时回退 `not head.closed`；有 timeframe 时继续使用既有 `seconds_until_bar_closes(int(head.ts_open), timeframe, now_ms=...)`，`secs_left > 0` 即 forming。该实现保留原 `latest_snapshot()` 内联逻辑的取模倒计时语义，不改 TradingView 固定时间偏移处理。
+- **`latest_snapshot()` 复用统一入口**：`_latest_snapshot_inner()` 构造头部临时 `KlineBar(closed=True)` 后，不再内联 import/调用 `seconds_until_bar_closes()`，而是调用 `self.has_forming_bar_at_head([bar], self._timeframe)`，再按返回值写回 `closed=not still_forming`。输出 `KlineBar` 结构与既有行为保持一致。
+- **扩展 `tests/unit/test_data_source_forming_bar.py`**：新增 TradingView active head / boundary closed 两条 override 单测，以及一条 `_latest_snapshot_inner()` 无网络测试（stub `tvDatafeed.Interval` 和 `_fetch_hist_with_retry()`），证明 snapshot 构建链路确实复用 override，并把 override 返回的 forming 状态写回头部 `closed`。
+
+### 验证
+
+- `py_compile` 通过（`tradingview.py`、`test_data_source_forming_bar.py`，EXIT=0）。
+- `py -3.12 -m pytest tests/unit/test_data_source_forming_bar.py tests/unit/test_bar_close_wait.py tests/unit/test_snapshot_closed_only_buffer.py tests/unit/test_build_analysis_frame.py tests/unit/test_snapshot_indicator_warmup.py tests/unit/test_data_source_factory.py --tb=line -q -p no:cacheprovider` → **35 passed**。
+- `py -3.12 -m ruff check tests/unit/test_data_source_forming_bar.py` → **All checks passed**。
+- `tradingview.py` 全文件 ruff 仍存在既有 RUF/I001 基线告警（中文标点、旧 `noqa`、旧 import 排序等），本轮未做大文件顺手清理；新增 override 与调用迁移已通过编译和目标测试覆盖。
+- `git diff --check` 通过；仅提示 Windows 工作树 LF/CRLF 规范化 warning，无 whitespace error。
+
+---
+
 ## [Unreleased] — 2026-07-15（第四十六轮：继续 M7，下沉 A 股数据源 forming 判定 override）
 
 本轮继续推进 **M7：统一 forming bar 判定**。第四十五轮已在 `DataSource` ABC 上建立默认 `has_forming_bar_at_head(...)` 入口，并让 snapshot 构建优先调用数据源方法。本轮核查各数据源后，发现 A 股源存在一个必须由数据源自身表达的语义差异：`EastMoneySource` 的日线头部在 A 股交易日午休期间仍应视为 live/forming（`ashare_head_bar_live("1d")` 使用 09:30-15:00 trading day），而 `AkShareSource` 现有 `latest_snapshot()` 只在连续交易时段把头部标为未收盘（午休不 live）。通用 helper 无法同时表达这两个差异，因此本轮把两者各自的 live-head 规则下沉为 override。
