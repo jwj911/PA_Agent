@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import functools
-import json
 import logging
 import threading
 from pathlib import Path
@@ -15,7 +14,6 @@ from pa_agent.ai.chain_context import (
     normalize_stage1_assistant_for_chain,
     render_previous_prediction,
 )
-from pa_agent.ai.decision_stance import build_decision_stance_guidance, normalize_stance
 from pa_agent.ai.experience_renderer import render_experience
 from pa_agent.ai.kline_table_renderer import render_kline_feature_table, render_kline_table
 from pa_agent.ai.program_prefill_hint import render_program_prefill_hint
@@ -30,6 +28,7 @@ from pa_agent.ai.stage2_guidance import (
     render_transition_guidance,
     render_trend_conflict_guidance,
 )
+from pa_agent.ai.stage2_prompt_builder import Stage2PromptBuilder
 from pa_agent.data.base import KlineFrame
 from pa_agent.records.schema import AnalysisRecord
 
@@ -1148,6 +1147,32 @@ class PromptAssembler:
 
     # ── Stage 2 ───────────────────────────────────────────────────────────────
 
+    def _stage2_prompt_builder(self) -> Stage2PromptBuilder:
+        return Stage2PromptBuilder(
+            build_stage2_system_prompt=self._build_stage2_system_prompt,
+            load=self._load,
+            load_full_strategy_library=self._load_full_strategy_library,
+            prompt_settings=self._prompt_settings,
+            stage2_user_task_txt_files=stage2_user_task_txt_files,
+            build_next_cycle_prediction_instruction=_build_next_cycle_prediction_instruction,
+            stage2_api_task_rule=_STAGE2_API_TASK_RULE,
+            stage2_output_contract=_STAGE2_OUTPUT_CONTRACT,
+            next_bar_prediction_instruction=_NEXT_BAR_PREDICTION_INSTRUCTION,
+            next_bar_disabled_note=_NEXT_BAR_DISABLED_NOTE,
+            stage2_tail_reminder=_STAGE2_TAIL_REMINDER,
+            market_features_authority_note=_MARKET_FEATURES_AUTHORITY_NOTE,
+            render_trend_conflict_guidance=self._render_trend_conflict_guidance,
+            render_transition_guidance=self._render_transition_guidance,
+            render_planned_limit_hint=self._render_planned_limit_hint,
+            render_experience=self._render_experience,
+            render_previous_prediction=self._render_previous_prediction,
+            compact_stage1_for_stage2=self._compact_stage1_for_stage2,
+            render_simple_market_features_block=self._render_simple_market_features_block,
+            render_kline_table=self._render_kline_table,
+            render_kline_feature_table=self._render_kline_feature_table,
+            normalize_stage1_assistant_for_chain=self._normalize_stage1_assistant_for_chain,
+        )
+
     def build_stage2(
         self,
         frame: KlineFrame,
@@ -1157,20 +1182,13 @@ class PromptAssembler:
         *,
         decision_stance: str = "conservative",
     ) -> list[dict]:
-        """Build a standalone Stage 2 request (kept for tests/tools)."""
-        system_content = self._build_stage2_system_prompt()
-        user_content = self._build_stage2_user_prompt(
-            frame=frame,
-            stage1_json=stage1_json,
-            strategy_files=strategy_files,
-            experience_entries=experience_entries,
+        return self._stage2_prompt_builder().build_stage2(
+            frame,
+            stage1_json,
+            strategy_files,
+            experience_entries,
             decision_stance=decision_stance,
-            enable_next_bar_prediction=False,
         )
-        return [
-            {"role": "system", "content": system_content},
-            {"role": "user", "content": user_content},
-        ]
 
     def build_stage2_continuation(
         self,
@@ -1188,47 +1206,20 @@ class PromptAssembler:
         use_prefix_chain: bool | None = None,
         structure_flip_cooldown_bars: int = 3,
     ) -> list[dict]:
-        """Build Stage 2 messages, optionally chaining after Stage 1 for KV cache.
-
-        Prefix-chain mode (DeepSeek native, default when safe):
-          [system, user(S1…), assistant(S1 JSON), user(S2 task only)]
-
-        Standalone mode (OpenClaw Agent and similar):
-          [system, user(S2 task + full K-line tables)]
-        """
-        from pa_agent.ai.deepseek_client import supports_kv_prefix_chain
-
-        if use_prefix_chain is None:
-            use_prefix_chain = supports_kv_prefix_chain(provider_settings)
-
-        chain_after_s1 = bool(use_prefix_chain and stage1_messages)
-        stage2_user_content = self._build_stage2_user_prompt(
+        return self._stage2_prompt_builder().build_stage2_continuation(
             frame=frame,
+            stage1_messages=stage1_messages,
+            stage1_reply_content=stage1_reply_content,
             stage1_json=stage1_json,
             strategy_files=strategy_files,
             experience_entries=experience_entries,
             decision_stance=decision_stance,
             previous_record=previous_record,
             enable_next_bar_prediction=enable_next_bar_prediction,
-            omit_kline_block=chain_after_s1,
+            provider_settings=provider_settings,
+            use_prefix_chain=use_prefix_chain,
             structure_flip_cooldown_bars=structure_flip_cooldown_bars,
         )
-
-        if chain_after_s1:
-            assistant_content = self._normalize_stage1_assistant_for_chain(
-                stage1_json,
-                stage1_reply_content,
-            )
-            chain = [dict(m) for m in stage1_messages]
-            chain.append({"role": "assistant", "content": assistant_content})
-            chain.append({"role": "user", "content": stage2_user_content})
-            return chain
-
-        system_content = self._build_stage2_system_prompt()
-        return [
-            {"role": "system", "content": system_content},
-            {"role": "user", "content": stage2_user_content},
-        ]
 
     def _build_stage2_user_prompt(
         self,
@@ -1243,130 +1234,16 @@ class PromptAssembler:
         omit_kline_block: bool = False,
         structure_flip_cooldown_bars: int = 3,
     ) -> str:
-        """Build the Stage 2 task turn for standalone or prefix-chain mode."""
-        from pa_agent.ai.decision_continuity import (
-            build_continuity_context,
-            render_continuity_prompt_block,
-        )
-
-        stance_block = build_decision_stance_guidance(normalize_stance(decision_stance))
-        continuity_ctx = build_continuity_context(
+        return self._stage2_prompt_builder().build_stage2_user_prompt(
             frame=frame,
             stage1_json=stage1_json,
+            strategy_files=strategy_files,
+            experience_entries=experience_entries,
+            decision_stance=decision_stance,
             previous_record=previous_record,
-            cooldown_bars=structure_flip_cooldown_bars,
-        )
-        continuity_block = render_continuity_prompt_block(continuity_ctx)
-        conflict_block = self._render_trend_conflict_guidance(stage1_json)
-        transition_block = self._render_transition_guidance(stage1_json)
-        planned_limit_block = self._render_planned_limit_hint(stage1_json, frame)
-        stage2_parts = [
-            stance_block,
-            continuity_block,
-            conflict_block,
-            transition_block,
-            planned_limit_block,
-            *(
-                self._load(name)
-                for name in stage2_user_task_txt_files(
-                    strategy_files,
-                    direction=str(stage1_json.get("direction", "") or ""),
-                    load_full_strategy_library=self._load_full_strategy_library(),
-                )
-            ),
-        ]
-        if experience_entries:
-            max_chars = 400
-            if self._prompt_settings is not None:
-                max_chars = int(
-                    getattr(
-                        self._prompt_settings,
-                        "experience_max_chars_per_entry",
-                        400,
-                    )
-                )
-            stage2_parts.append(
-                self._render_experience(
-                    experience_entries,
-                    max_chars_per_entry=max_chars,
-                )
-            )
-        stage2_parts.append(_STAGE2_OUTPUT_CONTRACT)
-        if enable_next_bar_prediction:
-            stage2_parts.append(_NEXT_BAR_PREDICTION_INSTRUCTION)
-        else:
-            stage2_parts.append(_NEXT_BAR_DISABLED_NOTE)
-        stage2_parts.append(
-            _build_next_cycle_prediction_instruction(enable_next_bar=enable_next_bar_prediction)
-        )
-        # Static strategy / contract blocks first → better KV prefix reuse across runs.
-        stage2_context = "\n\n---\n\n".join(p for p in stage2_parts if p)
-
-        from pa_agent.util.price_tick import format_breakout_tick_hint
-
-        n_bars = len(frame.bars)
-        breakout_tick_hint = format_breakout_tick_hint(frame)
-        prev_pred_block = self._render_previous_prediction(previous_record)
-        compact_s1 = json.dumps(
-            self._compact_stage1_for_stage2(stage1_json),
-            ensure_ascii=False,
-            indent=2,
-        )
-
-        if omit_kline_block:
-            kline_block = (
-                "## K线数据\n\n"
-                "完整 K 线表与几何特征已包含在上方阶段一用户消息中"
-                "（序号按当前分析窗口编号，K1=最新已收盘）。"
-                "阶段二须结合该表与下方阶段一诊断 JSON 做交易者方程与定价。\n\n"
-            )
-            simple_features_block = self._render_simple_market_features_block(frame)
-            if simple_features_block:
-                kline_block += (
-                    _MARKET_FEATURES_AUTHORITY_NOTE
-                    + simple_features_block
-                    + "\n\n"
-                )
-            if breakout_tick_hint:
-                kline_block += f"{breakout_tick_hint}\n\n"
-        else:
-            kline_table = self._render_kline_table(frame)
-            feature_table = self._render_kline_feature_table(frame)
-            simple_features_block = self._render_simple_market_features_block(frame)
-            kline_block = (
-                f"## K线数据(共{n_bars}根，含阳阴列；各节点 bar_range 由你据实填写)\n\n"
-                f"{kline_table}\n\n"
-                "## K线几何特征(程序预计算，仅作逐棒客观辅助；不得替代交易者方程；"
-                "基于当前 N 根已收盘 K 线，指标非全历史延续)\n\n"
-                f"{feature_table}\n\n"
-            )
-            if simple_features_block:
-                kline_block += f"{simple_features_block}\n\n"
-            if breakout_tick_hint:
-                kline_block += f"{breakout_tick_hint}\n\n"
-
-        kline_intro = (
-            "完整 K 线表见上方阶段一用户消息。\n\n"
-            if omit_kline_block
-            else "本消息下方附有完整 K 线表与几何特征。\n\n"
-        )
-        return (
-            f"{_STAGE2_API_TASK_RULE}\n\n"
-            "## 阶段二任务\n\n"
-            "你现在独立执行阶段二：交易决策、风险收益和下单方式评估（基于阶段一诊断结果）。\n"
-            "以下 JSON 是程序校验通过后的阶段一诊断结果，请以此为权威依据；"
-            f"{kline_intro}"
-            f"{stage2_context}\n\n"
-            "---\n\n"
-            f"## 阶段一诊断结果\n\n```json\n"
-            f"{compact_s1}"
-            f"\n```\n\n"
-            f"{kline_block}"
-            f"{prev_pred_block + chr(10) if prev_pred_block else ''}"
-            f"请根据以上诊断和K线数据,按《二元决策.txt》§3–§11、§14 输出 JSON 决策结果"
-            f"(含 decision_trace 与 terminal)。\n"
-            f"注意:如果判断不下单,entry_price、take_profit_price、take_profit_price_2、stop_loss_price、order_direction 必须全部为 null。\n\n"
-            f"{_STAGE2_TAIL_REMINDER}"
+            enable_next_bar_prediction=enable_next_bar_prediction,
+            omit_kline_block=omit_kline_block,
+            structure_flip_cooldown_bars=structure_flip_cooldown_bars,
         )
 
     def stage2_system_prompt_only(
