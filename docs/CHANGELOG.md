@@ -13,6 +13,25 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百三十八轮：继续 L7，扩展 Ruff 到 status bar widget）
+
+本轮继续推进 **L7：CI 增强**。第一百三十七轮已把 prediction format helper 纳入 focused Ruff；本轮继续从 GUI widgets 中筛选小范围候选，选择仅有 docstring 标点 lint 的 `pa_agent/gui/widgets/status_bar.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/gui/widgets/status_bar.py`。
+- **清理 status bar docstring lint**：将 `set_progress()` 文档中的 `0–100` 改为 ASCII `0-100`，消除 Ruff `RUF002`。
+- **保持运行逻辑不变**：本轮不改 `EnhancedStatusBar` 的消息显示、进度条取值、颜色切换、TPS 显示、样式或用户可见标签。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确 Ruff 门禁已覆盖 status bar widget。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/gui/widgets/status_bar.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/gui/widgets/status_bar.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百三十七轮：继续 L7，扩展 Ruff 到 prediction format helper）
 
 本轮继续推进 **L7：CI 增强**。第一百三十六轮已覆盖 East Money client；本轮避开 `pa_agent/notify`、`settings.py` 与 GUI 大窗口等中文文案密集候选，选择已经 Ruff clean、边界很小的 `pa_agent/gui/prediction_format.py`。
