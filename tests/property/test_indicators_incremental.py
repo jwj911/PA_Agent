@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import math
-import pytest
-from hypothesis import given, assume, settings as h_settings
+
+from hypothesis import assume, given
+from hypothesis import settings as h_settings
 from hypothesis import strategies as st
-from pa_agent.indicators.ema import ema_full, ema_incremental, make_ema_state, state_after
-from pa_agent.indicators.atr import atr_full, atr_incremental, make_atr_state, state_after_atr
+
+from pa_agent.indicators.atr import atr_full, atr_incremental, state_after_atr
+from pa_agent.indicators.ema import ema_full, ema_incremental, state_after
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -30,7 +32,7 @@ def test_ema_incremental_matches_full_at_last(
     **Validates: Requirements PR8.1**
     """
     assume(len(values) >= period)
-    full_result = ema_full(values + [x], period)
+    full_result = ema_full([*values, x], period)
     expected = full_result[-1]
 
     state = state_after(values, period)
@@ -104,7 +106,7 @@ def test_atr_incremental_matches_full_at_last(
 
     extra_l = max(0.01, extra_h - extra_l_offset)
 
-    full_result = atr_full(highs + [extra_h], lows + [extra_l], closes + [extra_c], period)
+    full_result = atr_full([*highs, extra_h], [*lows, extra_l], [*closes, extra_c], period)
     expected = full_result[-1]
 
     state = state_after_atr(highs, lows, closes, period)

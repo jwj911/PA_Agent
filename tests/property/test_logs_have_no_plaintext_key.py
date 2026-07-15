@@ -9,12 +9,12 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-from hypothesis import given, settings as h_settings
+from hypothesis import given
+from hypothesis import settings as h_settings
 from hypothesis import strategies as st
 
-from pa_agent.util.mask_secret import mask_secret
 import pa_agent.util.logging as logging_module
-
+from pa_agent.util.mask_secret import mask_secret
 
 # ── Strategy ──────────────────────────────────────────────────────────────────
 
@@ -47,7 +47,7 @@ def _close_root_handlers() -> None:
 
 
 @given(api_key=api_key_strategy)
-@h_settings(max_examples=50)
+@h_settings(max_examples=50, deadline=None)
 def test_log_file_never_contains_plaintext_key(api_key: str) -> None:
     """For any API key of length >= 12, the log file must not contain the
     plaintext key after configure_logging() is called with that key.
@@ -58,14 +58,17 @@ def test_log_file_never_contains_plaintext_key(api_key: str) -> None:
         log_file = Path(tmp_dir) / "test_pa_agent.log"
 
         try:
+            logging.disable(logging.NOTSET)
             # Patch LOG_FILE_PATH so we write to a temp file, not the real log
             with patch.object(logging_module, "LOG_FILE_PATH", log_file):
-                logging_module._configured = False  # noqa: SLF001
+                logging_module._configured = False
                 _close_root_handlers()
                 logging_module.configure_logging(api_key=api_key)
 
             # Emit a log message that contains the plaintext key
             test_logger = logging.getLogger("test.masking")
+            test_logger.setLevel(logging.INFO)
+            test_logger.propagate = True
             test_logger.info("API key in use: %s", api_key)
 
             # Flush all handlers

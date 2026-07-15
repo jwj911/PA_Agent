@@ -1,9 +1,8 @@
 """Property-based tests for analysis snapshot from bar lists (PR1)."""
 from __future__ import annotations
 
-import math
-
-from hypothesis import given, settings as h_settings
+from hypothesis import given
+from hypothesis import settings as h_settings
 from hypothesis import strategies as st
 
 from pa_agent.data.base import KlineBar
@@ -53,11 +52,12 @@ def test_analysis_frame_seq_bijection(n: int, extra: int) -> None:
 )
 @h_settings(max_examples=200)
 def test_live_frame_forming_bar_is_seq1(n: int, extra: int) -> None:
-    """build_live_frame keeps forming bar at seq=1 when present at index 0."""
+    """build_live_frame keeps an actively forming bar at seq=0 when present at index 0."""
     raw = _bars_with_forming(n, extra)
-    frame = build_live_frame(raw, n, symbol="TEST", timeframe="1h")
+    now_ms = int(raw[0].ts_open) + 1_000
+    frame = build_live_frame(raw, n, symbol="TEST", timeframe="1h", now_ms=now_ms)
     assert frame is not None
-    assert frame.bars[0].seq == 1
+    assert frame.bars[0].seq == 0
     assert frame.bars[0].closed is False
 
 

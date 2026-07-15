@@ -23,7 +23,7 @@ jobs:
       - name: Verify install
         run: python -c "import pa_agent; print('OK')"
 
-      - name: Run targeted unit tests
+      - name: Run targeted tests
         env:
           QT_QPA_PLATFORM: offscreen
         run: >
@@ -110,6 +110,7 @@ jobs:
           tests/unit/test_analysis_history.py
           tests/unit/test_demo_record_loader.py
           tests/unit/test_demo_replayer.py
+          tests/property
           --tb=line
           -q
           -p pytest_cov
@@ -221,3 +222,4 @@ jobs:
           tests/unit/test_analysis_history.py
           tests/unit/test_demo_record_loader.py
           tests/unit/test_demo_replayer.py
+          tests/property

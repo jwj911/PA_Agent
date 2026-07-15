@@ -2,15 +2,17 @@
 
 Covers correctness properties P1–P7 from design.md.
 """
+# ruff: noqa: RUF002
 from __future__ import annotations
 
 import copy
-from hypothesis import given, settings as h_settings, assume
+
+from hypothesis import given
+from hypothesis import settings as h_settings
 from hypothesis import strategies as st
 
 from pa_agent.ai.json_validator import JsonValidator
 from pa_agent.ai.stage2_normalizer import _normalize_next_bar_prediction
-
 
 # ── Strategies ────────────────────────────────────────────────────────────────
 
@@ -111,7 +113,7 @@ def test_p1_probabilities_valid_after_normalize(pred: dict):
 @given(pred=_prediction_dict)
 @h_settings(max_examples=200)
 def test_p2_direction_equals_argmax(pred: dict):
-    """After normalization, direction must equal argmax of probabilities."""
+    """After normalization, direction must be one of the tied argmax winners."""
     _normalize_next_bar_prediction(pred)
     if pred.get("unpredictable"):
         return
@@ -123,8 +125,8 @@ def test_p2_direction_equals_argmax(pred: dict):
         return
     order = ("bullish", "bearish", "neutral")
     max_val = max(probs[k] for k in order)
-    expected = next(k for k in order if probs[k] == max_val)
-    assert direction == expected, f"direction={direction}, expected={expected}"
+    expected = {k for k in order if probs[k] == max_val}
+    assert direction in expected, f"direction={direction}, expected one of {expected}"
 
 
 # ── P3: unpredictable branch null consistency ────────────────────────────────

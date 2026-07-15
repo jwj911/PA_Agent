@@ -4,16 +4,15 @@ NFR1.1: Stage 2 latency overhead ≤ 15%
 NFR1.2: Prompt token delta ≤ 800
 NFR1.3: Panel render ≤ 50ms
 """
+# ruff: noqa: RUF001
 from __future__ import annotations
 
 import sys
 import time
 from pathlib import Path
 
-import pytest
-
-from pa_agent.ai.prompt_assembler import PromptAssembler, _NEXT_BAR_PREDICTION_INSTRUCTION
-from pa_agent.data.base import KlineBar, KlineFrame, IndicatorBundle
+from pa_agent.ai.prompt_assembler import _NEXT_BAR_PREDICTION_INSTRUCTION, PromptAssembler
+from pa_agent.data.base import IndicatorBundle, KlineBar, KlineFrame
 
 
 def _make_frame(n: int = 50) -> KlineFrame:
@@ -90,10 +89,11 @@ def test_prompt_token_delta_within_budget(tmp_path: Path):
 
 def test_panel_render_time():
     """set_decision with prediction must complete in ≤ 50ms."""
-    from pa_agent.gui.decision_panel import DecisionPanel
     from PyQt6.QtWidgets import QApplication
 
-    app = QApplication.instance() or QApplication(sys.argv)
+    from pa_agent.gui.decision_panel import DecisionPanel
+
+    _app = QApplication.instance() or QApplication(sys.argv)
     panel = DecisionPanel()
 
     decision = {

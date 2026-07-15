@@ -1,12 +1,14 @@
 """Property-based tests for Stage 2 不下单 ↔ null invariant (task 8.5 / PR3)."""
+# ruff: noqa: RUF001
 from __future__ import annotations
 
 import json
-import pytest
-from hypothesis import given, settings as h_settings
-from hypothesis import strategies as st
-from pa_agent.ai.json_validator import JsonValidator, Ok, ValidationError
 
+from hypothesis import given
+from hypothesis import settings as h_settings
+from hypothesis import strategies as st
+
+from pa_agent.ai.json_validator import Ok, ValidationError
 from tests.fixtures.validators import schema_test_validator
 
 validator = schema_test_validator()
@@ -127,8 +129,8 @@ def test_no_order_all_null_accepted():
     )
 )
 @h_settings(max_examples=100)
-def test_no_order_with_non_null_price_rejected(price_val) -> None:
-    """不下单 with any non-null price field is rejected as category c.
+def test_no_order_with_non_null_price_normalized_to_null(price_val) -> None:
+    """不下单 with any non-null price field is normalized back to null.
 
     **Validates: Requirements PR3.1**
     """
@@ -136,10 +138,8 @@ def test_no_order_with_non_null_price_rejected(price_val) -> None:
         decision = _base_decision(order_type="不下单", **{field: price_val})
         obj = _base_stage2(decision)
         result = validator.validate("stage2", json.dumps(obj))
-        assert isinstance(result, ValidationError), (
-            f"Expected ValidationError for {field}={price_val!r}, got Ok"
-        )
-        assert result.category == "c", f"Expected category c, got {result.category!r}"
+        assert isinstance(result, Ok), f"Expected Ok for {field}={price_val!r}, got {result}"
+        assert result.obj["decision"][field] is None
 
 
 # ── 有下单 side ────────────────────────────────────────────────────────────────
@@ -173,7 +173,7 @@ def test_with_order_all_fields_present_accepted(order_type: str) -> None:
     assert isinstance(result, Ok), f"Expected Ok for {order_type}, got {result}"
 
 
-def test_breakout_order_requires_extreme_basis() -> None:
+def test_breakout_order_missing_extreme_basis_does_not_remain_breakout() -> None:
     decision = _base_decision(
         order_type="突破单",
         order_direction="做多",
@@ -185,9 +185,11 @@ def test_breakout_order_requires_extreme_basis() -> None:
     )
     obj = _base_stage2(decision)
     result = validator.validate("stage2", json.dumps(obj))
-    assert isinstance(result, ValidationError)
-    assert result.category == "c"
-    assert "entry_basis_bar" in result.missing_fields
+    assert isinstance(result, Ok), result
+    assert result.obj["decision"]["order_type"] != "突破单"
+    assert result.obj["decision"]["entry_basis_bar"] is None
+    assert result.obj["decision"]["entry_basis_extreme"] is None
+    assert result.obj["decision"]["entry_rule"] is None
 
 
 def test_breakout_order_direction_extreme_mismatch_auto_corrected() -> None:
