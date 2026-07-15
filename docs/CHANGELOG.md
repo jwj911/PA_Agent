@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-14（第三十一轮：继续拆分 PromptAssembler，提取 stage2_guidance 阶段二指导渲染器簇 R-M1-3）
+
+本轮为**大文件拆分 M1 的第三刀**（第二十九轮已切 `kline_table_renderer.py`、第三十轮已切 `experience_renderer.py`，`prompt_assembler.py` 从 1963→1902→1880 行）。前两刀分别切走报告 §5.2 M1 点名的 KlineTableRenderer 与 ExperienceRenderer 产出；本刀转向 Stage 2 user 消息里一组**由阶段一诊断字段派生的确定性指导块渲染器**——把它们抽成独立叶子模块。这一簇由四个 `@staticmethod` 组成：`_render_trend_conflict_guidance`（新旧趋势冲突指导，Brooks 并列原则）、`_render_transition_guidance`（状态转换期风险指导，按 transition_risk 高/中/低给信号把握与入场选择）、`_parse_level_midpoint`（支撑/阻力位字符串解析为数值中点，`_render_planned_limit_hint` 专用辅助）、`_render_planned_limit_hint`（通道/区间结构下的 §9.0/§9.0P 计划型限价提示，含 ATR 邻近度与近支撑/阻力定价）。选它作为 M1 第三刀的关键动机：① 它是一个**高内聚自足簇**——三个指导渲染器 + 一个私有解析辅助逻辑闭环，`_parse_level_midpoint` 仅被 `_render_planned_limit_hint` 内部调用，三个渲染器仅在 `_build_stage2_user_prompt`（L1575-1577）经 `self._render_*` 调用，不被其他逻辑纠缠；② 依赖**仅 stdlib `math` + PyQt6-free 的 `KlineFrame` 叶子**——不触 `market_features`→PyQt6 链，故新模块可**独立 import 并运行真实 runtime 等价验证**；③ 迁出后 `math.` 在 `prompt_assembler.py` 内**仅剩** `_render_planned_limit_hint` 一处引用，随簇迁出后 `import math` 成为孤儿可一并删除；④ `stage2_guidance` ← `prompt_assembler` **无环**（新模块不回依赖 `prompt_assembler`）。
+
+### 代码清理
+
+- **新增 `pa_agent/ai/stage2_guidance.py`（阶段二指导渲染器簇模块，PyQt6-free 叶子）**：把四个方法（去掉 `@staticmethod` 装饰降为模块函数、更名去掉前导下划线为 `render_trend_conflict_guidance`/`render_transition_guidance`/`parse_level_midpoint`/`render_planned_limit_hint`）**逐字节搬迁**至新模块（保留全部块头「## 新旧趋势冲突指导（Brooks 并列原则）」/「## 状态转换期风险指导」/「## §9.0 / §9.0P 计划型限价提示…」、中文指导串、`transition_risk` 高/中/低三分支文案、`{...:.4f}` 数值格式化、`max(atr * 0.35, ...)` 邻近度算术、`math.isnan` warm-up 分支；`_render_planned_limit_hint` 内两处 `PromptAssembler._parse_level_midpoint(lv)` 调用改为模块内 `parse_level_midpoint(lv)`）。import 仅 `from __future__ import annotations` + `math` + `from pa_agent.data.base import KlineFrame`，无其他 import 期项目依赖、无副作用。模块 docstring 说明其定位、PyQt6-free 叶子依赖、`PromptAssembler` staticmethod 重绑定约束、以及「块头/中文指导串/数值格式化须逐字节一致（模型按此块形对齐）」的约束。
+- **`prompt_assembler.py` 改为从 `stage2_guidance` 导入并重绑定 staticmethod**：删除四个方法体（含 `@staticmethod` 装饰，共约 154 行）；在顶部 import 组新增 `from pa_agent.ai.stage2_guidance import (parse_level_midpoint, render_planned_limit_hint, render_transition_guidance, render_trend_conflict_guidance)`；在 `PromptAssembler` 类体新增「Stage-2 contextual guidance rendering」区以 4 行 `_render_trend_conflict_guidance = staticmethod(render_trend_conflict_guidance)` / `_render_transition_guidance = staticmethod(render_transition_guidance)` / `_parse_level_midpoint = staticmethod(parse_level_midpoint)` / `_render_planned_limit_hint = staticmethod(render_planned_limit_hint)` **重绑定**，使 `_build_stage2_user_prompt` 链内 `self._render_trend_conflict_guidance(...)`/`self._render_transition_guidance(...)`/`self._render_planned_limit_hint(...)` 调用**逐字节兼容**；删除已成孤儿的 `import math`（迁出后本文件内 `math.` 已无引用）。文件从 1880 行降至 1736 行。
+- **调用站点零改动**：`PromptAssembler` 内 3 处 `self._render_*_guidance`/`self._render_planned_limit_hint`（`_build_stage2_user_prompt`）调用因 staticmethod 重绑定仍从 `PromptAssembler` 命名空间取到同一函数。
+
+### 验证
+
+- `py_compile` 通过（`stage2_guidance.py`、`prompt_assembler.py`，EXIT=0）。
+- **AST 结构核验**：`ast.walk` 确认 `prompt_assembler.py` 中已无这四个渲染器/辅助的函数定义残留（`RESIDUAL_DEFS []`，全部迁出，仅余 4 行 staticmethod 重绑定）。
+- **真实 runtime 等价对比**（新模块 PyQt6-free 可独立 import）：从 `git show HEAD:prompt_assembler.py` 用 AST 提取拆分前四个 `@staticmethod` 方法体、`exec` 重建为 `old_*`，与新模块 `render_*`/`parse_level_midpoint` 在多组用例上逐例对比返回值——trend_conflict 6 例（无 trend_context/非 dict/无 conflict/含 spike 等）、transition 7 例（stable/transitioning×高中低/未知 risk）、parse_level_midpoint 12 例（None/空/纯数/区间/非法/多段）、planned_limit_hint 7 例（非目标周期/空 bars/近支撑/近阻力/NaN ATR/非法 levels/neutral 方向）——`STAGE2_GUIDANCE_EQ` **True**。
+- `ruff check` 对比基线：拆分前 HEAD `prompt_assembler.py` 为 **1372** 条、Counter `{I001:2, RUF001:1364, RUF003:2, RUF100:2, SIM102:2}`；拆分后 `prompt_assembler.py` 降至 1312、新模块 `stage2_guidance.py` 携 60 条（58×RUF001 全角标点 + 2×SIM102 嵌套 if，均随 hint 逻辑迁入的既有类别），合计 **1372**，**逐类别 Counter 完全一致、零净新增告警**。
+- `git diff` 密钥扫描（`sk-...` / `api_key` / `Bearer` / `secret=` / `token=`）无命中——纯结构搬迁，无密钥。
+- **既有失败甄别**：`test_prompt_assembler.py` 因 import `PromptAssembler` 经 `market_features`→`util/__init__`→`event_bus`→PyQt6 在本机无法收集，属**既有环境缺口**（本机缺 PyQt6），与本轮纯结构搬迁无关；本轮迁出的渲染器已由 PyQt6-free 的 runtime 等价脚本独立验证。
+
+---
+
 ## [Unreleased] — 2026-07-14（第三十轮：继续拆分 PromptAssembler，提取 experience_renderer 经验库渲染器 R-M1-2）
 
 本轮为**大文件拆分 M1 的第二刀**（第二十九轮 `kline_table_renderer.py` 已把 K 线表渲染器簇拆出，`prompt_assembler.py` 从 1963 行降至 1902 行）。首刀切走了 **KlineTableRenderer 产出**，本刀转向报告 §5.2 M1 点名的另一产出——**ExperienceRenderer**，即把「阶段二 user 消息」中折叠最近经验库案例的纯文本块渲染器 `_render_experience` 抽成独立叶子模块。它是把经验库条目（dict / 带 `content` 属性对象 / 纯字符串）落地成「## 经验库(最近案例,供参考)」文本块的确定性生成器：逐条 `json.dumps(indent=2)` 序列化、超 `max_chars_per_entry`（默认 400）截断加省略号、每条包 markdown ```json 围栏。选它作为 M1 第二刀的关键动机：① 它是一个**极简自足单元**——单个 `@staticmethod`，除 `build_stage2`/`stage2_system_prompt_only` 链的唯一内部调用点（`self._render_experience(...)`）外不被其他逻辑纠缠；② 依赖**纯 stdlib**——只 `json`（无任何项目 import），故新模块可**独立 import 并运行真实 runtime 等价验证**（同 KlineTableRenderer 一样绕开 `market_features`→PyQt6 触链）；③ `experience_renderer` ← `prompt_assembler` **无环**（新模块不回依赖 `prompt_assembler`）。
