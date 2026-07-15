@@ -13,6 +13,25 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第三十七轮：继续拆分 TwoStageOrchestrator.submit() 第四刀，提取 _build_stage2_messages 阶段二 prompt 组装）
+
+本轮为**大文件拆分 M4 的第四刀**（第三十六轮第三刀已切 `_try_gate_short_circuit`，`submit()` 从 575 行降至 552 行）。M4 剩余的 `_run_stage2` 主体（Steps 14-19）内，闸门短路终局已于上一轮外提；本轮继续剥离其中**纯函数片段** Step 14（阶段二 prompt 组装）。该段结构与第一刀 `_route_and_load_experience` 同构——**无闭包、无 early-return、无副作用**：先从 `self._settings.general` 解析两个 settings 标志（`enable_next_bar_prediction` → `_enable_next_bar`、`structure_flip_cooldown_bars` → `_flip_cooldown`，均带 `getattr` 兜底），再调 `self._assembler.build_stage2_continuation(...)` 组装 `messages_s2`。因 `_enable_next_bar`/`_flip_cooldown` 在后续 Step 17（校验 `validate_kwargs`）、Step 18（`stage2_json.pop("next_bar_prediction")`）、Step 19.5（`_persist_result` 的预测日志）均被复用，方法返回 `(messages_s2, enable_next_bar, flip_cooldown)` 三元组，`submit()` 内以三元解包接收。剥离本段后，Stage 2 区仅余不可再分的**含闭包调用/校验核心**（Steps 15-18 的两组 `nonlocal` 流式闭包 `_on_s2_reasoning`/`_on_s2_content`/`_call_s2_retry` + 网络错误/取消/校验失败三终局），留待后续轮次处理。
+
+### 代码清理
+
+- **`pa_agent/orchestrator/two_stage.py` 新增纯实例方法 `_build_stage2_messages(self, *, frame, messages_s1, reply_s1, stage1_json, strategy_files, experience_entries, record, previous_record) -> tuple[list[dict], bool, int]`**：把 `submit()` 内 Step 14（`_enable_next_bar`/`_flip_cooldown` 两 settings 标志解析 + `build_stage2_continuation` 组装）**逐字节搬迁**为独立方法，放在 `_try_gate_short_circuit` 之后、`# ── Public API ──` 分隔线之前。逻辑完全不变：`bool(getattr(getattr(self._settings, "general", None), "enable_next_bar_prediction", False))`、`int(getattr(..., "structure_flip_cooldown_bars", 3) or 3)`、`build_stage2_continuation(frame/stage1_messages/stage1_reply_content/stage1_json/strategy_files/experience_entries/decision_stance/previous_record/enable_next_bar_prediction/provider_settings/structure_flip_cooldown_bars=...)`，末尾 `return messages_s2, enable_next_bar, flip_cooldown`。
+- **`submit()` 内 Step 14 块替换为三元解包调用**：`messages_s2, _enable_next_bar, _flip_cooldown = self._build_stage2_messages(frame=..., messages_s1=..., reply_s1=..., stage1_json=..., strategy_files=..., experience_entries=..., record=..., previous_record=...)`，紧跟 Step 13 闸门守卫之后。`submit()` 从 552 行降至 538 行。
+
+### 验证
+
+- `py_compile` 通过（`two_stage.py`，EXIT=0）。
+- **AST 结构核验**：`ast.walk` 确认 `TwoStageOrchestrator` 类体已含 `_build_stage2_messages` 方法，`submit()` 现跨 547-1084 行（538 行）。
+- **集成测试基线对比**：核心 submit-path 套件（`test_gate_shortcircuit` + `test_two_stage_happy_path`/`_no_order_with_prices`/`_stage1_syntax`/`_stage1_missing_field`/`_stage2_invalid_value`/`_network_timeout`/`_user_cancel` + `test_decision_nodes_orchestrator`）**13 passed / 1 failed**，进度串 `..F...........`——唯一失败 `test_no_order_with_non_null_price_fails_stage2` 为**既有失败**（该测试用不含业务规则的 `schema_test_validator()`，与第三十四/三十五/三十六轮记录一致），拆分前后行为逐字节一致。
+- `ruff check` 对比基线：`git show HEAD:two_stage.py` 与拆分后同为 **40 条**，逐类别 Counter 完全一致（`E402:11, I001:1, RUF001:22, RUF100:1, UP037:5`），**零净新增告警**。
+- `git diff` 密钥扫描（`api_key`/`sk-`/`secret`/`Bearer`/`password`/`token`）无命中——纯结构搬迁。
+
+---
+
 ## [Unreleased] — 2026-07-15（第三十六轮：继续拆分 TwoStageOrchestrator.submit() 第三刀，提取 _try_gate_short_circuit 闸门短路终局）
 
 本轮为**大文件拆分 M4 的第三刀**（第三十五轮第二刀已切 `_persist_result`，`submit()` 从约 601 行降至 575 行）。roadmap（`docs/backend_review_report.md` §5 L262）M4 剩余目标原列为 `_run_stage1`（Steps 3-9）与 `_run_stage2`（Steps 12-19）两大块。核查 `submit()` 现状后**细化了拆分粒度**：`_run_stage2`（Steps 12-19）经通读发现内含**五处 `return record` early-return 终局**（Step 12 取消检查、Step 13 闸门短路、Step 15 网络错误、Step 16 取消检查、Step 17 校验失败）与**两组 `nonlocal` 流式闭包**（`_on_s2_reasoning`/`_on_s2_content` 及 retry 内的 `_call_s2_retry`），整块一次性外提约 284 行、且须引入新的控制流信号类型，违背用户的**原子提交**偏好、风险过高。因此本轮改切其中**最自足的单一终局分支**——Step 13 的闸门短路块（`gate_result ∈ {wait, unknown}` 时程序本地合成阶段二结果、不调模型、落盘返回）：它是「计算 → `save_full` → `RecordSaved` → `return record`」的单出口块，**无闭包、无 `nonlocal`**，结构与第二刀 `_persist_result` 同构。外提为返回 `AnalysisRecord | None` 的守卫方法（返回 `None` 表示闸门放行、`submit()` 继续 Step 14 正常流程），**不引入任何新类型**，保持提交原子、低风险。
