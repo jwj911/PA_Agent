@@ -13,6 +13,29 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第五十轮：完成 M3，提取 DecisionNodeEngine 编排层）
+
+本轮回到后端审查报告 §5.2 的 **M3：拆分 `decision_nodes.py`** 做收官。此前 M3 已陆续拆出阈值常量、几何原语、preflight、trace 结果层、全部 section-judge、override 裁决、§11 下单方式路由、§9 信号棒/限价单上下文辅助；`decision_nodes.py` 中仅剩最后的 `DecisionNodeEngine` 编排类。为完成 M3，本轮把 `DecisionNodeEngine.apply_stage1()` / `apply_stage2()` 移入独立模块 `decision_node_engine.py`，让 `decision_nodes.py` 退化为兼容 facade，继续稳定旧 import 路径。
+
+### 代码清理
+
+- **新增 `pa_agent/ai/decision_node_engine.py`**：承接原 `DecisionNodeEngine` 类，保留 `apply_stage1()` / `apply_stage2()` 的编排职责：调用 diagnostic / direction / always-in / signal-bar / order-method / override / trace 等已拆出的模块，写回 `gate_trace`、`decision_trace`、`trend_context` 和 `bar_analysis.always_in`。除格式收敛与安全等价的 `program_nodes = [node_91, node_92, node_93, node_95, *sec11_nodes]` 外，不改变决策语义和中文 reason 串。
+- **`decision_nodes.py` 缩为兼容 facade**：删除内联 `DecisionNodeEngine` 实现，改为从 `decision_node_engine.py` 导入并重导出；同时继续重导出历史调用点依赖的 `judge_*`、`route_order_method`、`is_planned_limit_order`、`check_preflight_data`、`NodeFill`、三个阈值常量等名字。旧的 `from pa_agent.ai.decision_nodes import ...` 路径保持可用。
+- **补充 `__all__`**：显式列出 facade 的兼容导出面，降低后续清理时误删历史 import 名字的风险。
+
+### 验证
+
+- `py_compile` 通过（`decision_nodes.py`、`decision_node_engine.py`、`stage1_normalizer.py`、`stage2_normalizer.py`、`program_prefill_hint.py`，EXIT=0）。
+- import 核验通过：从 `pa_agent.ai.decision_nodes` 导入 `DecisionNodeEngine`、所有历史 judges/helpers/thresholds，并确认 `DecisionNodeEngine is pa_agent.ai.decision_node_engine.DecisionNodeEngine`。
+- `py -3.12 -m pytest tests/unit/test_trend_context.py tests/unit/test_decision_nodes_orchestrator.py --tb=line -q -p no:cacheprovider` → **8 passed**。
+- `py -3.12 -m pytest tests/unit/test_order_method_router.py -k "not model_breakout_preserved_for_broad_channel" --tb=line -q -p no:cacheprovider` → **2 passed / 1 deselected**。
+- 未运行完整 `test_decision_nodes_judges.py` / `test_decision_nodes_preflight.py`：当前 Python 3.12 环境缺少 `hypothesis`，测试收集阶段报 `ModuleNotFoundError: No module named 'hypothesis'`。
+- `test_order_method_router.py::test_model_breakout_preserved_for_broad_channel` 仍失败（期望 `突破单`，当前 `order_method_router.route_order_method()` 直接调用也输出 `限价单`），确认为既有路由行为/测试期望不一致，非本轮 facade 提取引入。
+- `py -3.12 -m ruff check pa_agent/ai/decision_nodes.py pa_agent/ai/decision_node_engine.py` 当前仅剩 **8×RUF001**，均为随原中文 reason 串迁入 `decision_node_engine.py` 的全角标点告警；原 `decision_nodes.py` 已从 400 行降至 71 行，新模块 259 行。
+- `git diff --check` 通过；仅提示 Windows 工作树 LF/CRLF 规范化 warning，无 whitespace error。
+
+---
+
 ## [Unreleased] — 2026-07-15（第四十九轮：继续 M7，让 MT5 复用 DataSource 默认 forming 判定）
 
 本轮继续推进 **M7：统一 forming bar 判定**。第四十八轮已让 YFinance 源内构建复用 ABC 默认入口；继续核查剩余显式硬编码后，`MT5Source.latest_snapshot()` 仍把头部 bar 固定视为 forming（`is_forming=True`），再依赖下游 snapshot 复判。MT5 已提供 `server_time_ms()`，而 ABC 默认 `has_forming_bar_at_head(...)` 会通过 `reference_now_ms(data_source=self)` 优先使用 broker tick 时间，因此应把 MT5 源内构建也接入统一入口，让过期/停盘头部在源内就可写回 closed。
