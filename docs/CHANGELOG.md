@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百三十一轮：继续 L7，扩展 Ruff 到 TradingView symbol lookup）
+
+本轮继续推进 **L7：CI 增强**。第一百三十轮已把 East Money Baostock fallback 纳入 focused Ruff；本轮继续筛选数据层剩余小模块，选择已由无网络单测覆盖的 `pa_agent/data/tv_symbol_lookup.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/data/tv_symbol_lookup.py`。
+- **清理 symbol lookup lint**：将别名分组注释中的全角标点改为 ASCII，简化 `is_tv_name_input()` 的中文字符判断返回值，并合并 `lookup_tv_symbol_by_name()` 的嵌套条件。
+- **保留中文错误提示**：未知股票名称提示中的全角括号和逗号属于用户可见中文文案，本轮使用行级 `# noqa: RUF001` 保留显示语义。
+- **保持业务语义不变**：本轮不改内置别名表、用户别名加载、名称归一化、模糊匹配、TradingView exchange/symbol 返回值或缓存刷新逻辑。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 TradingView symbol lookup helper。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/data/tv_symbol_lookup.py tests/unit/test_tv_symbol_lookup.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\data\tv_symbol_lookup.py tests\unit\test_tv_symbol_lookup.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_tv_symbol_lookup.py --tb=line -q -p no:cacheprovider` → **8 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百三十轮：继续 L7，扩展 Ruff 到 East Money Baostock fallback）
 
 本轮继续推进 **L7：CI 增强**。第一百二十九轮已把 East Money quote API 常量纳入 focused Ruff；本轮继续沿数据层低风险边界推进，选择 `pa_agent/data/eastmoney_baostock.py` 及其无网络 helper 测试。
