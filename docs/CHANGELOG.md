@@ -13,6 +13,25 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第五十六轮：继续 L7，扩展 CI 到安全配置与记录写入目标测试）
+
+本轮继续推进 **L7：CI 增强**。第五十五轮已为现有目标测试增加覆盖率报告；本轮继续扩大目标 pytest 的业务覆盖面，纳入此前已稳定的安全/配置/记录写入路径：API Key 至静态加密、settings load/save round-trip、PendingWriter 递归脱敏和记录文件名安全。这些路径与项目安全边界直接相关，且测试稳定，不依赖 GUI 或真实网络，适合纳入 CI 目标集。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_secret_store.py`、`test_settings_round_trip.py`、`test_pending_writer_sanitize.py`、`test_pending_writer_no_plaintext_key.py`。目标测试数量从 **60** 扩展到 **105**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `pa_agent/security/secret_store.py`、`pa_agent/records/pending_writer.py` 以及上述四个测试文件，使新增 CI 目标路径同时具备 lint 门禁。
+- **清理目标文件 lint**：`pending_writer.py` 改用 `datetime.UTC` 替代 `timezone.utc`，并移除当前 Ruff 配置下冗余的 `# noqa: BLE001`；相关测试文件删除未使用 import，并按 Ruff 整理 import 块。`PendingWriter` 的异常处理语义和 `logger.debug(..., exc_info=True)` 可观测性保持不变。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖安全加密、settings round-trip 与 PendingWriter 脱敏/文件名安全。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_data_source_forming_bar.py tests/unit/test_bar_close_wait.py tests/unit/test_snapshot_closed_only_buffer.py tests/unit/test_build_analysis_frame.py tests/unit/test_snapshot_indicator_warmup.py tests/unit/test_data_source_factory.py tests/unit/test_mt5_clock_skew.py tests/unit/test_order_method_router.py tests/unit/test_trend_context.py tests/unit/test_decision_nodes_orchestrator.py tests/unit/test_provider_sync_service.py tests/unit/test_qclaw_auto_fallback.py tests/unit/test_secret_store.py tests/unit/test_settings_round_trip.py tests/unit/test_pending_writer_sanitize.py tests/unit/test_pending_writer_no_plaintext_key.py --tb=line -q -p no:cacheprovider` → **105 passed**。
+- `py -3.12 -m ruff check pa_agent/data/base.py pa_agent/data/snapshot.py pa_agent/data/mt5.py pa_agent/data/yfinance_source.py pa_agent/ai/provider_sync_service.py pa_agent/security/secret_store.py pa_agent/records/pending_writer.py tests/unit/test_data_source_forming_bar.py tests/unit/test_mt5_clock_skew.py tests/unit/test_order_method_router.py tests/unit/test_trend_context.py tests/unit/test_decision_nodes_orchestrator.py tests/unit/test_provider_sync_service.py tests/unit/test_qclaw_auto_fallback.py tests/unit/test_secret_store.py tests/unit/test_settings_round_trip.py tests/unit/test_pending_writer_sanitize.py tests/unit/test_pending_writer_no_plaintext_key.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/records/pending_writer.py tests/unit/test_settings_round_trip.py tests/unit/test_pending_writer_sanitize.py tests/unit/test_pending_writer_no_plaintext_key.py` → 通过。
+
+---
+
 ## [Unreleased] — 2026-07-15（第五十五轮：继续 L7，给 CI 目标测试增加覆盖率报告）
 
 本轮继续推进 **L7：CI 增强**，切入上一轮尚未覆盖的“覆盖率”项。当前 CI 已具备安装/import、目标 pytest 与聚焦 Ruff；但 `pyproject.toml` 的 dev 依赖没有 `pytest-cov`，CI 也没有任何覆盖率输出。本轮先建立低风险覆盖率基线：让现有目标测试输出 `pa_agent` 的终端覆盖率报告，但暂不设置 `--cov-fail-under`，避免把当前 11% 的目标子集覆盖率误变成阻塞门禁。
