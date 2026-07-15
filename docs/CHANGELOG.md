@@ -13,6 +13,29 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第九十轮：继续 L7，扩展 CI 到 Stage 2 normalizer 测试）
+
+本轮继续推进 **L7：CI 增强**。第八十九轮已把 trade metrics validation 测试纳入目标 CI；本轮继续处理 Stage 2 归一化链路测试。`test_stage2_normalizer.py` 覆盖 closed enum 标注剥离、下一棒预测归一化、Stage 2 枚举/信号/entry 链路修复、交易指标守卫、prediction guard，以及多类历史模型输出兼容场景。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_stage2_normalizer.py`。目标测试数量从 **432** 扩展到 **463**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `tests/unit/test_stage2_normalizer.py`。
+- **修正目标测试 fixture**：更新两个过期 Stage 2 样例的交易指标，使它们先通过 RR/交易者方程守卫，再进入原本要验证的 signal_bar bump 与 bullish prediction guard 分支。
+- **清理目标测试 lint**：通过 Ruff 自动整理 import，并为密集保留的中文 Stage 2 normalizer 测试样例添加文件级 `# ruff: noqa: RUF001`。
+- **暂不纳入源文件 Ruff**：`pa_agent/ai/stage2_normalizer.py` 包含大量面向 prompt/用户可见输出的中文基线；本轮只扩展测试文件 Ruff 门禁，保持 L7 小切片策略。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 Stage 2 normalizer。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_stage2_normalizer.py --tb=line -q -p no:cacheprovider` → **31 passed**。
+- `py -3.12 -m ruff check tests/unit/test_stage2_normalizer.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests\unit\test_stage2_normalizer.py` → 通过。
+- 扩展后目标集：执行 `.github/workflows/ci.yml` 的 targeted pytest 清单（本地 `pytest_cov` 插件仍受用户 site-packages 权限问题影响，沿用无 coverage 插件行为验证）→ `py -3.12 -m pytest ... --tb=line -q -p no:cacheprovider` → **463 passed**。
+- 扩展后 Ruff：执行 `.github/workflows/ci.yml` 的 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第八十九轮：继续 L7，扩展 CI 到 trade metrics validation 测试）
 
 本轮继续推进 **L7：CI 增强**。第八十八轮已把 decision continuity 测试纳入目标 CI；本轮继续筛选纯后端交易指标与 Stage 2 validator 联动测试。`test_trade_metrics_validation.py` 覆盖 RR/交易者方程、坏 RR 自动改为不下单、突破价高点内侧修复、pending/stale entry_bar 兼容、计划型限价无信号棒/弱信号棒场景，以及强信号缺失 signal_bar 的拒绝路径。
