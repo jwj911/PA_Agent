@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百一十二轮：继续 L7，扩展 Ruff 到 AI schema/routing 辅助文件）
+
+本轮继续推进 **L7：CI 增强**。第一百一十一轮已把 AI 基础叶子模块纳入 focused Ruff；本轮继续评估 AI 源码侧小范围候选。`json_repair`、`override_arbiter`、`signal_context` 等仍存在中文业务文案或多点机械清理，本轮收窄到已经 Ruff 干净且测试覆盖明确的 `schema_validator.py`、`strategy_files.py` 与 `router.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/ai/schema_validator.py`、`pa_agent/ai/strategy_files.py` 与 `pa_agent/ai/router.py`。
+- **保持业务语义不变**：本轮不改 schema error collection、策略文件枚举/过滤、Stage 1 pattern routing 或 CI 测试执行范围。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 AI schema/routing 辅助文件。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/ai/schema_validator.py pa_agent/ai/strategy_files.py pa_agent/ai/router.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\ai\schema_validator.py pa_agent\ai\strategy_files.py pa_agent\ai\router.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_json_validator.py tests/unit/test_prompt_txt_files.py tests/unit/test_pattern_routing.py --tb=line -q -p no:cacheprovider` → **27 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+- `git diff --check` → 通过（仅显示 Windows 行尾提示）。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百一十一轮：继续 L7，扩展 Ruff 到 AI 基础叶子模块）
 
 本轮继续推进 **L7：CI 增强**。第一百一十轮已把 `ai/prompts` 纳入 focused Ruff；本轮继续评估 AI 源码侧剩余小范围。`decision_thresholds`、judge 相关模块、`trend_context`、`order_method_router` 等仍含较多中文业务 reason/prompt 文案与注释基线，因此本轮收窄到低风险的 AI 基础叶子模块 `bar_geometry.py` 与 `trace_nodes.py`。
