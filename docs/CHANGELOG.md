@@ -13,6 +13,25 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百四十轮：继续 L7，扩展 Ruff 到 flow bar widget）
+
+本轮继续推进 **L7：CI 增强**。第一百三十九轮已把 model selector widget 纳入 focused Ruff；本轮继续处理 GUI widgets 小文件，选择仅有 import 排序问题的 `pa_agent/gui/widgets/flow_bar.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/gui/widgets/flow_bar.py`。
+- **清理 FlowBar import lint**：按 Ruff/isort 要求拆分 `PyQt6.QtWidgets` 长 import，消除 `I001`。
+- **保持运行逻辑不变**：本轮不修改 FlowBar 步骤名称、默认 caption、状态颜色、进度状态更新、caption 更新或 reset 行为。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确 Ruff 门禁已覆盖 flow bar widget。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/gui/widgets/flow_bar.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/gui/widgets/flow_bar.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百三十九轮：继续 L7，扩展 Ruff 到 model selector widget）
 
 本轮继续推进 **L7：CI 增强**。第一百三十八轮已把 status bar widget 纳入 focused Ruff；本轮继续沿 GUI widgets 小文件推进，选择已经 Ruff clean、边界独立的 `pa_agent/gui/widgets/model_selector.py`。
