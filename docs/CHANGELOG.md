@@ -13,6 +13,31 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第九十九轮：继续 L7，扩展 CI 到 property suite）
+
+本轮继续推进 **L7：CI 增强**。第九十八轮已把最后一组 unit 测试 `test_cursor_sdk_client.py` 纳入目标 CI；本轮转向完整 `pytest -m "not e2e"` 前的下一层门禁。实测完整非 e2e 当前仍有 integration/live 和历史 property 合同漂移失败，因此本轮先治理无网络、可重复的 `tests/property`，把 property suite 纳入 CI，作为后续治理 integration 的前置基线。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的测试步骤改名为 `Run targeted tests`，并新增 `tests/property`。目标测试数量从 **674** 扩展到 **728**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `tests/property`，使 property 测试本身进入 lint 门禁。
+- **修正 property 合同漂移**：将 Stage 2 不下单价格字段、截断 Stage 1 repair、缺失 breakout basis、next-bar 概率并列方向、live frame forming bar 序号等断言更新为当前实现合同。
+- **加固日志脱敏 property**：`test_logs_have_no_plaintext_key` 显式恢复 logging disable 阈值、设置测试 logger level/propagation，并关闭 Hypothesis deadline，避免真实文件 I/O 触发误报。
+- **清理 property lint**：整理 import、删除未使用 import，修正 RUF005 列表拼接；对保留中文业务样例的 property 文件添加文件级 RUF 忽略。
+- **记录完整非 e2e 阻塞**：property 修复后复跑 `pytest -m "not e2e"`，剩余失败已收敛到 integration/live 层：`test_akshare_live.py` 的真实网络 AkShare 拉取、`test_next_bar_prediction.py` 的旧 next-bar/DecisionPanel 私有控件合同，以及 `test_two_stage_no_order_with_prices.py` 的 no-order prices 旧期望；本轮只把已治理通过的无网络 property 层升级为 CI 门禁。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 property invariants，Ruff 门禁同步覆盖 `tests/property`。
+
+### 验证
+
+- Property suite：`py -3.12 -m pytest tests/property --tb=line -q -p no:cacheprovider`（带 `QT_QPA_PLATFORM=offscreen`、临时 `pytest-qt` / `hypothesis` `PYTHONPATH`）→ **54 passed**。
+- `py -3.12 -m ruff check tests/property` → **All checks passed**。
+- `py -3.12 -m py_compile tests\property\test_indicators_incremental.py tests\property\test_json_validator_categories.py tests\property\test_logs_have_no_plaintext_key.py tests\property\test_mask_secret.py tests\property\test_next_bar_prediction.py tests\property\test_next_bar_prediction_perf.py tests\property\test_record_round_trip.py tests\property\test_router_determinism.py tests\property\test_snapshot_bijection.py tests\property\test_stage2_no_order_invariant.py` → 通过。
+- 完整非 e2e 审计：`py -3.12 -m pytest -m "not e2e" --tb=line -q -p no:cacheprovider` → 当前仍有 **8 failed**，分别来自 AkShare live 网络、integration 旧 next-bar/DecisionPanel 合同和 no-order prices 旧期望；因此暂不启用完整非 e2e CI。
+- 扩展后目标集：从 `.github/workflows/ci.yml` 解析 targeted pytest 清单（本地 `pytest_cov` 插件仍受用户 site-packages 权限问题影响，沿用无 coverage 插件行为验证；本机通过临时 `pytest-qt` / `hypothesis` `PYTHONPATH` 补齐开发依赖）→ `py -3.12 -m pytest ... --tb=line -q -p no:cacheprovider` → **通过**（目标测试数量 **728**）。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第九十八轮：继续 L7，扩展 CI 到 CursorSdkClient bridge patch 合同测试）
 
 本轮继续推进 **L7：CI 增强**。第九十七轮已把 DecisionPanel 当前 UI 合同测试纳入目标 CI；本轮处理最后一组因外部 SDK 依赖暂未纳入 CI 的 `test_cursor_sdk_client.py`。旧测试会直接导入真实 `cursor_sdk` 并调用 `CursorClient.launch_bridge()`，在本地和 CI 依赖缺失或 bridge 环境不稳定时容易失败。本轮将测试改为注入 fake `cursor_sdk` 模块，验证 PA Agent 自身的 bridge patch 合同，而不启动真实 Cursor bridge。
