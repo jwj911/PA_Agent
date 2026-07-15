@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第七十五轮：继续 L7，扩展 CI 到 chart decision overlay 测试）
+
+本轮继续推进 **L7：CI 增强**。第七十四轮已把 TradingView/PushPlus/API key 辅助测试纳入目标 CI；本轮继续筛选低依赖的小型纯逻辑测试。`test_chart_decision_overlay.py` 覆盖图表决策覆盖层的 continuity enrichment：上一轮限价计划仍有效时沿用旧价格、上一轮计划失效时不补画 overlay、当前仍有交易计划时保留当前价格。该测试不启动 Qt widget，也不访问真实网络。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_chart_decision_overlay.py`。目标测试数量从 **279** 扩展到 **282**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `pa_agent/gui/chart_decision_overlay.py` 与 `tests/unit/test_chart_decision_overlay.py`。
+- **清理目标测试 lint**：`test_chart_decision_overlay.py` 为需保留的中文用户可见 reasoning 样例添加行级 `# noqa: RUF001`；测试逻辑保持不变。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 chart decision continuity overlay，Ruff 门禁同步覆盖 `chart_decision_overlay`。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_chart_decision_overlay.py --tb=line -q -p no:cacheprovider` → **3 passed**。
+- 扩展后目标集：从 `.github/workflows/ci.yml` 解析 `Run targeted unit tests` 清单并执行 `py -3.12 -m pytest @tests --tb=line -q -p no:cacheprovider` → **282 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单并执行 `py -3.12 -m ruff check @argsList` → **All checks passed**。
+- `py -3.12 -m py_compile tests\unit\test_chart_decision_overlay.py pa_agent\gui\chart_decision_overlay.py` → 通过。
+
+---
+
 ## [Unreleased] — 2026-07-15（第七十四轮：继续 L7，扩展 CI 到 TradingView/PushPlus/API key 辅助测试）
 
 本轮继续推进 **L7：CI 增强**。第七十三轮已把 stance/别名与轻量图表辅助测试纳入目标 CI；本轮继续筛选无真实网络的小型辅助测试。`test_tradingview_socket.py` 覆盖 TradingView WebSocket 生命周期清理，`test_tradingview_errors.py` 与 `test_tv_symbol_lookup.py` 覆盖 TradingView 错误提示和港股/别名解析，`test_pushplus_notifier.py` 用 mock 覆盖 PushPlus 通知路径，`test_api_key_configured.py` 覆盖 provider API key presence helper。上述测试稳定且不访问真实网络。
