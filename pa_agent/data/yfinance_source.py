@@ -124,11 +124,8 @@ class YFinanceSource(DataSource):
         # Determine how many bars to request
         fetch_n = n * _FETCH_MULTIPLIER.get(self._timeframe, 1) + 10
 
-        # Choose period based on timeframe
-        if self._timeframe in _INTRADAY_TF:
-            period = "60d"   # max for intraday
-        else:
-            period = "2y"
+        # Choose period based on timeframe ("60d" is max for intraday)
+        period = "60d" if self._timeframe in _INTRADAY_TF else "2y"
 
         try:
             ticker = yf.Ticker(self._symbol)
@@ -154,21 +151,29 @@ class YFinanceSource(DataSource):
         bars: list[KlineBar] = []
         for i, row in enumerate(df.itertuples(index=False)):
             ts_ms = _row_ts_ms(row)
-            # bars[0] is the forming (most recent, possibly unclosed) bar
-            bars.append(
-                normalize_kline_bar(
-                    KlineBar(
-                        seq=i + 1,
-                        ts_open=ts_ms,
-                        open=float(row.Open),
-                        high=float(row.High),
-                        low=float(row.Low),
-                        close=float(row.Close),
-                        volume=float(getattr(row, "Volume", 0.0)),
-                        closed=(i != 0),
-                    )
-                )
+            bar = KlineBar(
+                seq=i + 1,
+                ts_open=ts_ms,
+                open=float(row.Open),
+                high=float(row.High),
+                low=float(row.Low),
+                close=float(row.Close),
+                volume=float(getattr(row, "Volume", 0.0)),
+                closed=(i != 0),
             )
+            if i == 0:
+                is_forming = self.has_forming_bar_at_head([bar], self._timeframe)
+                bar = KlineBar(
+                    seq=bar.seq,
+                    ts_open=bar.ts_open,
+                    open=bar.open,
+                    high=bar.high,
+                    low=bar.low,
+                    close=bar.close,
+                    volume=bar.volume,
+                    closed=not is_forming,
+                )
+            bars.append(normalize_kline_bar(bar))
             if len(bars) >= n:
                 break
 

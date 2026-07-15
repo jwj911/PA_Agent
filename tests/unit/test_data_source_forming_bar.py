@@ -14,6 +14,7 @@ from pa_agent.data.base import DataSource, KlineBar
 from pa_agent.data.eastmoney_source import EastMoneySource
 from pa_agent.data.snapshot import build_analysis_frame
 from pa_agent.data.tradingview import TradingViewSource
+from pa_agent.data.yfinance_source import YFinanceSource
 
 
 class _Source(DataSource):
@@ -221,3 +222,49 @@ def test_tradingview_latest_snapshot_reuses_override(monkeypatch) -> None:
     assert calls == [("15m", True)]
     assert len(bars) == 1
     assert not bars[0].closed
+
+
+def test_yfinance_latest_snapshot_reuses_data_source_forming_entry(monkeypatch) -> None:
+    calls: list[tuple[str | None, bool]] = []
+
+    class _Source(YFinanceSource):
+        def has_forming_bar_at_head(
+            self,
+            bars_newest_first: list[KlineBar],
+            timeframe: str | None = None,
+            *,
+            now_ms: int | None = None,
+            symbol: str | None = None,
+        ) -> bool:
+            calls.append((timeframe, bars_newest_first[0].closed))
+            return False
+
+    df = pd.DataFrame(
+        [
+            {
+                "Open": 10.0,
+                "High": 11.0,
+                "Low": 9.0,
+                "Close": 10.5,
+                "Volume": 100.0,
+            }
+        ],
+        index=pd.DatetimeIndex([datetime(2026, 7, 15, 9, 30)], name="Datetime"),
+    )
+    ticker = SimpleNamespace(history=lambda **kwargs: df)
+    monkeypatch.setitem(
+        sys.modules,
+        "yfinance",
+        SimpleNamespace(Ticker=lambda symbol: ticker),
+    )
+
+    src = _Source()
+    src._connected = True
+    src._symbol = "GC=F"
+    src._timeframe = "15m"
+
+    bars = src.latest_snapshot(1)
+
+    assert calls == [("15m", False)]
+    assert len(bars) == 1
+    assert bars[0].closed
