@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百零四轮：继续 L7，扩展 Ruff 到 security 与 theme）
+
+本轮继续推进 **L7：CI 增强**。第一百零三轮已开始把 Ruff 覆盖从测试侧转向小型源码包；本轮继续选择已经干净、边界明确且低风险的源码范围，把安全包与 GUI 主题包纳入 focused Ruff。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 将 `pa_agent/security/secret_store.py` 提升为整个 `pa_agent/security` 包，并新增 `pa_agent/gui/theme`。
+- **保持运行逻辑不变**：本轮只扩大静态检查范围，不修改安全加密、主题 token 或 QSS 加载逻辑。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确 Ruff 门禁已覆盖 `security` 与 `gui/theme`。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/security pa_agent/gui/theme` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent\security\__init__.py pa_agent\security\secret_store.py pa_agent\gui\theme\__init__.py pa_agent\gui\theme\apply.py pa_agent\gui\theme\tokens.py` → 通过。
+- 相关测试：`py -3.12 -m pytest tests/unit/test_secret_store.py --tb=line -q -p no:cacheprovider` → **9 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+- `git diff --check` → 通过。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百零三轮：继续 L7，扩展 Ruff 到 indicators 源码）
 
 本轮继续推进 **L7：CI 增强**。第一百零二轮已把测试侧目录的 Ruff 覆盖扩展到 `tests/e2e` 与 `tests/fixtures`；本轮开始继续收窄源码侧 Ruff 缺口。先选择边界清晰、噪声很小且已有单元/属性测试覆盖的 `pa_agent/indicators` 包，避免直接触碰仍有大量中文文案基线的 `notify` / `config` 等模块。
