@@ -144,6 +144,7 @@ jobs:
           pa_agent/data/bar_close_wait.py
           pa_agent/data/kline_adjust.py
           pa_agent/data/refresh_policy.py
+          pa_agent/data/ashare_limits.py
           pa_agent/data/tradingview_connectivity.py
           pa_agent/data/market_defaults.py
           pa_agent/ai/provider_sync_service.py
