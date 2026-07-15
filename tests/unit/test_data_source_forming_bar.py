@@ -1,14 +1,19 @@
 """Tests for DataSource-level forming-bar semantics."""
 from __future__ import annotations
 
+import sys
 from datetime import datetime
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
+
+import pandas as pd
 
 from pa_agent.data.akshare_source import AkShareSource
 from pa_agent.data.bar_close_wait import has_forming_bar_at_head
 from pa_agent.data.base import DataSource, KlineBar
 from pa_agent.data.eastmoney_source import EastMoneySource
 from pa_agent.data.snapshot import build_analysis_frame
+from pa_agent.data.tradingview import TradingViewSource
 
 
 class _Source(DataSource):
@@ -145,3 +150,74 @@ def test_akshare_daily_head_is_not_forming_during_lunch_break() -> None:
         now_ms=lunch_ms,
         symbol="600519",
     )
+
+
+def test_tradingview_override_detects_active_head_by_countdown() -> None:
+    ts_open = 1_700_000_000_000.0
+    now_ms = int(ts_open) + 5 * 60 * 1000
+
+    assert TradingViewSource().has_forming_bar_at_head(
+        [_bar(ts_open, close=10.0, closed=True)],
+        "15m",
+        now_ms=now_ms,
+    )
+
+
+def test_tradingview_override_marks_boundary_head_closed() -> None:
+    ts_open = 1_700_000_000_000.0
+    now_ms = int(ts_open) + 30 * 60 * 1000
+
+    assert not TradingViewSource().has_forming_bar_at_head(
+        [_bar(ts_open, close=10.0)],
+        "15m",
+        now_ms=now_ms,
+    )
+
+
+def test_tradingview_latest_snapshot_reuses_override(monkeypatch) -> None:
+    calls: list[tuple[str | None, bool]] = []
+
+    class _Source(TradingViewSource):
+        def has_forming_bar_at_head(
+            self,
+            bars_newest_first: list[KlineBar],
+            timeframe: str | None = None,
+            *,
+            now_ms: int | None = None,
+            symbol: str | None = None,
+        ) -> bool:
+            calls.append((timeframe, bars_newest_first[0].closed))
+            return True
+
+    src = _Source()
+    src._tv = object()
+    src._symbol = "XAUUSD"
+    src._timeframe = "15m"
+
+    monkeypatch.setitem(
+        sys.modules,
+        "tvDatafeed",
+        SimpleNamespace(Interval=SimpleNamespace(in_15_minute="15m")),
+    )
+    monkeypatch.setattr(
+        src,
+        "_fetch_hist_with_retry",
+        lambda **kwargs: pd.DataFrame(
+            [
+                {
+                    "datetime": datetime(2026, 7, 15, 9, 30),
+                    "open": 10.0,
+                    "high": 11.0,
+                    "low": 9.0,
+                    "close": 10.5,
+                    "volume": 100.0,
+                }
+            ]
+        ),
+    )
+
+    bars = src._latest_snapshot_inner(1)
+
+    assert calls == [("15m", True)]
+    assert len(bars) == 1
+    assert not bars[0].closed

@@ -390,18 +390,7 @@ class TradingViewSource(DataSource):
                 closed=True,
             )
             if i == 0:
-                # Determine whether the newest bar is still forming.
-                # We must NOT pass bar.closed=True into is_bar_still_forming because
-                # that function short-circuits on bar.closed and would always return
-                # False — defeating the purpose of the check entirely.
-                # Instead, use seconds_until_bar_closes which only looks at the
-                # timestamp, and is robust to constant broker-time offsets.
-                from pa_agent.data.bar_close_wait import seconds_until_bar_closes
-
-                secs_left = seconds_until_bar_closes(
-                    ts_ms, self._timeframe, now_ms=None
-                )
-                still_forming = secs_left is not None and secs_left > 0
+                still_forming = self.has_forming_bar_at_head([bar], self._timeframe)
                 bar = KlineBar(
                     seq=bar.seq,
                     ts_open=bar.ts_open,
@@ -417,6 +406,35 @@ class TradingViewSource(DataSource):
                 break
 
         return bars
+
+    def has_forming_bar_at_head(
+        self,
+        bars_newest_first: list[KlineBar],
+        timeframe: str | None = None,
+        *,
+        now_ms: int | None = None,
+        symbol: str | None = None,
+    ) -> bool:
+        """Use TradingView timestamp countdown semantics for the live head bar."""
+        if not bars_newest_first:
+            return False
+        tf = timeframe or self._timeframe
+        if not tf:
+            return not bars_newest_first[0].closed
+
+        # TradingView timestamps may carry a constant exchange/broker offset.
+        # seconds_until_bar_closes() intentionally uses modulo duration logic,
+        # matching the previous inline latest_snapshot() behavior.
+        from pa_agent.data.bar_close_wait import seconds_until_bar_closes
+
+        secs_left = seconds_until_bar_closes(
+            int(bars_newest_first[0].ts_open),
+            tf,
+            now_ms=now_ms,
+        )
+        if secs_left is None:
+            return not bars_newest_first[0].closed
+        return secs_left > 0
 
 
 def _row_ts_ms(row) -> int:
