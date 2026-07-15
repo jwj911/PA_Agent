@@ -13,6 +13,25 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第三十五轮：继续拆分 TwoStageOrchestrator.submit() 第二刀，提取 _persist_result 落盘尾段）
+
+本轮为**大文件拆分 M4 的第二刀**（第三十四轮首刀已切 `_route_and_load_experience`，`submit()` 从约 647 行降至约 601 行）。与 M1/M2/M3 的**叶子模块提取**不同，M4 是**同类内的方法级拆分**：子方法共享 `self` 与跨阶段可变局部状态，无法用纯函数等价脚本验证，须靠既有 mock-based 集成测试套件做 baseline 对比。roadmap（`docs/backend_review_report.md` §5 L262）将 M4 目标拆为 `_run_stage1`/`_run_stage2`/`_route_and_load_experience`/`_persist_result`。本刀切**尾段** Steps 19.5-24（预测日志 + 构建 final record + `save_full` + `RecordSaved` 事件 + return）。选它作为 M4 第二刀的关键动机：① 它是 `_route_and_load_experience` 之后 `submit()` 中**最自足的一段**——纯只读聚合（读 `stage2_json`/`record`/两组 `usage_calls` 等已算好的状态）+ 单次落盘，**无 early-return 回流、无 `nonlocal` 闭包**（`submit()` 的所有中途失败/取消 early-return 都在本段之前，本段是 happy-path 的唯一终点）；② 它只被 `submit()` 尾部唯一调用点触达，`stage2_json`/`usage_total` 等中间局部只在段内与段末 return 使用，可完整封装；③ 因用 `self.*` 与 `on_event` 回调，自然拆为实例方法而非模块函数，`submit()` 内替换为单次 `return self._persist_result(...)` 关键字实参调用，行为逐字节一致。
+
+### 代码清理
+
+- **`pa_agent/orchestrator/two_stage.py` 新增实例方法 `_persist_result(self, *, record, on_event, stage1_json, messages_s1, reply_s1, messages_s2, reply_s2, stage2_json, strategy_files, experience_entries, s1_usage_calls, s2_usage_calls, _enable_next_bar) -> AnalysisRecord`**：把 `submit()` 内 Steps 19.5-24（`# ── Step 19.5: Log next_bar_prediction`→`# ── Step 24: Return` 五块）**逐字节搬迁**为独立方法，放在 `_route_and_load_experience` 之后、`# ── Public API ──` 分隔线之前的辅助方法区。逻辑完全不变：next_bar_prediction 日志（feature 关闭/unpredictable/概率三分支/absent 兜底）、next_cycle_prediction 日志（unpredictable/正常/absent 三分支）、`usage_total` 双层 `_accumulate_usage_calls(s1_usage_calls)` 再叠 `s2_usage_calls`、`record.model_copy(update={...11 字段含 experience_loaded 的 model_dump/dict 分支...})`、`self._pending_writer.save_full(record)`、`on_event(OrchestratorEvent.RecordSaved)`、末尾 `return record`。全部经关键字实参传入，被搬迁的所有局部（`_pred`/`_nb_pred`/`_probs`/`_nc_pred`/`usage_total`）仍为方法内局部。
+- **`submit()` 内 Steps 19.5-24 替换为单次调用**：`return self._persist_result(record=record, on_event=on_event, stage1_json=stage1_json, messages_s1=messages_s1, reply_s1=reply_s1, messages_s2=messages_s2, reply_s2=reply_s2, stage2_json=stage2_json, strategy_files=strategy_files, experience_entries=experience_entries, s1_usage_calls=s1_usage_calls, s2_usage_calls=s2_usage_calls, _enable_next_bar=_enable_next_bar)`，紧跟 `# ── Step 19: Stage 2 done`→`on_event(OrchestratorEvent.Stage2Done)` 之后。`submit()` 从约 601 行降至 575 行。
+
+### 验证
+
+- `py_compile` 通过（`two_stage.py`，EXIT=0）。
+- **AST 结构核验**：`ast.walk` 确认 `TwoStageOrchestrator` 类体已含 `_persist_result` 与 `_route_and_load_experience` 两个方法，`submit()` 现跨 439-1013 行（575 行）。
+- **集成测试基线对比**：核心 submit-path 套件（`test_two_stage_happy_path`/`_no_order_with_prices`/`_stage1_syntax`/`_stage1_missing_field`/`_stage2_invalid_value`/`_network_timeout`/`_user_cancel` + `test_gate_shortcircuit` + `test_decision_nodes_orchestrator`）**13 passed / 1 failed**，唯一失败 `test_no_order_with_non_null_price_fails_stage2` 经 `git stash` 回退 HEAD 复跑确认为**既有失败**（该测试用 `schema_test_validator()`，不含业务规则校验，故 order_type=不下单+entry_price=0 走到 happy path 而非 Stage2Failed，与第三十四轮记录一致）——拆分前后行为逐字节一致。
+- `ruff check` 对比基线：`git show HEAD:two_stage.py` 与拆分后同为 **40 条**，逐类别 Counter 完全一致（`E402:11, I001:1, RUF001:22, RUF100:1, UP037:5`），**零净新增告警**。
+- `git diff` 密钥扫描（`api_key`/`sk-`/`secret`/`Bearer`/`password`/`token`）无命中——纯结构搬迁，无密钥泄漏。
+
+---
+
 ## [Unreleased] — 2026-07-15（第三十四轮：启动 M4 里程碑，拆分 TwoStageOrchestrator.submit() 第一刀，提取 _route_and_load_experience）
 
 本轮**开启大文件拆分 M4 里程碑**（M1 已完成对 `prompt_assembler.py` 的五刀叶子提取，1963→1571 行；本轮转向 `orchestrator/two_stage.py` 的巨型方法 `TwoStageOrchestrator.submit()`——约 647 行、跨阶段流转、含多处 `nonlocal` 闭包与 early-return）。与 M1/M2/M3 的**叶子模块提取**本质不同，M4 是**同类内的方法级拆分**：子方法共享 `self` 与大量跨阶段流转的可变局部状态，无法用纯函数等价脚本验证，必须靠既有 mock-based 集成测试套件做 baseline 对比。roadmap（`docs/backend_review_report.md` §5 L262）将 M4 目标拆为 `_run_stage1`/`_run_stage2`/`_route_and_load_experience`/`_persist_result`。本刀先切最干净的一块——Steps 10-11（路由策略文件 + 加载经验条目）。选它作为 M4 第一刀的关键动机：① 它是 `submit()` 中**唯一零闭包、零 early-return、零副作用的自足片段**——只读 `stage1_json` 与 `self._router`/`self._settings`/`self._exp_reader`，输出 `(strategy_files, experience_entries)`；② 其中间局部变量 `cycle_position`/`direction`/`patterns` 经核查**只在该块内被引用**（Step 12+ 仅用 `strategy_files`/`experience_entries`），故可完整封装、不外泄；③ 因用 `self.*`，自然拆为实例方法而非模块函数，`submit()` 内替换为单行解包调用，行为逐字节一致。
