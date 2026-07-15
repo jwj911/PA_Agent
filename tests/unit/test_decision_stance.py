@@ -30,8 +30,8 @@ def test_stance_guidance_balanced_more_aggressive_than_conservative():
 def test_stance_guidance_aggressive_more_than_balanced():
     balanced = build_decision_stance_guidance("balanced")
     aggressive = build_decision_stance_guidance("aggressive")
-    assert "30–44" in aggressive
-    assert "30–44" not in balanced
+    assert "30–44" in aggressive  # noqa: RUF001
+    assert "30–44" not in balanced  # noqa: RUF001
 
 
 def test_stance_guidance_extreme_aggressive_forces_trade():

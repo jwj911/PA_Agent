@@ -11,8 +11,8 @@ def test_chart_uses_farthest_support_and_resistance() -> None:
     }
     levels = chart_levels_from_stage1_diagnosis(stage1)
     assert len(levels) == 2
-    support = next(l for l in levels if l.kind == "support")
-    resistance = next(l for l in levels if l.kind == "resistance")
+    support = next(level for level in levels if level.kind == "support")
+    resistance = next(level for level in levels if level.kind == "resistance")
     assert support.price == 4121.0
     assert resistance.price == 4221.0
     assert support.label == "支撑"

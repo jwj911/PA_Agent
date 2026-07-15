@@ -31,6 +31,8 @@ jobs:
           tests/unit/test_snapshot_closed_only_buffer.py
           tests/unit/test_build_analysis_frame.py
           tests/unit/test_snapshot_indicator_warmup.py
+          tests/unit/test_overlay_lines.py
+          tests/unit/test_support_resistance_chart.py
           tests/unit/test_data_source_factory.py
           tests/unit/test_refresh_loop_warmup.py
           tests/unit/test_akshare_source.py
@@ -55,6 +57,8 @@ jobs:
           tests/unit/test_kline_features.py
           tests/unit/test_market_features.py
           tests/unit/test_structure_levels.py
+          tests/unit/test_stage1_normalizer_strategy_aliases.py
+          tests/unit/test_decision_stance.py
           tests/unit/test_cycle_enums.py
           tests/unit/test_response_extract.py
           tests/unit/test_mimo_compat.py
@@ -118,11 +122,15 @@ jobs:
           tests/unit/test_pending_writer_no_plaintext_key.py
           tests/unit/test_datetime_ts.py
           tests/unit/test_kline_bar_normalize.py
+          tests/unit/test_overlay_lines.py
+          tests/unit/test_support_resistance_chart.py
           tests/unit/test_atr_true_range.py
           tests/unit/test_kline_candle_direction.py
           tests/unit/test_kline_features.py
           tests/unit/test_market_features.py
           tests/unit/test_structure_levels.py
+          tests/unit/test_stage1_normalizer_strategy_aliases.py
+          tests/unit/test_decision_stance.py
           tests/unit/test_cycle_enums.py
           tests/unit/test_response_extract.py
           tests/unit/test_mimo_compat.py
