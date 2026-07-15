@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第八十六轮：继续 L7，扩展 CI 到 Stage 1 normalizer 测试）
+
+本轮继续推进 **L7：CI 增强**。第八十五轮已把 decision tree helper 测试纳入目标 CI；本轮继续筛选纯后端归一化链路测试。`test_stage1_normalizer.py` 覆盖 Stage 1 JSON 归一化的 bar_by_bar hoist、策略文件别名、gate_result 修复、方向/branch 枚举修复、signal_bar 补全与 quality 修复、bar_type 截断修复、bar_by_bar 补齐、incremental_delta 补全，以及若干历史模型输出兼容场景。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_stage1_normalizer.py`。目标测试数量从 **372** 扩展到 **394**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `tests/unit/test_stage1_normalizer.py`。
+- **清理目标测试 lint**：整理导入顺序，并为需保留的中文 gate question、reason、signal_bar reason 与 incremental risk_warning 样例添加行级 `# noqa: RUF001`。
+- **暂不纳入源文件 Ruff**：`pa_agent/ai/stage1_normalizer.py` 仍含较多中文兼容逻辑/样例基线，本轮只扩展测试文件 Ruff 门禁。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 Stage 1 normalizer。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_stage1_normalizer.py --tb=line -q -p no:cacheprovider` → **22 passed**。
+- `py -3.12 -m ruff check tests/unit/test_stage1_normalizer.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests\unit\test_stage1_normalizer.py` → 通过。
+- 扩展后目标集：执行 `.github/workflows/ci.yml` 的 targeted pytest 清单（本地 `pytest_cov` 插件仍受用户 site-packages 权限问题影响，沿用无 coverage 插件行为验证）→ `py -3.12 -m pytest ... --tb=line -q -p no:cacheprovider` → **394 passed**。
+- 扩展后 Ruff：执行 `.github/workflows/ci.yml` 的 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第八十五轮：继续 L7，扩展 CI 到 decision tree 测试）
 
 本轮继续推进 **L7：CI 增强**。第八十四轮已把 price tick 测试纳入目标 CI；本轮继续筛选纯后端决策树 helper 测试。`test_decision_tree.py` 覆盖 bar-range 问题后缀、trace answer branch 格式化、决策树 txt 加载、gate/decision trace 合并、gate wait/unknown 短路响应、Stage 1/Stage 2 trace consistency，以及短路响应的 Stage 2 schema 校验。
