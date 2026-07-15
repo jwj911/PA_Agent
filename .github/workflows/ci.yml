@@ -38,6 +38,10 @@ jobs:
           tests/unit/test_decision_nodes_orchestrator.py
           tests/unit/test_provider_sync_service.py
           tests/unit/test_qclaw_auto_fallback.py
+          tests/unit/test_secret_store.py
+          tests/unit/test_settings_round_trip.py
+          tests/unit/test_pending_writer_sanitize.py
+          tests/unit/test_pending_writer_no_plaintext_key.py
           --tb=line
           -q
           -p pytest_cov
@@ -52,6 +56,8 @@ jobs:
           pa_agent/data/mt5.py
           pa_agent/data/yfinance_source.py
           pa_agent/ai/provider_sync_service.py
+          pa_agent/security/secret_store.py
+          pa_agent/records/pending_writer.py
           tests/unit/test_data_source_forming_bar.py
           tests/unit/test_mt5_clock_skew.py
           tests/unit/test_order_method_router.py
@@ -59,3 +65,7 @@ jobs:
           tests/unit/test_decision_nodes_orchestrator.py
           tests/unit/test_provider_sync_service.py
           tests/unit/test_qclaw_auto_fallback.py
+          tests/unit/test_secret_store.py
+          tests/unit/test_settings_round_trip.py
+          tests/unit/test_pending_writer_sanitize.py
+          tests/unit/test_pending_writer_no_plaintext_key.py

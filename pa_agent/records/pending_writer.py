@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from pa_agent.records.schema import AnalysisRecord, FollowupTurn
@@ -24,7 +24,7 @@ def _default_logger() -> logging.Logger:
 
 def _ms_to_local_datetime(ms: int) -> datetime:
     """Convert epoch milliseconds to local datetime."""
-    return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).astimezone()
+    return datetime.fromtimestamp(ms / 1000, tz=UTC).astimezone()
 
 
 def build_record_basename(record: AnalysisRecord) -> str:
@@ -98,7 +98,7 @@ class PendingWriter:
             from pa_agent.records.analysis_history import invalidate_latest_record_cache
 
             invalidate_latest_record_cache()
-        except Exception:  # noqa: BLE001
+        except Exception:
             self._logger.debug("Failed to invalidate latest-record cache", exc_info=True)
         return path
 
@@ -124,7 +124,7 @@ class PendingWriter:
             from pa_agent.records.analysis_history import invalidate_latest_record_cache
 
             invalidate_latest_record_cache()
-        except Exception:  # noqa: BLE001
+        except Exception:
             self._logger.debug("Failed to invalidate latest-record cache", exc_info=True)
         return path
 
@@ -185,7 +185,7 @@ class PendingWriter:
         if self._event_bus is not None:
             try:
                 self._event_bus.emit_disk_error({"path": str(path), "error": str(exc)})
-            except Exception as bus_exc:  # noqa: BLE001
+            except Exception as bus_exc:
                 self._logger.error(
                     "PendingWriter: event_bus emit failed: %s", bus_exc
                 )
