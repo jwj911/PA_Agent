@@ -13,6 +13,29 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第九十一轮：继续 L7，扩展 CI 到 trace normalize 与 prompt assembler 测试）
+
+本轮继续推进 **L7：CI 增强**。第九十轮已把 Stage 2 normalizer 测试纳入目标 CI；本轮继续筛选纯后端 prompt/trace 组装与归一化测试。`test_trace_normalize.py` 覆盖 trace bar_range 修复、Stage 2 trace 归一化、pending/partial answer 兼容、严格模式 trace 问题修复与 schema 通过路径；`test_prompt_assembler.py` 覆盖 prompt 组装、bar-by-bar 摘要、程序判定闸门、增量分析上下文，以及上一轮 fenced JSON 响应抽取。
+
+### 工程治理
+
+- **CI 目标 pytest 扩容**：`.github/workflows/ci.yml` 的 `Run targeted unit tests` 新增 `tests/unit/test_trace_normalize.py` 与 `tests/unit/test_prompt_assembler.py`。目标测试数量从 **463** 扩展到 **518**，继续通过 `pytest-cov` 输出覆盖率报告。
+- **CI Ruff 门禁扩容**：聚焦 Ruff 新增 `tests/unit/test_trace_normalize.py` 与 `tests/unit/test_prompt_assembler.py`。
+- **清理目标测试 lint**：通过 Ruff 自动整理 import、移除未使用导入，并为需保留的中文 prompt/trace 断言样例添加文件级 `# ruff: noqa: RUF001` / `# ruff: noqa: RUF001,RUF002`。
+- **暂不纳入源文件 Ruff**：`pa_agent/ai/prompt_assembler.py` 与 trace/normalizer 相关源文件包含大量面向 prompt/用户可见输出的中文基线；本轮只扩展测试文件 Ruff 门禁，保持 L7 小切片策略。
+- **同步 `AGENTS.md`**：更新 CI 状态说明，明确目标测试已覆盖 trace normalize 与 prompt assembler。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_trace_normalize.py --tb=line -q -p no:cacheprovider` → **24 passed**。
+- `py -3.12 -m pytest tests/unit/test_prompt_assembler.py --tb=line -q -p no:cacheprovider` → **31 passed**。
+- `py -3.12 -m ruff check tests/unit/test_trace_normalize.py tests/unit/test_prompt_assembler.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests\unit\test_trace_normalize.py tests\unit\test_prompt_assembler.py` → 通过。
+- 扩展后目标集：从 `.github/workflows/ci.yml` 解析 targeted pytest 清单（本地 `pytest_cov` 插件仍受用户 site-packages 权限问题影响，沿用无 coverage 插件行为验证）→ `py -3.12 -m pytest ... --tb=line -q -p no:cacheprovider` → **518 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第九十轮：继续 L7，扩展 CI 到 Stage 2 normalizer 测试）
 
 本轮继续推进 **L7：CI 增强**。第八十九轮已把 trade metrics validation 测试纳入目标 CI；本轮继续处理 Stage 2 归一化链路测试。`test_stage2_normalizer.py` 覆盖 closed enum 标注剥离、下一棒预测归一化、Stage 2 枚举/信号/entry 链路修复、交易指标守卫、prediction guard，以及多类历史模型输出兼容场景。
