@@ -151,6 +151,8 @@ jobs:
           pa_agent/ai/response_extract.py
           pa_agent/ai/mimo_compat.py
           pa_agent/ai/kline_features.py
+          pa_agent/ai/bar_geometry.py
+          pa_agent/ai/trace_nodes.py
           pa_agent/ai/structure_levels.py
           pa_agent/ai/provider_errors.py
           pa_agent/ai/retry_policy.py

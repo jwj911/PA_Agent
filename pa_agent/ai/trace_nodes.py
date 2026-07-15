@@ -68,7 +68,7 @@ def _node_label(node_id: str) -> str:
         from pa_agent.ai.decision_tree import node_label as _nl
 
         return _nl(node_id)
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.debug("node_label lookup failed for %s", node_id, exc_info=True)
         return node_id
 
@@ -79,7 +79,7 @@ def build_program_trace_node(fill: NodeFill, *, tree: Any = None) -> dict[str, A
         from pa_agent.ai.decision_tree import node_label as _nl
 
         question = _nl(fill.node_id, tree)
-    except Exception:  # noqa: BLE001
+    except Exception:
         question = fill.node_id
 
     node: dict[str, Any] = {
