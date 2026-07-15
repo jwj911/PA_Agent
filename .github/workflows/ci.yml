@@ -32,6 +32,7 @@ jobs:
           tests/unit/test_build_analysis_frame.py
           tests/unit/test_snapshot_indicator_warmup.py
           tests/unit/test_data_source_factory.py
+          tests/unit/test_refresh_loop_warmup.py
           tests/unit/test_akshare_source.py
           tests/unit/test_tushare_source.py
           tests/unit/test_mt5_clock_skew.py
@@ -56,6 +57,7 @@ jobs:
           tests/unit/test_cycle_enums.py
           tests/unit/test_response_extract.py
           tests/unit/test_mimo_compat.py
+          tests/unit/test_kv_prefix_cache.py
           tests/unit/test_prompt_txt_files.py
           tests/unit/test_client_factory.py
           tests/unit/test_cost_and_ledger.py
@@ -97,6 +99,7 @@ jobs:
           pa_agent/demo/record_loader.py
           pa_agent/demo/replayer.py
           tests/unit/test_data_source_forming_bar.py
+          tests/unit/test_refresh_loop_warmup.py
           tests/unit/test_akshare_source.py
           tests/unit/test_tushare_source.py
           tests/unit/test_mt5_clock_skew.py
@@ -121,6 +124,7 @@ jobs:
           tests/unit/test_cycle_enums.py
           tests/unit/test_response_extract.py
           tests/unit/test_mimo_compat.py
+          tests/unit/test_kv_prefix_cache.py
           tests/unit/test_prompt_txt_files.py
           tests/unit/test_client_factory.py
           tests/unit/test_cost_and_ledger.py
