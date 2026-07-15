@@ -33,6 +33,7 @@ jobs:
           tests/unit/test_snapshot_indicator_warmup.py
           tests/unit/test_data_source_factory.py
           tests/unit/test_mt5_clock_skew.py
+          tests/unit/test_mt5_symbol_available.py
           tests/unit/test_order_method_router.py
           tests/unit/test_trend_context.py
           tests/unit/test_decision_nodes_orchestrator.py
@@ -83,6 +84,7 @@ jobs:
           pa_agent/demo/replayer.py
           tests/unit/test_data_source_forming_bar.py
           tests/unit/test_mt5_clock_skew.py
+          tests/unit/test_mt5_symbol_available.py
           tests/unit/test_order_method_router.py
           tests/unit/test_trend_context.py
           tests/unit/test_decision_nodes_orchestrator.py
