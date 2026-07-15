@@ -46,8 +46,8 @@ def test_trading_range_syncs_range_patterns_from_text() -> None:
         "cycle_position": "trading_range",
         "direction": "neutral",
         "detected_patterns": [],
-        "key_signals": ["K线重叠度高，多空力量均衡"],
-        "risk_warning": "区间下沿若被突破，警惕假突破后快速收复",
+        "key_signals": ["K线重叠度高，多空力量均衡"],  # noqa: RUF001
+        "risk_warning": "区间下沿若被突破，警惕假突破后快速收复",  # noqa: RUF001
         "bar_analysis": {"entry_setup_type": "none"},
     }
     from pa_agent.ai.stage1_normalizer import normalize_stage1
@@ -96,7 +96,6 @@ def test_tr_boundary_syncs_middle_range_and_barbwire() -> None:
         "bar_analysis": {"entry_setup_type": "tr_boundary"},
         "program_features": {"barbwire_candidate": True, "barbwire_score": 0.72},
     }
-    from pa_agent.ai.pattern_routing import sync_detected_patterns_field
     from pa_agent.ai.stage1_normalizer import normalize_stage1
 
     out = normalize_stage1(s1, normalization_mode="strict")
@@ -124,7 +123,7 @@ def test_ema_gap_count_does_not_trigger_hl_count_setup() -> None:
     """「EMA缺口计数」must not be mistaken for H1/H2/L1/L2 count entry."""
     s1 = {
         "key_signals": [
-            "连续19根K线收盘在EMA下方（EMA缺口计数19），接近20GB极端状态",
+            "连续19根K线收盘在EMA下方（EMA缺口计数19），接近20GB极端状态",  # noqa: RUF001
         ],
         "detected_patterns": ["reversal_attempt"],
         "risk_warning": "",
@@ -154,7 +153,7 @@ def test_barbwire_not_synced_from_subthreshold_risk_warning() -> None:
         "cycle_position": "trading_range",
         "direction": "neutral",
         "detected_patterns": [],
-        "risk_warning": "铁丝网分数0.20未达阈值，区间中部不宜追单",
+        "risk_warning": "铁丝网分数0.20未达阈值，区间中部不宜追单",  # noqa: RUF001
         "program_features": {"barbwire_candidate": False, "barbwire_score": 0.2},
         "bar_analysis": {"entry_setup_type": "none"},
     }
