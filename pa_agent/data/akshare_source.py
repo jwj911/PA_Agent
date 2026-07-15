@@ -35,7 +35,7 @@ _SUPPORTED_TIMEFRAMES: tuple[str, ...] = ("1h", "4h", "1d")
 _PRESET_SYMBOLS: tuple[str, ...] = (
     "000001",  # 平安银行
     "600519",  # 贵州茅台
-    "000300",  # 沪深300（指数）
+    "000300",  # 沪深300 (指数)
     "399006",  # 创业板指
 )
 
@@ -96,7 +96,7 @@ def _cn_now() -> datetime:
 
 
 def _ashare_session_open(now: datetime | None = None) -> bool:
-    """True during A-share cash session (Mon–Fri, 09:30–11:30 & 13:00–15:00 CN)."""
+    """True during A-share cash session (Mon-Fri, 09:30-11:30 & 13:00-15:00 CN)."""
     now = now or _cn_now()
     if now.weekday() >= 5:
         return False
@@ -114,10 +114,7 @@ def _row_time_to_ts_ms(value: Any) -> int:
 
         if isinstance(value, pd.Timestamp):
             ts = value
-            if ts.tz is None:
-                ts = ts.tz_localize(_CN_TZ)
-            else:
-                ts = ts.tz_convert(_CN_TZ)
+            ts = ts.tz_localize(_CN_TZ) if ts.tz is None else ts.tz_convert(_CN_TZ)
             return int(ts.timestamp() * 1000)
     except ImportError:
         pass
@@ -261,7 +258,7 @@ class AkShareSource(DataSource):
             import akshare  # noqa: F401
         except ImportError as exc:
             raise DataSourceTransientError(
-                "未安装 akshare，请执行: pip install akshare"
+                "未安装 akshare，请执行: pip install akshare"  # noqa: RUF001
             ) from exc
         self._baostock_ok = False
         if os.environ.get("PA_AGENT_BAOSTOCK_FALLBACK", "").strip() in ("1", "true", "yes"):
@@ -293,7 +290,7 @@ class AkShareSource(DataSource):
             )
         code = normalize_ashare_symbol(symbol)
         if not code:
-            raise ValueError("A股代码无效，请输入 6 位数字（如 600519）或指数 sh000300")
+            raise ValueError("A股代码无效，请输入 6 位数字（如 600519）或指数 sh000300")  # noqa: RUF001
         self._symbol = code
         self._timeframe = timeframe
         logger.info("AkShareSource subscribed: %s %s", code, timeframe)
@@ -494,7 +491,7 @@ class AkShareSource(DataSource):
         import baostock as bs
 
         if is_index_symbol(symbol) and timeframe != "1d":
-            raise DataSourceTransientError("Baostock 不提供指数分钟线，请稍后重试 AkShare")
+            raise DataSourceTransientError("Baostock 不提供指数分钟线，请稍后重试 AkShare")  # noqa: RUF001
         code = _baostock_code(symbol)
         freq = {"1d": "d", "1h": "60", "4h": "60"}.get(timeframe, "d")
         end = _cn_now().strftime("%Y-%m-%d")
@@ -610,7 +607,7 @@ class AkShareSource(DataSource):
             import baostock as bs
 
             bs.logout()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.debug("Baostock logout: %s", exc)
         self._baostock_logged_in = False
 
