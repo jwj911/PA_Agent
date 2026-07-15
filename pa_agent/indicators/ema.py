@@ -20,7 +20,7 @@ def ema_full(values: list[float], period: int) -> list[float]:
     Returns a list of the same length:
     - Indices 0 .. period-2: nan  (warm-up)
     - Index period-1: simple mean of first *period* values
-    - Index period .. end: EMA with multiplier α = 2/(period+1)
+    - Index period .. end: EMA with multiplier alpha = 2/(period+1)
 
     Args:
         values: Price series, oldest first.

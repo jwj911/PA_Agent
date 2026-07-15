@@ -156,6 +156,7 @@ jobs:
           pa_agent/records/analysis_history.py
           pa_agent/demo/record_loader.py
           pa_agent/demo/replayer.py
+          pa_agent/indicators
           tests/unit/test_data_source_forming_bar.py
           tests/unit/test_refresh_loop_warmup.py
           tests/unit/test_akshare_source.py
