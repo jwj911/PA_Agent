@@ -13,6 +13,25 @@
 
 ---
 
+## [Unreleased] — 2026-07-15（第五十二轮：启动 L7，给 CI 增加目标测试与聚焦 Ruff 门禁）
+
+本轮根据后端审查报告 §5.3 的 **L7：CI 增强** 开始收窄 CI 缺口。此前 `.github/workflows/ci.yml` 只在 Windows + Python 3.11 下安装依赖并 import `pa_agent`，没有运行任何 pytest、ruff、black 或覆盖率检查。考虑到全仓仍存在大量历史 Ruff 中文标点告警，且当前 Python 文件尚未整体 black 格式化，本轮先落地低风险第一片：把近期 M7 forming-bar/data-source 相关的稳定目标单测和同范围 Ruff 检查纳入 CI。
+
+### 工程治理
+
+- **CI 新增目标单测步骤**：安装与 import 验证之后，运行 `tests/unit/test_data_source_forming_bar.py`、`test_bar_close_wait.py`、`test_snapshot_closed_only_buffer.py`、`test_build_analysis_frame.py`、`test_snapshot_indicator_warmup.py`、`test_data_source_factory.py`、`test_mt5_clock_skew.py`。该子集覆盖 `DataSource.has_forming_bar_at_head(...)` 统一入口、snapshot closed-only 逻辑、各数据源 forming 判定复用，以及 MT5 clock skew 的无本地终端测试路径。
+- **CI 新增聚焦 Ruff 步骤**：对 `pa_agent/data/base.py`、`snapshot.py`、`mt5.py`、`yfinance_source.py` 以及对应 forming/MT5 单测运行 `python -m ruff check`。这些文件在本轮前已确认可全量通过 Ruff，适合作为第一批 CI lint 门禁。
+- **暂不启用 Black / 全仓 Ruff / 全量 pytest**：本机验证显示候选文件 `black --check` 仍会触发格式化请求，若本轮直接启用 Black 会把 CI 增强扩大为大面积格式化任务；全仓 Ruff 也仍受历史中文标点基线影响。Black、覆盖率、完整 `pytest -m "not e2e"` 继续作为 L7 后续增量推进。
+- **同步 `AGENTS.md`**：更新测试策略与发布章节中的 CI 描述，避免继续声称 CI 仅做安装与 import。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_data_source_forming_bar.py tests/unit/test_bar_close_wait.py tests/unit/test_snapshot_closed_only_buffer.py tests/unit/test_build_analysis_frame.py tests/unit/test_snapshot_indicator_warmup.py tests/unit/test_data_source_factory.py tests/unit/test_mt5_clock_skew.py --tb=line -q -p no:cacheprovider` → **41 passed**。
+- `py -3.12 -m ruff check pa_agent/data/base.py pa_agent/data/snapshot.py pa_agent/data/mt5.py pa_agent/data/yfinance_source.py tests/unit/test_data_source_forming_bar.py tests/unit/test_mt5_clock_skew.py` → **All checks passed**。
+- `py -3.12 -m black --check ...` 对同一候选文件返回 **6 files would be reformatted**，确认为本轮暂缓 Black CI 门禁的基线证据。
+
+---
+
 ## [Unreleased] — 2026-07-15（第五十一轮：修复 §11 broad_channel 突破单被错误降级为限价单）
 
 本轮处理第五十轮 M3 收官验证中暴露出的既有失败：`test_order_method_router.py::test_model_breakout_preserved_for_broad_channel`。该用例描述的是 **broad_channel 默认偏限价，但模型若给出完整突破单依据（`entry_basis_bar` + `entry_basis_extreme`）且 §10.3 已通过，应保留模型明确的突破单选择**。实际代码中已写了保留分支，但 `_has_trade_prices()` 错把可选的 `take_profit_price_2` 当成必填价格，导致只有主止盈价的有效突破单未进入保留分支，随后被 broad_channel 默认路线改成 `限价单`。

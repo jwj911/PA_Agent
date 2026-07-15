@@ -294,8 +294,8 @@ pytest -m live
 **测试约定**：
 
 - 修改 JSON schema、提示词、策略路由、决策节点时，请补充或更新对应测试用例。
-- CI（`.github/workflows/ci.yml`）目前只在 Windows + Python 3.11 下做安装验证，不运行完整测试套件。
-- 提交前建议至少运行 `pytest -m "not e2e"`。
+- CI（`.github/workflows/ci.yml`）目前在 Windows + Python 3.11 下执行安装/import 验证，并运行一组形成中 K 线与数据源相关的目标单测，以及同范围的 Ruff 检查；尚未启用完整 `pytest -m "not e2e"`、全仓 Ruff、Black 或覆盖率门禁。
+- 提交前建议至少运行与改动相关的目标测试；较大改动应继续补跑 `pytest -m "not e2e"`。
 
 ***
 
@@ -384,7 +384,7 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
 - 部署方式以源码运行或 `pip install -e .` 为主：
   - Windows 用户：直接双击 `run.py` 或在终端执行 `python run.py`。
   - 开发者：`pip install -e ".[dev]"` 后使用 `make run` / `python -m pa_agent.main`。
-- CI（`.github/workflows/ci.yml`）仅做安装与 import 验证，不运行完整测试套件。
+- CI（`.github/workflows/ci.yml`）已开始执行安装/import 验证、目标单测与聚焦 Ruff 检查；完整测试、Black 与覆盖率仍属于 L7 后续增强。
 - `tools/` 目录包含大量一次性诊断脚本（网关探测、stage2 JSON 调试、MT5 时钟偏移检测等），不属于正式发布流程。
 
 ***
