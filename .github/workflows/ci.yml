@@ -120,6 +120,7 @@ jobs:
           tests/unit/test_trade_metrics_validation.py
           tests/unit/test_limit_order_k1_freshness.py
           tests/unit/test_provider_errors.py
+          tests/unit/test_retry_policy.py
           tests/unit/test_validation_retry.py
           tests/unit/test_analysis_history.py
           tests/unit/test_demo_record_loader.py
@@ -332,6 +333,7 @@ jobs:
           tests/unit/test_trade_metrics_validation.py
           tests/unit/test_limit_order_k1_freshness.py
           tests/unit/test_provider_errors.py
+          tests/unit/test_retry_policy.py
           tests/unit/test_validation_retry.py
           tests/unit/test_analysis_history.py
           tests/unit/test_demo_record_loader.py
