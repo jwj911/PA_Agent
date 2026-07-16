@@ -13,6 +13,24 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百四十九轮：继续 L7，扩展 Ruff 到 stage2 payload helper）
+
+本轮继续推进 **L7：CI 增强**。第一百四十八轮已把 snapshot worker 纳入 focused Ruff；本轮继续收束 GUI helper 小文件，选择已经 Ruff clean 的 `pa_agent/gui/stage2_payload.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/gui/stage2_payload.py`。
+- **保持运行逻辑不变**：本轮不修改 Stage 2 `decision` 合并、`next_bar_prediction` / `next_cycle_prediction` 透传、deepcopy 归一化、`ensure_stage2_predictions()` 调用或 `skip_next_bar` 行为。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确 Ruff 门禁已覆盖 Stage 2 UI payload helper。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/gui/stage2_payload.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/gui/stage2_payload.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百四十八轮：继续 L7，扩展 Ruff 到 snapshot worker）
 
 本轮继续推进 **L7：CI 增强**。第一百四十七轮已把 GUI 包入口纳入 focused Ruff；本轮转向 GUI worker 小文件，选择仅有 stale `BLE001` noqa 的 `pa_agent/gui/snapshot_worker.py`。
