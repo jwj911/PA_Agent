@@ -13,6 +13,29 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百六十六轮：继续 L7，补充 trace nodes 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百六十五轮已给 bar geometry primitives 补充单测；本轮转向同属 AI 基础叶子模块、已在 focused Ruff 清单内的 `pa_agent/ai/trace_nodes.py`，补充 trace 结果层 helper 的确定性覆盖。
+
+### 工程治理
+
+- **新增 trace nodes 单测**：新增 `tests/unit/test_trace_nodes.py`，覆盖 `_coerce_dict()` 的 dict-only 归一、`_coerce_trace_list()` 的 trace list 过滤、`NodeFill` frozen dataclass 默认元数据、`build_program_trace_node()` 的键/值/可选 `branch` 与 `section` 写入，以及 `decision_tree.node_label` 异常时回退到 `node_id`。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_trace_nodes.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_trace_nodes.py`。
+- **保持运行逻辑不变**：本轮不修改 trace dict 构建、`node_label` 惰性解析、`decision_nodes` 重导出、judge 调用路径或任何生产代码。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已覆盖 trace node result helpers。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_trace_nodes.py --tb=line -q -p no:cacheprovider` → **6 passed**。
+- `py -3.12 -m ruff check pa_agent/ai/trace_nodes.py tests/unit/test_trace_nodes.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/ai/trace_nodes.py tests/unit/test_trace_nodes.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+- `git diff --check` → 通过。
+- 敏感字面量扫描（常见 access key、OpenAI key 与 key-value secret patterns）→ 无命中。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百六十五轮：继续 L7，补充 bar geometry 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百六十四轮已给 East Money quote API constants 补充单测；本轮转向已在 focused Ruff 清单内、stdlib-only 的 AI 叶子模块 `pa_agent/ai/bar_geometry.py`，补充决策节点几何 primitive 的确定性覆盖。
