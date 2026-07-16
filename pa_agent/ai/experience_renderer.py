@@ -25,7 +25,7 @@ def render_experience(
     """Render experience library entries as a text block."""
     lines = [
         "## 经验库(最近案例,供参考)",
-        "以下案例仅作对照，**不得**因相似就改变对本图结构/方向的独立判断。",
+        "以下案例仅作对照，**不得**因相似就改变对本图结构/方向的独立判断。",  # noqa: RUF001
     ]
     for i, entry in enumerate(entries, 1):
         if isinstance(entry, dict):

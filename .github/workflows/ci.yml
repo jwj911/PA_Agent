@@ -168,6 +168,7 @@ jobs:
           pa_agent/data/market_defaults.py
           pa_agent/ai/provider_sync_service.py
           pa_agent/ai/validation_messages.py
+          pa_agent/ai/experience_renderer.py
           pa_agent/ai/cycle_enums.py
           pa_agent/ai/response_extract.py
           pa_agent/ai/mimo_compat.py
