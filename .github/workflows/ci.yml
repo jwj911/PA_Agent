@@ -41,6 +41,7 @@ jobs:
           tests/unit/test_refresh_loop_warmup.py
           tests/unit/test_akshare_source.py
           tests/unit/test_tushare_source.py
+          tests/unit/test_eastmoney_client.py
           tests/unit/test_eastmoney_baostock.py
           tests/unit/test_eastmoney_quote.py
           tests/unit/test_eastmoney_quote_api.py
@@ -257,6 +258,7 @@ jobs:
           tests/unit/test_refresh_loop_warmup.py
           tests/unit/test_akshare_source.py
           tests/unit/test_tushare_source.py
+          tests/unit/test_eastmoney_client.py
           tests/unit/test_eastmoney_baostock.py
           tests/unit/test_eastmoney_quote.py
           tests/unit/test_eastmoney_quote_api.py
