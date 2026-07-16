@@ -43,6 +43,7 @@ jobs:
           tests/unit/test_tushare_source.py
           tests/unit/test_eastmoney_baostock.py
           tests/unit/test_eastmoney_quote.py
+          tests/unit/test_eastmoney_quote_api.py
           tests/unit/test_tradingview_socket.py
           tests/unit/test_tradingview_errors.py
           tests/unit/test_tradingview_connectivity.py
@@ -247,6 +248,7 @@ jobs:
           tests/unit/test_tushare_source.py
           tests/unit/test_eastmoney_baostock.py
           tests/unit/test_eastmoney_quote.py
+          tests/unit/test_eastmoney_quote_api.py
           tests/unit/test_tradingview_socket.py
           tests/unit/test_tradingview_errors.py
           tests/unit/test_tradingview_connectivity.py
