@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第二百零六轮：继续 L7，补充 security package 单测）
+
+本轮继续推进 **L7：CI 增强**。第二百零五轮已给 indicators package marker 补充合同覆盖；本轮转向同属轻量包入口、且已在 focused Ruff 包级覆盖内的 `pa_agent/security/__init__.py`，补充 security package marker 合同覆盖。
+
+### 工程治理
+
+- **新增 security package 单测**：新增 `tests/unit/test_security_package.py`，覆盖 `pa_agent.security` 可导入、无 `__all__`、不重导出 `encrypt_secret` / `decrypt_secret`，以及既有 package docstring 合同。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_security_package.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_security_package.py`。
+- **保持运行逻辑不变**：本轮不修改 security 包入口、secret store、settings 加密、运行时脱敏或任何密钥持久化逻辑。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 security package marker。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_security_package.py --tb=short -q -p no:cacheprovider` → **1 passed**。
+- `py -3.12 -m ruff check pa_agent/security/__init__.py tests/unit/test_security_package.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/security/__init__.py tests/unit/test_security_package.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...`，共 **233** 个目标 → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第二百零五轮：继续 L7，补充 indicators package 单测）
 
 本轮继续推进 **L7：CI 增强**。第二百零四轮已给 ATR helper 补充直接边界覆盖；本轮转向同属 `pa_agent/indicators` 包的轻量包入口，补充 indicators package marker 合同覆盖。
