@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百四十四轮：继续 L7，扩展 Ruff 到 candle item widget）
+
+本轮继续推进 **L7：CI 增强**。第一百四十三轮已把 summary strip widget 纳入 focused Ruff；本轮继续筛选 GUI widgets 剩余小文件，选择仅有 quoted annotation lint 的 `pa_agent/gui/widgets/candle_item.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/gui/widgets/candle_item.py`。
+- **清理 CandleItem lint**：移除 `KlineBar` quoted annotations，消除 Ruff `UP037`。
+- **保持运行逻辑不变**：本轮不修改蜡烛绘制、forming bar 空心样式、body/wick 几何计算、颜色、bounding rect 或增量 `update_bar()` 行为。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确 Ruff 门禁已覆盖 candle item widget。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/gui/widgets/candle_item.py tests/unit/test_chart_skip_redraw.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/gui/widgets/candle_item.py tests/unit/test_chart_skip_redraw.py` → 通过。
+- `py -3.12 -m pytest tests/unit/test_chart_skip_redraw.py::test_frame_is_pure_closed tests/unit/test_chart_skip_redraw.py::test_frames_equal_ignores_snapshot_ts --tb=line -q -p no:cacheprovider` → **2 passed**。
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_chart_skip_redraw.py --tb=line -q -p no:cacheprovider` → 本地环境缺少 `qtbot` fixture，两个 GUI widget 用例未能执行；本轮未把该结果作为通过证据。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百四十三轮：继续 L7，扩展 Ruff 到 summary strip widget）
 
 本轮继续推进 **L7：CI 增强**。第一百四十二轮已把 overlay lines widget 纳入 focused Ruff；本轮继续处理 GUI widgets 小文件，选择仅有 stale `N802` noqa 的 `pa_agent/gui/widgets/summary_strip.py`。
