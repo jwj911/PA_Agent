@@ -106,6 +106,7 @@ jobs:
           tests/unit/test_validation_messages.py
           tests/unit/test_json_validator.py
           tests/unit/test_validation_lenient_fixes.py
+          tests/unit/test_business_rules.py
           tests/unit/test_mimo_compat.py
           tests/unit/test_kv_prefix_cache.py
           tests/unit/test_token_counter.py
@@ -321,6 +322,7 @@ jobs:
           tests/unit/test_validation_messages.py
           tests/unit/test_json_validator.py
           tests/unit/test_validation_lenient_fixes.py
+          tests/unit/test_business_rules.py
           tests/unit/test_mimo_compat.py
           tests/unit/test_kv_prefix_cache.py
           tests/unit/test_token_counter.py
