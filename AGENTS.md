@@ -307,6 +307,7 @@ pytest -m live
 - 第一百四十五轮 L7 补充：focused Ruff 新增 `pa_agent/gui/widgets/seq_label_item.py`，仅把 forming/non-forming 两侧相同的序号文本条件表达式简化为单一赋值；本轮不修改序号文本格式、forming 颜色、默认颜色、字体、anchor 或位置。
 - 第一百四十六轮 L7 补充：focused Ruff 新增 `pa_agent/gui/widgets/__init__.py`，覆盖 widgets 包入口导出；本轮不修改包导出、公开类名、widget 初始化路径或任何运行代码。
 - 第一百四十七轮 L7 补充：focused Ruff 新增 `pa_agent/gui/__init__.py`，仅按 Ruff/isort 排序 GUI 包入口 import 与 `__all__`；本轮不修改 GUI 包公开类集合、导出名称、初始化路径或任何运行代码。
+- 第一百四十八轮 L7 补充：focused Ruff 新增 `pa_agent/gui/snapshot_worker.py`，仅移除 stale `BLE001` noqa；本轮不修改后台 snapshot 拉取、`bars_ready`/`failed` signal、异常捕获范围、warning 日志或失败消息传播。
 
 ***
 
