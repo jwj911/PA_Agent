@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百九十七轮：继续 L7，补充 package metadata 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百九十六轮已给 decision nodes compatibility facade 补充 exports 合同单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/__init__.py`，补充顶层包元数据合同覆盖。
+
+### 工程治理
+
+- **新增 package metadata 单测**：新增 `tests/unit/test_package_metadata.py`，通过 `tomllib` 读取 `pyproject.toml`，覆盖 `pa_agent.__version__` 与 project version 的一致性，并锁定顶层包 docstring。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_package_metadata.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_package_metadata.py`。
+- **保持运行逻辑不变**：本轮不修改 `pa_agent/__init__.py`、项目版本、打包配置或启动入口。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 package metadata。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_package_metadata.py --tb=short -q -p no:cacheprovider` → **2 passed**。
+- `py -3.12 -m ruff check pa_agent/__init__.py tests/unit/test_package_metadata.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/__init__.py tests/unit/test_package_metadata.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...`，共 **224** 个目标 → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百九十六轮：继续 L7，补充 decision nodes exports 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百九十五轮已给 util 包入口补充 exports 合同单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/ai/decision_nodes.py`，补充 decision node compatibility facade 的导出合同覆盖。
