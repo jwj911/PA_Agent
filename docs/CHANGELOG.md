@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百七十九轮：继续 L7，补充 stage2 payload 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百七十八轮已给 prediction display formatting helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/gui/stage2_payload.py`，补充 Stage 2 UI payload 合并/归一化 helper 的直接覆盖。
+
+### 工程治理
+
+- **新增 stage2 payload 单测**：新增 `tests/unit/test_stage2_payload.py`，覆盖 `merge_stage2_for_panels()` 对非 dict 输入的空结果、`decision` 内层字段与顶层 `next_bar_prediction` / `next_cycle_prediction` 的合并，以及 `prepare_stage2_for_ui()` 在调用 normalizer 前 deepcopy、透传 `stage1_json` / `skip_next_bar`，并在 `skip_next_bar=True` 时预先移除下一根 K 线预测。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_stage2_payload.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_stage2_payload.py`。
+- **保持运行逻辑不变**：本轮不修改 `stage2_payload.py`、`stage2_normalizer.py`、Stage 2 UI 面板、预测字段展示或任何用户可见文本。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 Stage 2 UI payload merge helper。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_stage2_payload.py --tb=short -q -p no:cacheprovider` → **4 passed**。
+- `py -3.12 -m ruff check pa_agent/gui/stage2_payload.py tests/unit/test_stage2_payload.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/gui/stage2_payload.py tests/unit/test_stage2_payload.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百七十八轮：继续 L7，补充 prediction format 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百七十七轮已给 A 股共享 helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/gui/prediction_format.py`，补充预测展示格式化 helper 的直接覆盖。
