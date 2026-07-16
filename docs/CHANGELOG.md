@@ -13,6 +13,30 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百六十八轮：继续 L7，补充 token counter 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百六十七轮已给 signal context helpers 补充单测；本轮转向同属 AI 基础小 helper、已在 focused Ruff 清单内的 `pa_agent/ai/token_counter.py`，补充 token 估算路径的确定性覆盖。
+
+### 工程治理
+
+- **新增 token counter 单测**：新增 `tests/unit/test_token_counter.py`，通过 fake `tiktoken` module 覆盖 `estimate_tokens()` 的编码路径、每条消息 overhead、字符串字段计数、reply priming 和 `model_hint` 透传，并模拟 `tiktoken` 不可用时的 char/4 fallback 与最小返回 1。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_token_counter.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_token_counter.py`。
+- **保持运行逻辑不变**：本轮不修改 token 估算公式、`tiktoken.get_encoding()` 调用、fallback 日志、消息字段遍历或任何生产代码。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已覆盖 token counter helper。
+
+### 验证
+
+- 初始测试校准：首版断言少算 `role` 字符串字段，已把预期从 13 修正为 15；被测代码未修改。
+- `py -3.12 -m pytest tests/unit/test_token_counter.py --tb=line -q -p no:cacheprovider` → **3 passed**。
+- `py -3.12 -m ruff check pa_agent/ai/token_counter.py tests/unit/test_token_counter.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/ai/token_counter.py tests/unit/test_token_counter.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+- `git diff --check` → 通过。
+- 敏感字面量扫描（常见 access key、OpenAI key 与 key-value secret patterns）→ 无命中。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百六十七轮：继续 L7，补充 signal context 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百六十六轮已给 trace node result helpers 补充单测；本轮转向同属 AI 基础叶子模块、已在 focused Ruff 清单内的 `pa_agent/ai/signal_context.py`，补充信号棒 / 计划型限价上下文 helper 的确定性覆盖。
