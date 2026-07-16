@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百八十一轮：继续 L7，补充 validation debug dialog 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百八十轮已给 status bar widget helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/gui/validation_debug_dialog.py`，补充验证失败调试弹窗 helper 的直接覆盖。
+
+### 工程治理
+
+- **新增 validation debug dialog 单测**：新增 `tests/unit/test_validation_debug_dialog.py`，通过 offscreen `QApplication` 与 monkeypatch `QDialog.exec()` 避免真正弹窗，覆盖 `show_validation_debug_dialog()` 的窗口标题/尺寸、summary label word-wrap、只读正文内容、复制/关闭按钮文案、blank summary 省略，以及复制全部按钮写入剪贴板。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_validation_debug_dialog.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_validation_debug_dialog.py`。
+- **保持运行逻辑不变**：本轮不修改 `validation_debug_dialog.py`、弹窗文案、剪贴板调用、尺寸、modal `exec()` 行为或主窗口触发路径。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 validation debug dialog helper。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_validation_debug_dialog.py --tb=short -q -p no:cacheprovider` → **2 passed**。
+- `py -3.12 -m ruff check pa_agent/gui/validation_debug_dialog.py tests/unit/test_validation_debug_dialog.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/gui/validation_debug_dialog.py tests/unit/test_validation_debug_dialog.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百八十轮：继续 L7，补充 status bar 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百七十九轮已给 Stage 2 UI payload helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/gui/widgets/status_bar.py`，补充增强状态栏 widget helper 的直接覆盖。
