@@ -32,7 +32,7 @@ class SeqLabelItem(pg.TextItem):
         font_pt: int = 7,
         forming: bool = False,
     ) -> None:
-        label = f"#{seq}" if not forming else f"#{seq}"
+        label = f"#{seq}"
         color = QColor(120, 200, 220, 200) if forming else self._COLOR
         super().__init__(
             text=label,
