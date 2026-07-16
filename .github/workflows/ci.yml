@@ -86,6 +86,7 @@ jobs:
           tests/unit/test_atr_true_range.py
           tests/unit/test_kline_candle_direction.py
           tests/unit/test_kline_features.py
+          tests/unit/test_bar_geometry.py
           tests/unit/test_order_opportunity.py
           tests/unit/test_market_features.py
           tests/unit/test_price_tick.py
@@ -294,6 +295,7 @@ jobs:
           tests/unit/test_atr_true_range.py
           tests/unit/test_kline_candle_direction.py
           tests/unit/test_kline_features.py
+          tests/unit/test_bar_geometry.py
           tests/unit/test_order_opportunity.py
           tests/unit/test_market_features.py
           tests/unit/test_price_tick.py
