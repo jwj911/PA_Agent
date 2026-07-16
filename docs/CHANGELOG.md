@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百八十轮：继续 L7，补充 status bar 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百七十九轮已给 Stage 2 UI payload helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/gui/widgets/status_bar.py`，补充增强状态栏 widget helper 的直接覆盖。
+
+### 工程治理
+
+- **新增 status bar 单测**：新增 `tests/unit/test_status_bar.py`，覆盖 `EnhancedStatusBar` 的 `set_message()` / `showMessage()` / `currentMessage()` 兼容合同、`set_progress()` 对 progress value 与 label 的更新、`set_progress_color()` 对 red 与未知颜色 fallback 的样式输出，以及 `set_tps()` 对正数/自定义 label/零值隐藏的行为。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_status_bar.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_status_bar.py`。
+- **保持运行逻辑不变**：本轮不修改 `status_bar.py`、状态栏样式颜色、布局、高度、主窗口集成或任何用户可见文本。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 status bar widget helper。
+
+### 验证
+
+- 初始测试校准：首版使用 `qtbot` fixture，但本地环境未加载 `pytest-qt` fixture；已改为测试内直接创建并模块级持有 `QApplication`，保持 `QT_QPA_PLATFORM=offscreen`。
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_status_bar.py --tb=short -q -p no:cacheprovider` → **4 passed**。
+- `py -3.12 -m ruff check pa_agent/gui/widgets/status_bar.py tests/unit/test_status_bar.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/gui/widgets/status_bar.py tests/unit/test_status_bar.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百七十九轮：继续 L7，补充 stage2 payload 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百七十八轮已给 prediction display formatting helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/gui/stage2_payload.py`，补充 Stage 2 UI payload 合并/归一化 helper 的直接覆盖。
