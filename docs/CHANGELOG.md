@@ -13,6 +13,25 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百四十七轮：继续 L7，扩展 Ruff 到 GUI 包入口）
+
+本轮继续推进 **L7：CI 增强**。第一百四十六轮已把 widgets 包入口纳入 focused Ruff；本轮继续收束 GUI 入口边界，选择仅有 import / `__all__` 排序 lint 的 `pa_agent/gui/__init__.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/gui/__init__.py`。
+- **清理 GUI 包入口 lint**：按 Ruff/isort 要求排序导入，并排序 `__all__`，消除 `I001` 与 `RUF022`。
+- **保持运行逻辑不变**：本轮不修改 GUI 包公开类集合、导出名称、初始化路径或任何 widget / window 运行代码。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确 Ruff 门禁已覆盖 GUI 包入口。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/gui/__init__.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/gui/__init__.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百四十六轮：继续 L7，扩展 Ruff 到 widgets 包入口）
 
 本轮继续推进 **L7：CI 增强**。第一百四十五轮已把 seq label widget 纳入 focused Ruff；本轮继续收束 GUI widgets 边界，选择已经 Ruff clean 的 `pa_agent/gui/widgets/__init__.py`。
