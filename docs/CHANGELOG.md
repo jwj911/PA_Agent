@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百四十二轮：继续 L7，扩展 Ruff 到 overlay lines widget）
+
+本轮继续推进 **L7：CI 增强**。第一百四十一轮已把 toast widget 纳入 focused Ruff；本轮继续处理 GUI widgets 小文件，选择已有单测覆盖的 `pa_agent/gui/widgets/overlay_lines.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/gui/widgets/overlay_lines.py`。
+- **清理 OverlayLines lint**：移除 `PlotItem` quoted annotations，并删除当前 Ruff 规则集中未启用的 stale `BLE001` noqa。
+- **保持运行逻辑不变**：本轮不修改 entry/TP/SL 线绘制、label 精确价格存储、label 左边缘定位、view range 更新连接或异常日志兜底。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确 Ruff 门禁已覆盖 overlay lines widget。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/gui/widgets/overlay_lines.py tests/unit/test_overlay_lines.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/gui/widgets/overlay_lines.py tests/unit/test_overlay_lines.py` → 通过。
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_overlay_lines.py --tb=line -q -p no:cacheprovider` → **2 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百四十一轮：继续 L7，扩展 Ruff 到 toast widget）
 
 本轮继续推进 **L7：CI 增强**。第一百四十轮已把 flow bar widget 纳入 focused Ruff；本轮继续处理 GUI widgets 小文件，选择仅有 import 排序问题的 `pa_agent/gui/widgets/toast.py`。
