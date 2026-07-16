@@ -77,6 +77,7 @@ jobs:
           tests/unit/test_timefmt.py
           tests/unit/test_threading_utils.py
           tests/unit/test_datetime_ts.py
+          tests/unit/test_kline_adjust.py
           tests/unit/test_kline_bar_normalize.py
           tests/unit/test_atr_true_range.py
           tests/unit/test_kline_candle_direction.py
@@ -277,6 +278,7 @@ jobs:
           tests/unit/test_timefmt.py
           tests/unit/test_threading_utils.py
           tests/unit/test_datetime_ts.py
+          tests/unit/test_kline_adjust.py
           tests/unit/test_kline_bar_normalize.py
           tests/unit/test_overlay_lines.py
           tests/unit/test_support_resistance_chart.py
