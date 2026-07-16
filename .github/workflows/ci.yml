@@ -166,6 +166,7 @@ jobs:
           tests/unit/test_demo_replayer.py
           tests/unit/test_event_bus.py
           tests/unit/test_logging.py
+          tests/unit/test_ruff_baseline.py
           tests/property
           tests/integration/test_next_bar_prediction.py
           tests/integration/test_two_stage_no_order_with_prices.py
@@ -183,6 +184,9 @@ jobs:
           -m "not e2e and not live"
           --tb=line
           -q
+
+      - name: Run repository Ruff baseline
+        run: python scripts/check_ruff_baseline.py
 
       - name: Run focused Ruff checks
         run: >
@@ -420,6 +424,7 @@ jobs:
           tests/unit/test_demo_replayer.py
           tests/unit/test_event_bus.py
           tests/unit/test_logging.py
+          tests/unit/test_ruff_baseline.py
           tests/property
           tests/integration
           tests/e2e

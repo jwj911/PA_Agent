@@ -18,22 +18,44 @@
 
 ---
 
+## [Unreleased] — 2026-07-17（第二百一十一轮：全仓 Ruff 基线门禁）
+
+本轮继续推进 **L7：CI 增强**。此前 CI 的 237 个 focused Ruff 目标能守住已覆盖的小范围，
+但无法阻止其他目录引入新的静态检查问题；全仓又已有大量中文业务文本触发的历史 Ruff 诊断，
+不适合在单轮内机械清理。本轮建立严格、可审计的全仓增量基线：保留现有历史问题，但任何新增、
+修改或未同步的已清理问题都会阻断 CI。
+
+### 工程治理
+
+- **固定 Ruff 版本**：开发依赖从宽松的 `ruff>=0.5` 改为 `ruff==0.15.13`，使本地与 Windows
+  CI 使用同一诊断引擎；基线校验会进一步验证实际运行版本，版本不一致直接失败。
+- **新增全仓基线校验**：新增 `scripts/check_ruff_baseline.py`，执行 `ruff check .` 的 JSON 输出，
+  将每条诊断的仓库相对路径、规则码、起止位置和消息与批准清单逐项比较；新增、变更和已移除但未
+  同步清单的诊断均失败。仅 `--write-baseline` 显式命令可重建清单，供独立清理迭代审查后使用。
+- **新增批准清单**：新增 `scripts/ruff_baseline.json`，由固定版本 Ruff 生成，当前包含 3,725 条
+  已知诊断；清单只记录规则元数据，不包含运行配置、API Key 或任何敏感信息。
+- **新增单测与 CI 接入**：`tests/unit/test_ruff_baseline.py` 覆盖诊断相对路径归一、基线序列化及
+  新增/移除诊断比较；目标 pytest 和 focused Ruff 均纳入该测试。CI 在既有 focused Ruff 前执行
+  `python scripts/check_ruff_baseline.py`，让未覆盖目录的静态质量退化也能阻断合并。
+- **新增操作文档**：`docs/ci_quality_gates.md` 记录日常校验、基线更新命令、当前数量和禁止通过
+  扩大 ignore/全局 noqa/缩小范围绕过门禁的规则。
+
+### 验证
+
+- `py -3.12 -m ruff check scripts/check_ruff_baseline.py tests/unit/test_ruff_baseline.py` → **All checks passed**。
+- `QT_QPA_PLATFORM=offscreen PYTHONDONTWRITEBYTECODE=1 py -3.12 -m pytest tests/unit/test_ruff_baseline.py -q -p no:cacheprovider` → **3 passed**。
+- `py -3.12 scripts/check_ruff_baseline.py --write-baseline` → 生成 3,725 条基线。
+- `py -3.12 scripts/check_ruff_baseline.py` → **通过**；受控注入临时 `F401` 违规时以 exit code 1
+  拒绝，删除探针后再次通过。
+- `QT_QPA_PLATFORM=offscreen PYTHONDONTWRITEBYTECODE=1 py -3.12 -m pytest -m "not e2e and not live" --tb=line -q -p no:cacheprovider` → **通过**。
+- 从 CI 清单解析的 238 个 focused Ruff 目标 → **All checks passed**。
+
+---
+
 ## 后续迭代计划（未执行）
 
 > 本节是 L7 的剩余治理任务清单，不代表已经完成的变更。每项完成后，须移入文件顶部的
 > `[Unreleased]` 记录，并按项目约定完成验证、原子提交与推送。
-
-### 第二百一十一轮：全仓 Ruff 基线门禁
-
-- **目标**：把当前“237 个 focused Ruff 目标”的局部门禁扩展为全仓增量门禁，阻止新增
-  Ruff 违规，同时不把已有中文文案相关的历史告警混入本轮业务改动。
-- **实施范围**：新增稳定的 Ruff 基线清单及其校验脚本；脚本运行 `ruff check .` 的 JSON
-  输出，与基线逐项比较，新增或变更的违规必须失败。将该校验加入
-  `.github/workflows/ci.yml`，并在 `docs/` 记录基线生成命令、总数和更新规则。
-- **约束**：不得扩大 Ruff 的 ignore 规则、不得用全局 `noqa` 掩盖新增问题；历史问题只能
-  通过单独的清理迭代消除并同步收缩基线。
-- **验收**：干净工作区运行全仓基线校验通过；向临时文件注入任一 Ruff 违规时校验失败；
-  现有 focused Ruff 检查仍通过。
 
 ### 第二百一十二轮：固定版本的 Black 格式门禁
 
