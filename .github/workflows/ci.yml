@@ -109,6 +109,7 @@ jobs:
           tests/unit/test_mimo_compat.py
           tests/unit/test_kv_prefix_cache.py
           tests/unit/test_token_counter.py
+          tests/unit/test_strategy_files.py
           tests/unit/test_prompt_txt_files.py
           tests/unit/test_prompt_assembler.py
           tests/unit/test_token_indicator_thresholds.py
@@ -323,6 +324,7 @@ jobs:
           tests/unit/test_mimo_compat.py
           tests/unit/test_kv_prefix_cache.py
           tests/unit/test_token_counter.py
+          tests/unit/test_strategy_files.py
           tests/unit/test_prompt_txt_files.py
           tests/unit/test_prompt_assembler.py
           tests/unit/test_token_indicator_thresholds.py
