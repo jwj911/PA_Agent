@@ -13,6 +13,24 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百五十三轮：继续 L7，扩展 Ruff 到 notify 包入口）
+
+本轮继续推进 **L7：CI 增强**。第一百五十二轮已把 AI decision nodes facade 纳入 focused Ruff；本轮选择已经 Ruff clean 的通知包入口 `pa_agent/notify/__init__.py`，避免触碰通知实现文件中的用户可见中文文案。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/notify/__init__.py`。
+- **保持运行逻辑不变**：本轮不修改 Feishu / PushPlus 通知实现、webhook 签名、tenant token、消息文案、图片上传、HTTP 发送或错误处理逻辑。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确 Ruff 门禁已覆盖 notify 包入口。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/notify/__init__.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/notify/__init__.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百五十二轮：继续 L7，扩展 Ruff 到 decision nodes facade）
 
 本轮继续推进 **L7：CI 增强**。第一百五十一轮已把 AI sidebar 纳入 focused Ruff；本轮转向 AI 决策节点兼容导出边界，选择已经 Ruff clean 的 `pa_agent/ai/decision_nodes.py`。
