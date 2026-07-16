@@ -13,6 +13,24 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百五十六轮：继续 L7，扩展 Ruff 到测试子包入口）
+
+本轮继续推进 **L7：CI 增强**。第一百五十五轮已把顶层与 unit 测试包入口纳入 focused Ruff；本轮继续收束测试目录边界，选择已经 Ruff clean 的 `tests/integration/__init__.py`、`tests/property/__init__.py`、`tests/fixtures/__init__.py` 与 `tests/e2e/__init__.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增四个测试子包入口文件。
+- **保持运行逻辑不变**：本轮不修改测试选择、pytest marker、fixture、断言、测试数据、live/e2e 默认执行策略或任何运行代码，仅扩大 focused Ruff 覆盖面。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确 Ruff 门禁已覆盖测试子包入口。
+
+### 验证
+
+- `py -3.12 -m ruff check tests/integration/__init__.py tests/property/__init__.py tests/fixtures/__init__.py tests/e2e/__init__.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests/integration/__init__.py tests/property/__init__.py tests/fixtures/__init__.py tests/e2e/__init__.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百五十五轮：继续 L7，扩展 Ruff 到测试包入口）
 
 本轮继续推进 **L7：CI 增强**。第一百五十四轮已把 AI experience renderer 纳入 focused Ruff；本轮转向测试包入口，选择已经 Ruff clean 的 `tests/__init__.py` 与 `tests/unit/__init__.py`。
