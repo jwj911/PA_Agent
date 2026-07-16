@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第二百零三轮：继续 L7，补充 EMA 单测）
+
+本轮继续推进 **L7：CI 增强**。第二百零二轮已给 mask secret helper 补充直接边界单测；本轮转向已在 focused Ruff 清单内的 `pa_agent/indicators/ema.py`，补充 EMA 指标 helper 的直接单元覆盖。
+
+### 工程治理
+
+- **新增 EMA 单测**：新增 `tests/unit/test_ema.py`，覆盖 `ema_full()` 的 warmup/seed/smoothing、`period=1` 直通、非法周期异常、`make_ema_state()` 初始状态和 `state_after()` 增量最终状态。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_ema.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_ema.py`。
+- **保持运行逻辑不变**：本轮不修改 EMA 公式、增量状态结构、ATR、snapshot warmup 或任何指标计算运行逻辑。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 EMA helper。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_ema.py --tb=short -q -p no:cacheprovider` → **5 passed**。
+- `py -3.12 -m ruff check pa_agent/indicators/ema.py tests/unit/test_ema.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/indicators/ema.py tests/unit/test_ema.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...`，共 **230** 个目标 → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第二百零二轮：继续 L7，补充 mask secret 单测）
 
 本轮继续推进 **L7：CI 增强**。第二百零一轮已给 safe filename helper 补充直接边界单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/util/mask_secret.py`，补充密钥掩码纯函数的直接边界覆盖。
