@@ -194,6 +194,7 @@ jobs:
           pa_agent/gui/prediction_format.py
           pa_agent/gui/snapshot_worker.py
           pa_agent/gui/stage2_payload.py
+          pa_agent/gui/validation_debug_dialog.py
           pa_agent/gui/widgets/__init__.py
           pa_agent/gui/widgets/candle_item.py
           pa_agent/gui/widgets/flow_bar.py
