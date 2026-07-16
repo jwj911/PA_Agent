@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百六十四轮：继续 L7，补充 eastmoney quote api 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百六十三轮已给 East Money field enum helper 补充单测；本轮转向同属 East Money 盘口协议边界、已在 focused Ruff 清单内的 `pa_agent/data/eastmoney_quote_api.py`，补充 HTTP/SSE path 与盘口字段常量的确定性覆盖。
+
+### 工程治理
+
+- **新增 eastmoney quote api 单测**：新增 `tests/unit/test_eastmoney_quote_api.py`，覆盖 `QUOTE_HOSTS` mirror 顺序、HTTP/SSE path 常量、五档 ask/bid 字段顺序、L2 扩展档位、逐笔字段与 `TEN_DEPTH_FIELDS` 绑定。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_eastmoney_quote_api.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_eastmoney_quote_api.py`。
+- **保持运行逻辑不变**：本轮不修改 East Money HTTP/SSE 常量、盘口字段映射、逐笔字段、`TEN_DEPTH_FIELDS` 引用、盘口解析或任何采集逻辑。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已覆盖 East Money quote API constants。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_eastmoney_quote_api.py --tb=line -q -p no:cacheprovider` → **5 passed**。
+- `py -3.12 -m ruff check pa_agent/data/eastmoney_quote_api.py tests/unit/test_eastmoney_quote_api.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/data/eastmoney_quote_api.py tests/unit/test_eastmoney_quote_api.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百六十三轮：继续 L7，补充 eastmoney field enums 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百六十二轮已给 East Money quote page URL helper 补充单测；本轮转向同属数据层小文件组、已在 focused Ruff 清单内的 `pa_agent/data/eastmoney_field_enums.py`，补充 East Money 逆向 field enum helper 的确定性覆盖。
