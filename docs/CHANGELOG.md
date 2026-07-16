@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百九十五轮：继续 L7，补充 util exports 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百九十四轮已给 GUI theme 包入口补充 exports 合同单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/util/__init__.py`，补充 util 包入口导出合同覆盖。
+
+### 工程治理
+
+- **新增 util exports 单测**：新增 `tests/unit/test_util_exports.py`，覆盖 `pa_agent.util.__all__` 的公开名称顺序，以及 `CancelToken`、`EventBus`、`OrchestratorEvent`、`configure_logging`、`update_api_key` 的包入口绑定对象。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_util_exports.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_util_exports.py`。
+- **保持运行逻辑不变**：本轮不修改 `pa_agent/util/__init__.py`、Qt 信号、线程取消语义、日志 handler 配置或 API key 脱敏逻辑。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 util package exports。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_util_exports.py --tb=short -q -p no:cacheprovider` → **2 passed**。
+- `py -3.12 -m ruff check pa_agent/util/__init__.py tests/unit/test_util_exports.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/util/__init__.py tests/unit/test_util_exports.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...`，共 **222** 个目标 → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百九十四轮：继续 L7，补充 GUI theme exports 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百九十三轮已给 demo 包入口补充 exports 合同单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/gui/theme/__init__.py`，补充 GUI theme 包入口导出合同覆盖。
