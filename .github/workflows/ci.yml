@@ -57,6 +57,7 @@ jobs:
           tests/unit/test_chart_widget_no_lines_when_not_trading.py
           tests/unit/test_prediction_format.py
           tests/unit/test_stage2_payload.py
+          tests/unit/test_snapshot_worker.py
           tests/unit/test_status_bar.py
           tests/unit/test_validation_debug_dialog.py
           tests/unit/test_flow_bar.py
@@ -285,6 +286,7 @@ jobs:
           tests/unit/test_chart_widget_no_lines_when_not_trading.py
           tests/unit/test_prediction_format.py
           tests/unit/test_stage2_payload.py
+          tests/unit/test_snapshot_worker.py
           tests/unit/test_status_bar.py
           tests/unit/test_validation_debug_dialog.py
           tests/unit/test_flow_bar.py
