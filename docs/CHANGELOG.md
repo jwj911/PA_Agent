@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百八十三轮：继续 L7，补充 summary strip 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百八十二轮已给 flow bar widget helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/gui/widgets/summary_strip.py`，补充 AI 面板 summary strip widget helper 的直接覆盖。
+
+### 工程治理
+
+- **新增 summary strip 单测**：新增 `tests/unit/test_summary_strip.py`，覆盖 `SummaryStrip` 的默认 5 个 metric card、默认值、grid 布局计数、`set_metrics()` 对匹配 key 的局部更新、未知 key 忽略、`reset()` 恢复默认值，以及 `_relayout()` 保持全部 card 入 grid 的合同。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_summary_strip.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_summary_strip.py`。
+- **保持运行逻辑不变**：本轮不修改 `summary_strip.py`、默认指标文案、字体/样式、布局列数、响应式 relayout 或主窗口集成路径。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 summary strip widget helper。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_summary_strip.py --tb=short -q -p no:cacheprovider` → **4 passed**。
+- `py -3.12 -m ruff check pa_agent/gui/widgets/summary_strip.py tests/unit/test_summary_strip.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/gui/widgets/summary_strip.py tests/unit/test_summary_strip.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百八十二轮：继续 L7，补充 flow bar 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百八十一轮已给 validation debug dialog helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/gui/widgets/flow_bar.py`，补充分析流程条 widget helper 的直接覆盖。
