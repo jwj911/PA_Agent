@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百七十五轮：继续 L7，补充 qclaw relay 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百七十四轮已给 experience renderer helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/ai/qclaw_relay.py`，补充本地 relay helper 的直接覆盖。
+
+### 工程治理
+
+- **新增 qclaw relay 单测**：新增 `tests/unit/test_qclaw_relay.py`，覆盖 `_find_free_port()` 跳过已占用端口、`ProxyHandler` 的 `/health` 服务元数据 JSON 响应，以及 `/v1/models` 对 QClaw relay 支持模型列表的响应。测试使用本地临时 `HTTPServer` 与短 timeout，不连接真实 QClaw 上游。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_qclaw_relay.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_qclaw_relay.py`。
+- **保持运行逻辑不变**：本轮不修改 `qclaw_relay.py`、POST 转发、上游错误处理、自测线程、端口选择策略或真实 QClaw 集成路径。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 QClaw relay helper。
+
+### 验证
+
+- 候选排除：`pa_agent/ai/chain_context.py` 单独 Ruff 仍有 5 条既有 `RUF001` 中文标点告警，本轮不纳入 focused Ruff。
+- `py -3.12 -m pytest tests/unit/test_qclaw_relay.py --tb=short -q -p no:cacheprovider` → **3 passed**。
+- `py -3.12 -m ruff check pa_agent/ai/qclaw_relay.py tests/unit/test_qclaw_relay.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/ai/qclaw_relay.py tests/unit/test_qclaw_relay.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百七十四轮：继续 L7，补充 experience renderer 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百七十三轮已给 schema validator helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/ai/experience_renderer.py`，补充 Stage 2 经验库文本块渲染器的直接覆盖。
