@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百九十六轮：继续 L7，补充 decision nodes exports 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百九十五轮已给 util 包入口补充 exports 合同单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/ai/decision_nodes.py`，补充 decision node compatibility facade 的导出合同覆盖。
+
+### 工程治理
+
+- **新增 decision nodes exports 单测**：新增 `tests/unit/test_decision_nodes_exports.py`，覆盖 `pa_agent.ai.decision_nodes.__all__` 的公开名称顺序，以及 27 个阈值、engine、preflight、judge、router、override 与 trace helper 的 facade 绑定对象。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_decision_nodes_exports.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_decision_nodes_exports.py`。
+- **保持运行逻辑不变**：本轮不修改 `pa_agent/ai/decision_nodes.py`、判定阈值、judge 逻辑、router 行为或 override / trace helper。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 decision nodes facade exports。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_decision_nodes_exports.py --tb=short -q -p no:cacheprovider` → **2 passed**。
+- `py -3.12 -m ruff check pa_agent/ai/decision_nodes.py tests/unit/test_decision_nodes_exports.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/ai/decision_nodes.py tests/unit/test_decision_nodes_exports.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...`，共 **223** 个目标 → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百九十五轮：继续 L7，补充 util exports 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百九十四轮已给 GUI theme 包入口补充 exports 合同单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/util/__init__.py`，补充 util 包入口导出合同覆盖。
