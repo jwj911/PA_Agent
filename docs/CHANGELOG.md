@@ -5,14 +5,46 @@
 ## 维护规范（重要）
 
 - **每次代码更新/迭代都必须在本文件追加或更新对应条目**，不得只改代码而不记录。
-- 新的一轮迭代在文件顶部“未发布 / Unreleased”或对应日期小节下新增条目；发布版本时把 Unreleased 内容归档到带版本号的小节。
+
+- 新的一轮迭代在文件顶部"未发布 / Unreleased"或对应日期小节下新增条目；发布版本时把 Unreleased 内容归档到带版本号的小节。
+
 - 每条记录尽量包含：**问题/动机** → **修复/改动** → **涉及文件** → **验证方式**。
+
 - 条目按类别归类：`崩溃修复` / `安全加固` / `性能优化` / `代码清理` / `功能` / `文档`。
+
 - 用户可见文案、日志、提示使用简体中文；代码标识符使用英文，与项目既有风格保持一致。
+
 - 遵守安全边界：不得记录任何真实 API Key、明文密钥或敏感配置内容。
 
 ---
 
+## [Unreleased] — 2026-07-16（第二百零九轮：继续 L7，补充 EventBus 单测）
+
+本轮继续推进 **L7：CI 增强**。第二百零八轮已给 GUI theme apply helper 补充直接合同覆盖；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/util/event_bus.py`，补充 EventBus 信号 hub 的直接单元覆盖。
+
+### 工程治理
+
+- **新增 EventBus 单测**：新增 `tests/unit/test_event_bus.py`，覆盖 `EventBus` 的五个 Qt signal 初始化、以及 `emit_status()`/`emit_exception()`/`emit_data_frame()`/`emit_token_update()`/`emit_disk_error()` 五个便捷包装方法的信号转发合同。
+
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_event_bus.py`。
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_event_bus.py`。
+
+- **保持运行逻辑不变**：本轮不修改 EventBus、Qt signal 定义、信号连接或任何组件间通信逻辑。
+
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 EventBus helper。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_event_bus.py --tb=short -q -p no:cacheprovider` → **6 passed**。
+
+- `py -3.12 -m ruff check pa_agent/util/event_bus.py tests/unit/test_event_bus.py` → **All checks passed**。
+
+- `py -3.12 -m py_compile pa_agent/util/event_bus.py tests/unit/test_event_bus.py` → 通过。
+
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...`，共 **236** 个目标 → **All checks passed**。
+
+---
 ## [Unreleased] — 2026-07-16（第二百零八轮：继续 L7，补充 GUI theme apply 单测）
 
 本轮继续推进 **L7：CI 增强**。第二百零七轮已给 GUI theme design tokens 补充直接常量合同覆盖；本轮转向同属 `pa_agent/gui/theme` 包级 focused Ruff 范围内的 `pa_agent/gui/theme/apply.py`，补充 `apply_theme()` 的 QSS 加载与 Fusion 样式设置合同。

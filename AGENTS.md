@@ -1,4 +1,4 @@
-<!-- From: d:\Code\price_action_agent\AGENTS.md -->
+﻿<!-- From: d:\Code\price_action_agent\AGENTS.md -->
 
 # PA Agent — AI 编码代理须知
 
@@ -368,6 +368,7 @@ pytest -m live
 - 第二百零六轮 L7 补充：新增 `tests/unit/test_security_package.py` 并纳入目标 pytest 与 focused Ruff，覆盖 `pa_agent.security` 轻量包入口可导入、无 `__all__`、不重导出加解密 helper 和既有 package docstring 合同；本轮不修改 security 包入口、secret store、settings 加密、运行时脱敏或任何密钥持久化逻辑。
 - 第二百零七轮 L7 补充：新增 `tests/unit/test_gui_theme_tokens.py` 并纳入目标 pytest 与 focused Ruff，覆盖 GUI theme canonical color token 格式、pill rgba token 格式、字体/布局 token 固定值和 legacy alias 绑定；本轮不修改 theme tokens、QSS、`apply_theme()`、GUI 样式加载或任何运行逻辑。
 - 第二百零八轮 L7 补充：新增 `tests/unit/test_gui_theme_apply.py` 并纳入目标 pytest 与 focused Ruff，覆盖 `apply_theme()` 在 QSS 存在时读取 stylesheet 并设置 Fusion style、在 QSS 缺失时仍设置 Fusion style 的合同；本轮不修改 QSS、theme tokens、`apply_theme()` 实现、QApplication 集成或任何 GUI 运行逻辑。
+- 第二百零九轮 L7 补充：新增 `tests/unit/test_event_bus.py` 并纳入目标 pytest 与 focused Ruff，覆盖 `EventBus` 的五个 Qt signal 初始化、以及 `emit_status()`/`emit_exception()`/`emit_data_frame()`/`emit_token_update()`/`emit_disk_error()` 五个便捷包装方法的信号转发合同；本轮不修改 EventBus、Qt signal 定义、信号连接或任何组件间通信逻辑。
 
 ***
 
