@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第二百零四轮：继续 L7，补充 ATR 单测）
+
+本轮继续推进 **L7：CI 增强**。第二百零三轮已给 EMA helper 补充直接单元覆盖；本轮转向同属 `pa_agent/indicators` 包的 `pa_agent/indicators/atr.py`，补充 ATR 指标 helper 的直接边界覆盖。
+
+### 工程治理
+
+- **新增 ATR 单测**：新增 `tests/unit/test_atr.py`，覆盖 `atr_full()` 的 warmup/seed/Wilder smoothing、`period=1` 直通、非法周期异常、输入长度不一致异常、`make_atr_state()` 初始状态和 `state_after_atr()` 增量最终状态。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_atr.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_atr.py`。
+- **保持运行逻辑不变**：本轮不修改 ATR 公式、true range 规则、EMA、snapshot warmup 或任何指标计算运行逻辑。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 ATR helper。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_atr.py --tb=short -q -p no:cacheprovider` → **6 passed**。
+- `py -3.12 -m ruff check pa_agent/indicators/atr.py tests/unit/test_atr.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/indicators/atr.py tests/unit/test_atr.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...`，共 **231** 个目标 → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第二百零三轮：继续 L7，补充 EMA 单测）
 
 本轮继续推进 **L7：CI 增强**。第二百零二轮已给 mask secret helper 补充直接边界单测；本轮转向已在 focused Ruff 清单内的 `pa_agent/indicators/ema.py`，补充 EMA 指标 helper 的直接单元覆盖。
