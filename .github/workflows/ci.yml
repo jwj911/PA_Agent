@@ -112,6 +112,7 @@ jobs:
           tests/unit/test_eastmoney_field_enums.py
           tests/unit/test_kline_bar_normalize.py
           tests/unit/test_atr_true_range.py
+          tests/unit/test_ema.py
           tests/unit/test_kline_candle_direction.py
           tests/unit/test_kline_features.py
           tests/unit/test_bar_geometry.py
@@ -358,6 +359,7 @@ jobs:
           tests/unit/test_support_resistance_chart.py
           tests/unit/test_chart_decision_overlay.py
           tests/unit/test_atr_true_range.py
+          tests/unit/test_ema.py
           tests/unit/test_kline_candle_direction.py
           tests/unit/test_kline_features.py
           tests/unit/test_bar_geometry.py
