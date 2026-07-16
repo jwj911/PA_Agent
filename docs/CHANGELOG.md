@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百五十九轮：继续 L7，补充 refresh policy 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百五十八轮已给基础线程工具补充单测；本轮转向纯函数刷新策略 helper `pa_agent/data/refresh_policy.py`，补充 HTTP 轮询源刷新间隔、缓存 TTL 与 zombie join timeout 覆盖。
+
+### 工程治理
+
+- **新增 refresh policy 单测**：新增 `tests/unit/test_refresh_policy.py`，覆盖 `is_http_poll_source()`、`effective_refresh_interval_ms()`、`snapshot_cache_ttl_s()` 与 `zombie_join_timeout_ms()`。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_refresh_policy.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_refresh_policy.py`。
+- **保持运行逻辑不变**：本轮不修改 HTTP 轮询源集合、刷新间隔 clamp、日线刷新下限、snapshot cache TTL、zombie join timeout 或刷新循环运行代码。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已覆盖刷新策略 helper。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_refresh_policy.py --tb=line -q -p no:cacheprovider` → **4 passed**。
+- `py -3.12 -m ruff check pa_agent/data/refresh_policy.py tests/unit/test_refresh_policy.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/data/refresh_policy.py tests/unit/test_refresh_policy.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百五十八轮：继续 L7，补充 threading 工具单测）
 
 本轮继续推进 **L7：CI 增强**。第一百五十七轮已给 timefmt 小工具补充确定性单测；本轮转向同属 util 小工具的 `pa_agent/util/threading.py`，补充 `CancelToken` 与 `OrchestratorEvent` 的轻量回归覆盖。
