@@ -195,6 +195,7 @@ jobs:
           pa_agent/gui/widgets/model_selector.py
           pa_agent/gui/widgets/overlay_lines.py
           pa_agent/gui/widgets/status_bar.py
+          pa_agent/gui/widgets/summary_strip.py
           pa_agent/gui/widgets/toast.py
           pa_agent/util/__init__.py
           pa_agent/util/crash_diagnostics.py
