@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百八十八轮：继续 L7，补充 snapshot worker 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百八十七轮已给 model selector helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/gui/snapshot_worker.py`，补充 K 线 snapshot 后台 worker 的直接信号合同覆盖。
+
+### 工程治理
+
+- **新增 snapshot worker 单测**：新增 `tests/unit/test_snapshot_worker.py`，通过 fake data source 直接调用 `SnapshotFetchWorker.run()`，覆盖 `latest_snapshot(n_bars)` 参数传递、成功时 `bars_ready` 信号载荷，以及异常时 `failed` 信号文本。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_snapshot_worker.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_snapshot_worker.py`。
+- **保持运行逻辑不变**：本轮不修改 `snapshot_worker.py`、线程启动方式、数据源调用、warning 日志或失败消息传播。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 snapshot worker helper。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_snapshot_worker.py --tb=short -q -p no:cacheprovider` → **2 passed**。
+- `py -3.12 -m ruff check pa_agent/gui/snapshot_worker.py tests/unit/test_snapshot_worker.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/gui/snapshot_worker.py tests/unit/test_snapshot_worker.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...`，共 **215** 个目标 → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百八十七轮：继续 L7，补充 model selector 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百八十六轮已给 toast overlay helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/gui/widgets/model_selector.py`，补充模型选择 pill button 与 dropdown 的直接覆盖。
