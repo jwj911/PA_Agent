@@ -74,6 +74,7 @@ jobs:
           tests/unit/test_gui_theme_exports.py
           tests/unit/test_util_exports.py
           tests/unit/test_package_metadata.py
+          tests/unit/test_package_markers.py
           tests/unit/test_order_method_router.py
           tests/unit/test_trend_context.py
           tests/unit/test_decision_panel.py
@@ -313,6 +314,7 @@ jobs:
           tests/unit/test_gui_theme_exports.py
           tests/unit/test_util_exports.py
           tests/unit/test_package_metadata.py
+          tests/unit/test_package_markers.py
           tests/unit/test_order_method_router.py
           tests/unit/test_trend_context.py
           tests/unit/test_decision_panel.py
