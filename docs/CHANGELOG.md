@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百六十三轮：继续 L7，补充 eastmoney field enums 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百六十二轮已给 East Money quote page URL helper 补充单测；本轮转向同属数据层小文件组、已在 focused Ruff 清单内的 `pa_agent/data/eastmoney_field_enums.py`，补充 East Money 逆向 field enum helper 的确定性覆盖。
+
+### 工程治理
+
+- **新增 eastmoney field enums 单测**：新增 `tests/unit/test_eastmoney_field_enums.py`，覆盖 `build_fields_param()` 的 first-seen 顺序、重复 enum 去重、未知 enum 核心字段兜底、L2 深度字段包含，以及 `FIELDS_TEN_DEPTH` 与 basic + L2 enum 集合的合同。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_eastmoney_field_enums.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_eastmoney_field_enums.py`。
+- **保持运行逻辑不变**：本轮不修改 East Money 逆向 enum 映射、L1/L2 字段常量、十档字段生成逻辑或 `eastmoney_quote_api.py` 引用路径。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已覆盖 East Money field enum helper。
+
+### 验证
+
+- 初始 Ruff 校准：新增测试首版触发 `SIM300` Yoda condition，已调整断言顺序；被测代码未修改。
+- `py -3.12 -m pytest tests/unit/test_eastmoney_field_enums.py --tb=line -q -p no:cacheprovider` → **4 passed**。
+- `py -3.12 -m ruff check pa_agent/data/eastmoney_field_enums.py tests/unit/test_eastmoney_field_enums.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/data/eastmoney_field_enums.py tests/unit/test_eastmoney_field_enums.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百六十二轮：继续 L7，补充 eastmoney urls 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百六十一轮已给 A 股涨跌停 helper 补充单测；本轮转向同属数据层小文件组、已在 focused Ruff 清单内的 `pa_agent/data/eastmoney_urls.py`，补充 East Money quote page URL 构造的确定性覆盖。
