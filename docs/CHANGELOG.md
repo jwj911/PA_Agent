@@ -13,6 +13,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百五十四轮：继续 L7，扩展 Ruff 到 experience renderer）
+
+本轮继续推进 **L7：CI 增强**。第一百五十三轮已把 notify 包入口纳入 focused Ruff；本轮转向 Stage 2 经验库 prompt helper，选择仅有中文 caveat 标点 lint 的 `pa_agent/ai/experience_renderer.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/ai/experience_renderer.py`。
+- **保留 prompt 文本字节不变**：对经验库中文 caveat 行添加窄范围 `# noqa: RUF001`，不改写全角逗号或任何模型提示文字。
+- **保持运行逻辑不变**：本轮不修改经验库 block header、中文 caveat、per-case markdown fence、`json.dumps(..., ensure_ascii=False)`、截断省略号或 `PromptAssembler` 的 `render_experience` 绑定路径。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确 Ruff 门禁已覆盖 AI experience renderer。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/ai/experience_renderer.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/ai/experience_renderer.py` → 通过。
+- `py -3.12 -m pytest tests/unit/test_prompt_assembler.py --tb=line -q -p no:cacheprovider` → **31 passed**。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百五十三轮：继续 L7，扩展 Ruff 到 notify 包入口）
 
 本轮继续推进 **L7：CI 增强**。第一百五十二轮已把 AI decision nodes facade 纳入 focused Ruff；本轮选择已经 Ruff clean 的通知包入口 `pa_agent/notify/__init__.py`，避免触碰通知实现文件中的用户可见中文文案。
