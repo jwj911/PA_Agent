@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百六十二轮：继续 L7，补充 eastmoney urls 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百六十一轮已给 A 股涨跌停 helper 补充单测；本轮转向同属数据层小文件组、已在 focused Ruff 清单内的 `pa_agent/data/eastmoney_urls.py`，补充 East Money quote page URL 构造的确定性覆盖。
+
+### 工程治理
+
+- **新增 eastmoney urls 单测**：新增 `tests/unit/test_eastmoney_urls.py`，覆盖沪市/深市股票、未带前缀指数、显式交易所前缀、空 symbol fallback、未知 timeframe 默认日线与 simple URL。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_eastmoney_urls.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_eastmoney_urls.py`。
+- **保持运行逻辑不变**：本轮不修改 East Money URL 构造、A 股 symbol 归一化、指数识别、交易所前缀保留或 timeframe → klt 映射。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已覆盖 East Money quote page URL helper。
+
+### 验证
+
+- 初始测试校准：`sh000300` 显式交易所前缀按当前实现保留为 `sh000300`，未带前缀的 `000300` 才走 `zs000300`；测试已按该 contract 覆盖两条分支。
+- `py -3.12 -m pytest tests/unit/test_eastmoney_urls.py --tb=line -q -p no:cacheprovider` → **7 passed**。
+- `py -3.12 -m ruff check pa_agent/data/eastmoney_urls.py tests/unit/test_eastmoney_urls.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/data/eastmoney_urls.py tests/unit/test_eastmoney_urls.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百六十一轮：继续 L7，补充 ashare limits 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百六十轮已给 K-line 复权偏好 helper 补充单测；本轮转向同属数据层小文件组、已在 focused Ruff 清单内的 `pa_agent/data/ashare_limits.py`，补充 A 股涨跌停辅助函数的确定性覆盖。
