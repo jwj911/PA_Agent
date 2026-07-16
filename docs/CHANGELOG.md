@@ -13,6 +13,25 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百四十五轮：继续 L7，扩展 Ruff 到 seq label widget）
+
+本轮继续推进 **L7：CI 增强**。第一百四十四轮已把 candle item widget 纳入 focused Ruff；本轮继续处理 GUI widgets 小文件，选择仅有无效条件表达式 lint 的 `pa_agent/gui/widgets/seq_label_item.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/gui/widgets/seq_label_item.py`。
+- **清理 SeqLabelItem lint**：将 forming / non-forming 两侧完全相同的 `f"#{seq}"` 条件表达式简化为单一赋值，消除 Ruff `RUF034`。
+- **保持运行逻辑不变**：本轮不修改序号 label 文本格式、forming 颜色、默认颜色、字体、anchor 或位置。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确 Ruff 门禁已覆盖 seq label widget。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/gui/widgets/seq_label_item.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/gui/widgets/seq_label_item.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百四十四轮：继续 L7，扩展 Ruff 到 candle item widget）
 
 本轮继续推进 **L7：CI 增强**。第一百四十三轮已把 summary strip widget 纳入 focused Ruff；本轮继续筛选 GUI widgets 剩余小文件，选择仅有 quoted annotation lint 的 `pa_agent/gui/widgets/candle_item.py`。
