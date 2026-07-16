@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百七十八轮：继续 L7，补充 prediction format 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百七十七轮已给 A 股共享 helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/gui/prediction_format.py`，补充预测展示格式化 helper 的直接覆盖。
+
+### 工程治理
+
+- **新增 prediction format 单测**：新增 `tests/unit/test_prediction_format.py`，覆盖 `_format_prediction_probs_line()` 的固定中文展示行与缺失概率 `?` fallback，以及 `_dominant_prediction_direction()` 对最高数值概率、字符串数值、非法值忽略和无可解析值返回 `None` 的判定。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_prediction_format.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_prediction_format.py`。
+- **保持运行逻辑不变**：本轮不修改 `prediction_format.py`、下一根 K 线/周期预测面板、颜色常量、dominant direction 判定规则或任何用户可见文本。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 prediction display formatting helper。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_prediction_format.py --tb=short -q -p no:cacheprovider` → **5 passed**。
+- `py -3.12 -m ruff check pa_agent/gui/prediction_format.py tests/unit/test_prediction_format.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/gui/prediction_format.py tests/unit/test_prediction_format.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百七十七轮：继续 L7，补充 ashare common 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百七十六轮已给 East Money low-level client helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/data/ashare_common.py`，补充 A 股共享 helper 的直接覆盖。
