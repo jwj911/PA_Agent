@@ -13,6 +13,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百七十一轮：继续 L7，补充 strategy files 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百七十轮已给 validation messages helper 补充单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/ai/strategy_files.py`，补充策略/提示文件名注册表的直接合同测试。
+
+### 工程治理
+
+- **新增 strategy files 单测**：新增 `tests/unit/test_strategy_files.py`，覆盖 `strategy_files.py` 模块级注册表的文件名唯一性与 `.txt` 后缀、`router._ALL_VALID_FILES` 从注册表扣除非路由文件后派生，以及 `prompt_assembler` 的 common / stage1 / stage2 文件列表均绑定注册表值并保留 Stage 1 common→task 顺序。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_strategy_files.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_strategy_files.py`。
+- **保持运行逻辑不变**：本轮不修改策略文件名、router 路由表、prompt assembler 文件顺序、prompt 文本或任何生产代码。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已覆盖 strategy filename registry；同时把 `strategy_files.py` 的过时固定数量表述改为“模块级常量注册表”。
+
+### 验证
+
+- 初始 Ruff 校准：新增测试首版触发 `SIM300` Yoda condition，已调整断言顺序；被测代码未修改。
+- `py -3.12 -m pytest tests/unit/test_strategy_files.py --tb=short -q -p no:cacheprovider` → **4 passed**。
+- `py -3.12 -m ruff check pa_agent/ai/strategy_files.py tests/unit/test_strategy_files.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/ai/strategy_files.py tests/unit/test_strategy_files.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百七十轮：继续 L7，补充 validation messages 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百六十九轮已给 retry policy helper 补充单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/ai/validation_messages.py`，补充验证错误摘要格式化 helper 的直接覆盖。
