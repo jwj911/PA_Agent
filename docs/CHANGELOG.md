@@ -13,6 +13,30 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百六十九轮：继续 L7，补充 retry policy 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百六十八轮已给 token counter helper 补充单测；本轮转向同属已在 focused Ruff 清单内的 AI 校验辅助模块 `pa_agent/ai/retry_policy.py`，补充验证重试策略纯函数的直接覆盖。
+
+### 工程治理
+
+- **新增 retry policy 单测**：新增 `tests/unit/test_retry_policy.py`，覆盖 `max_retries_for_category()` 的类别/禁用/语义上限、`should_retry()` 的 attempt 上限和 semantic non-retry prefix、`detect_cheat()` 的 Stage 2 `diagnosis_summary.cycle_position` 不可变保护与 feedback-mentioned 豁免，以及 `extract_feedback_targets()` 对常见字段名的映射。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_retry_policy.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_retry_policy.py`。
+- **保持运行逻辑不变**：本轮不修改 retry 次数策略、semantic retry 判定、作弊检测、feedback target 提取、`validation_retry.py` 编排或任何生产代码。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已覆盖 retry policy helper。
+
+### 验证
+
+- 初始测试校准：首版断言把实现中的 Unicode arrow 写成 ASCII arrow，已改为断言字段名与前后值；被测代码未修改。
+- `py -3.12 -m pytest tests/unit/test_retry_policy.py --tb=line -q -p no:cacheprovider` → **6 passed**。
+- `py -3.12 -m ruff check pa_agent/ai/retry_policy.py tests/unit/test_retry_policy.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/ai/retry_policy.py tests/unit/test_retry_policy.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+- `git diff --check` → 通过。
+- 敏感字面量扫描（常见 access key、OpenAI key 与 key-value secret patterns）→ 无命中。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百六十八轮：继续 L7，补充 token counter 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百六十七轮已给 signal context helpers 补充单测；本轮转向同属 AI 基础小 helper、已在 focused Ruff 清单内的 `pa_agent/ai/token_counter.py`，补充 token 估算路径的确定性覆盖。
