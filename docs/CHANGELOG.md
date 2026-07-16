@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百七十六轮：继续 L7，补充 eastmoney client 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百七十五轮已给 QClaw relay helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/data/eastmoney_client.py`，补充东方财富底层 HTTP client 中不发真实网络请求的解析与参数 helper 覆盖。
+
+### 工程治理
+
+- **新增 eastmoney client 单测**：新增 `tests/unit/test_eastmoney_client.py`，覆盖 `stock_market_code()` / `stock_secid()` / `index_secid()` 的市场前缀规则、`_parse_klines()` 对日线/分钟/秒级 K 线字符串的解析与坏行过滤、`_parse_clist_rows()` 对非法行过滤和安全数值转换，以及 `_daily_kline_params()` 的日期区间模式、recent `lmt` clamp 与复权参数。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_eastmoney_client.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_eastmoney_client.py`。
+- **保持运行逻辑不变**：本轮不修改 `eastmoney_client.py`、HTTP 请求封装、CDN host retry、真实 East Money API 调用、盘口解析或数据源集成路径。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 East Money low-level client helpers。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_eastmoney_client.py --tb=short -q -p no:cacheprovider` → **4 passed**。
+- `py -3.12 -m ruff check pa_agent/data/eastmoney_client.py tests/unit/test_eastmoney_client.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/data/eastmoney_client.py tests/unit/test_eastmoney_client.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百七十五轮：继续 L7，补充 qclaw relay 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百七十四轮已给 experience renderer helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/ai/qclaw_relay.py`，补充本地 relay helper 的直接覆盖。
