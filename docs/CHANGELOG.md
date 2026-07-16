@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第二百零七轮：继续 L7，补充 GUI theme tokens 单测）
+
+本轮继续推进 **L7：CI 增强**。第二百零六轮已给 security package marker 补充合同覆盖；本轮转向同属 `pa_agent/gui/theme` 包级 focused Ruff 范围内的 `pa_agent/gui/theme/tokens.py`，补充 GUI theme design tokens 的直接常量合同覆盖。
+
+### 工程治理
+
+- **新增 GUI theme tokens 单测**：新增 `tests/unit/test_gui_theme_tokens.py`，覆盖 canonical color token 的 hex 格式、pill text/border/bg token 的 hex/rgba 格式、字体与布局 token 固定值，以及 legacy alias 与 canonical token 的绑定关系。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_gui_theme_tokens.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_gui_theme_tokens.py`。
+- **保持运行逻辑不变**：本轮不修改 theme tokens、QSS、`apply_theme()`、GUI 样式加载或任何运行逻辑。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 GUI theme design tokens。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_gui_theme_tokens.py --tb=short -q -p no:cacheprovider` → **4 passed**。
+- `py -3.12 -m ruff check pa_agent/gui/theme/tokens.py tests/unit/test_gui_theme_tokens.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/gui/theme/tokens.py tests/unit/test_gui_theme_tokens.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...`，共 **234** 个目标 → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第二百零六轮：继续 L7，补充 security package 单测）
 
 本轮继续推进 **L7：CI 增强**。第二百零五轮已给 indicators package marker 补充合同覆盖；本轮转向同属轻量包入口、且已在 focused Ruff 包级覆盖内的 `pa_agent/security/__init__.py`，补充 security package marker 合同覆盖。
