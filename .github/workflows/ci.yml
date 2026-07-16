@@ -66,6 +66,7 @@ jobs:
           tests/unit/test_candle_item.py
           tests/unit/test_toast_overlay.py
           tests/unit/test_model_selector.py
+          tests/unit/test_widgets_exports.py
           tests/unit/test_order_method_router.py
           tests/unit/test_trend_context.py
           tests/unit/test_decision_panel.py
@@ -295,6 +296,7 @@ jobs:
           tests/unit/test_candle_item.py
           tests/unit/test_toast_overlay.py
           tests/unit/test_model_selector.py
+          tests/unit/test_widgets_exports.py
           tests/unit/test_order_method_router.py
           tests/unit/test_trend_context.py
           tests/unit/test_decision_panel.py
