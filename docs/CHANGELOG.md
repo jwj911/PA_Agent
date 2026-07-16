@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第二百零一轮：继续 L7，补充 safe filename 单测）
+
+本轮继续推进 **L7：CI 增强**。第二百轮已给 crash diagnostics helper 补充确定性单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/util/safe_filename.py`，补充文件名组件清洗 helper 的直接边界覆盖。
+
+### 工程治理
+
+- **新增 safe filename 单测**：新增 `tests/unit/test_safe_filename.py`，覆盖 `sanitize_filename_component()` 对非法字符、路径分隔符、空结果 fallback、首尾点/空格/短横线、Windows 保留名和正常值保持的边界处理。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_safe_filename.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_safe_filename.py`。
+- **保持运行逻辑不变**：本轮不修改文件名清洗规则、记录命名、日志命名或落盘路径。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 safe filename helper。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_safe_filename.py --tb=short -q -p no:cacheprovider` → **16 passed**。
+- `py -3.12 -m ruff check pa_agent/util/safe_filename.py tests/unit/test_safe_filename.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/util/safe_filename.py tests/unit/test_safe_filename.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...`，共 **228** 个目标 → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第二百轮：继续 L7，补充 crash diagnostics 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百九十九轮已给轻量包入口补充 package marker 合同单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/util/crash_diagnostics.py`，补充 crash diagnostics 内部 logging handler 检测 helper 的确定性覆盖。
