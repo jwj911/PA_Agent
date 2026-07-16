@@ -223,6 +223,10 @@ jobs:
           pa_agent/indicators
           pa_agent/gui/theme
           tests/__init__.py
+          tests/e2e/__init__.py
+          tests/fixtures/__init__.py
+          tests/integration/__init__.py
+          tests/property/__init__.py
           tests/unit/__init__.py
           tests/unit/test_data_source_forming_bar.py
           tests/unit/test_data_source_factory.py
