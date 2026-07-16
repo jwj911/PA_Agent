@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百五十七轮：继续 L7，补充 timefmt 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百五十六轮已把测试子包入口纳入 focused Ruff；本轮转向已在 Ruff 清单内但缺少直接单测的小工具 `pa_agent/util/timefmt.py`，补充确定性 epoch 毫秒转换测试。
+
+### 工程治理
+
+- **新增 timefmt 单测**：新增 `tests/unit/test_timefmt.py`，用 `monkeypatch` 固定 `time.time()`，验证 `now_local_ms()` 返回毫秒整数。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_timefmt.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_timefmt.py`。
+- **保持运行逻辑不变**：本轮不修改真实时间读取逻辑、时区语义、`int(time.time() * 1000)` 转换方式或 `pa_agent/util/timefmt.py` 运行代码。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已覆盖 timefmt epoch ms helper。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_timefmt.py --tb=line -q -p no:cacheprovider` → **1 passed**。
+- `py -3.12 -m ruff check pa_agent/util/timefmt.py tests/unit/test_timefmt.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/util/timefmt.py tests/unit/test_timefmt.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百五十六轮：继续 L7，扩展 Ruff 到测试子包入口）
 
 本轮继续推进 **L7：CI 增强**。第一百五十五轮已把顶层与 unit 测试包入口纳入 focused Ruff；本轮继续收束测试目录边界，选择已经 Ruff clean 的 `tests/integration/__init__.py`、`tests/property/__init__.py`、`tests/fixtures/__init__.py` 与 `tests/e2e/__init__.py`。
