@@ -101,6 +101,7 @@ jobs:
           tests/unit/test_pending_writer_no_plaintext_key.py
           tests/unit/test_crash_diagnostics.py
           tests/unit/test_safe_filename.py
+          tests/unit/test_mask_secret.py
           tests/unit/test_timefmt.py
           tests/unit/test_threading_utils.py
           tests/unit/test_datetime_ts.py
@@ -343,6 +344,7 @@ jobs:
           tests/unit/test_pending_writer_no_plaintext_key.py
           tests/unit/test_crash_diagnostics.py
           tests/unit/test_safe_filename.py
+          tests/unit/test_mask_secret.py
           tests/unit/test_timefmt.py
           tests/unit/test_threading_utils.py
           tests/unit/test_datetime_ts.py
