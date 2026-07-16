@@ -139,6 +139,7 @@ jobs:
           pa_agent/ai/__init__.py
           pa_agent/config/__init__.py
           pa_agent/data/__init__.py
+          pa_agent/notify/__init__.py
           pa_agent/orchestrator/__init__.py
           pa_agent/data/base.py
           pa_agent/data/factory.py
