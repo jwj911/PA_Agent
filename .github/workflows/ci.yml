@@ -71,6 +71,7 @@ jobs:
           tests/unit/test_orchestrator_exports.py
           tests/unit/test_records_exports.py
           tests/unit/test_demo_exports.py
+          tests/unit/test_gui_theme_apply.py
           tests/unit/test_gui_theme_exports.py
           tests/unit/test_gui_theme_tokens.py
           tests/unit/test_util_exports.py
@@ -319,6 +320,7 @@ jobs:
           tests/unit/test_orchestrator_exports.py
           tests/unit/test_records_exports.py
           tests/unit/test_demo_exports.py
+          tests/unit/test_gui_theme_apply.py
           tests/unit/test_gui_theme_exports.py
           tests/unit/test_gui_theme_tokens.py
           tests/unit/test_util_exports.py
