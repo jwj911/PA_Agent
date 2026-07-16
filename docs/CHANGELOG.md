@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百九十三轮：继续 L7，补充 demo exports 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百九十二轮已给 records 包入口补充 exports 合同单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/demo/__init__.py`，补充 demo 包入口导出合同覆盖。
+
+### 工程治理
+
+- **新增 demo exports 单测**：新增 `tests/unit/test_demo_exports.py`，覆盖 `pa_agent.demo.__all__` 的公开名称顺序，以及 `DemoReplayer` 与 demo record loader 公开函数的包入口绑定对象。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_demo_exports.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_demo_exports.py`。
+- **保持运行逻辑不变**：本轮不修改 `pa_agent/demo/__init__.py`、回放定时逻辑、记录加载、随机选择或可播放判定。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 demo package exports。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_demo_exports.py --tb=short -q -p no:cacheprovider` → **2 passed**。
+- `py -3.12 -m ruff check pa_agent/demo/__init__.py tests/unit/test_demo_exports.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/demo/__init__.py tests/unit/test_demo_exports.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...`，共 **220** 个目标 → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百九十二轮：继续 L7，补充 records exports 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百九十一轮已给 orchestrator 包入口补充 exports 合同单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/records/__init__.py`，补充 records 包入口导出合同覆盖。
