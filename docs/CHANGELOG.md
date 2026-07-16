@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百九十九轮：继续 L7，补充 package markers 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百九十八轮已给集中路径常量补充合同单测；本轮转向同属已在 focused Ruff 清单内的轻量包入口，补充 package marker import 与文档合同覆盖。
+
+### 工程治理
+
+- **新增 package markers 单测**：新增 `tests/unit/test_package_markers.py`，覆盖 `pa_agent.ai`、`pa_agent.config`、`pa_agent.data`、`pa_agent.notify` 可稳定导入、无 `__all__`，以及既有 package docstring 合同。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_package_markers.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_package_markers.py`。
+- **保持运行逻辑不变**：本轮不修改包入口、子模块导入路径、公开 API 或通知/配置/数据层逻辑。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 package marker imports。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_package_markers.py --tb=short -q -p no:cacheprovider` → **2 passed**。
+- `py -3.12 -m ruff check pa_agent/ai/__init__.py pa_agent/config/__init__.py pa_agent/data/__init__.py pa_agent/notify/__init__.py tests/unit/test_package_markers.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/ai/__init__.py pa_agent/config/__init__.py pa_agent/data/__init__.py pa_agent/notify/__init__.py tests/unit/test_package_markers.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...`，共 **226** 个目标 → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百九十八轮：继续 L7，补充 config paths 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百九十七轮已给顶层包元数据补充合同单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/config/paths.py`，补充集中路径常量的派生关系覆盖。
