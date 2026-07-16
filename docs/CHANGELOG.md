@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百五十八轮：继续 L7，补充 threading 工具单测）
+
+本轮继续推进 **L7：CI 增强**。第一百五十七轮已给 timefmt 小工具补充确定性单测；本轮转向同属 util 小工具的 `pa_agent/util/threading.py`，补充 `CancelToken` 与 `OrchestratorEvent` 的轻量回归覆盖。
+
+### 工程治理
+
+- **新增 threading 工具单测**：新增 `tests/unit/test_threading_utils.py`，覆盖 `CancelToken.set()` / `clear()` / `wait(timeout=0)` / `is_set()` 语义，以及 `OrchestratorEvent` 成员顺序。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_threading_utils.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_threading_utils.py`。
+- **保持运行逻辑不变**：本轮不修改 `threading.Event` 包装逻辑、`OrchestratorEvent` 枚举值、编排器事件流或任何运行代码。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已覆盖基础线程工具。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_threading_utils.py --tb=line -q -p no:cacheprovider` → **2 passed**。
+- `py -3.12 -m ruff check pa_agent/util/threading.py tests/unit/test_threading_utils.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/util/threading.py tests/unit/test_threading_utils.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百五十七轮：继续 L7，补充 timefmt 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百五十六轮已把测试子包入口纳入 focused Ruff；本轮转向已在 Ruff 清单内但缺少直接单测的小工具 `pa_agent/util/timefmt.py`，补充确定性 epoch 毫秒转换测试。
