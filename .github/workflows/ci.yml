@@ -69,6 +69,7 @@ jobs:
           tests/unit/test_widgets_exports.py
           tests/unit/test_gui_exports.py
           tests/unit/test_orchestrator_exports.py
+          tests/unit/test_records_exports.py
           tests/unit/test_order_method_router.py
           tests/unit/test_trend_context.py
           tests/unit/test_decision_panel.py
@@ -301,6 +302,7 @@ jobs:
           tests/unit/test_widgets_exports.py
           tests/unit/test_gui_exports.py
           tests/unit/test_orchestrator_exports.py
+          tests/unit/test_records_exports.py
           tests/unit/test_order_method_router.py
           tests/unit/test_trend_context.py
           tests/unit/test_decision_panel.py
