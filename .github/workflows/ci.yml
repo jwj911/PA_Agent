@@ -104,6 +104,7 @@ jobs:
           tests/unit/test_trace_normalize.py
           tests/unit/test_coherence_checks.py
           tests/unit/test_validation_messages.py
+          tests/unit/test_schema_validator.py
           tests/unit/test_json_validator.py
           tests/unit/test_validation_lenient_fixes.py
           tests/unit/test_business_rules.py
@@ -320,6 +321,7 @@ jobs:
           tests/unit/test_trace_normalize.py
           tests/unit/test_coherence_checks.py
           tests/unit/test_validation_messages.py
+          tests/unit/test_schema_validator.py
           tests/unit/test_json_validator.py
           tests/unit/test_validation_lenient_fixes.py
           tests/unit/test_business_rules.py
