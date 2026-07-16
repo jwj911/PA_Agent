@@ -13,6 +13,29 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百六十七轮：继续 L7，补充 signal context 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百六十六轮已给 trace node result helpers 补充单测；本轮转向同属 AI 基础叶子模块、已在 focused Ruff 清单内的 `pa_agent/ai/signal_context.py`，补充信号棒 / 计划型限价上下文 helper 的确定性覆盖。
+
+### 工程治理
+
+- **新增 signal context 单测**：新增 `tests/unit/test_signal_context.py`，覆盖 `_get_signal_seq()` 的 `bar_analysis.signal_bar.bar` 解析与缺失/非法/K0 回退、`has_background_limit_path()` 的 §9.0P yes-only 检测，以及 `is_planned_limit_order()` 的背景限价路径、pending entry 无信号棒、weak structural pattern、非限价单与已触发限价单拒绝路径。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_signal_context.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_signal_context.py`。
+- **保持运行逻辑不变**：本轮不修改 signal bar 序号定位、§9.0P 检测、计划型限价判定、`decision_nodes` 重导出、Stage 2 调用路径或任何生产代码。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已覆盖 signal context helpers。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_signal_context.py --tb=line -q -p no:cacheprovider` → **7 passed**。
+- `py -3.12 -m ruff check pa_agent/ai/signal_context.py tests/unit/test_signal_context.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/ai/signal_context.py tests/unit/test_signal_context.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+- `git diff --check` → 通过。
+- 敏感字面量扫描（常见 access key、OpenAI key 与 key-value secret patterns）→ 无命中。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百六十六轮：继续 L7，补充 trace nodes 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百六十五轮已给 bar geometry primitives 补充单测；本轮转向同属 AI 基础叶子模块、已在 focused Ruff 清单内的 `pa_agent/ai/trace_nodes.py`，补充 trace 结果层 helper 的确定性覆盖。
