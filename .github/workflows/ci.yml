@@ -190,6 +190,7 @@ jobs:
           pa_agent/config/paths.py
           pa_agent/orchestrator/validation_retry.py
           pa_agent/gui/__init__.py
+          pa_agent/gui/ai_sidebar.py
           pa_agent/gui/chart_decision_overlay.py
           pa_agent/gui/prediction_format.py
           pa_agent/gui/snapshot_worker.py

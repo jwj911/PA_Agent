@@ -7,8 +7,8 @@ from PyQt6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 
 from pa_agent.gui.ai_stream_window import AIStreamPanel
 from pa_agent.gui.debug_widget import DebugWidget
-from pa_agent.gui.decision_panel import DecisionPanel
 from pa_agent.gui.decision_flow_viz import DecisionFlowVizPanel
+from pa_agent.gui.decision_panel import DecisionPanel
 from pa_agent.gui.decision_tree_panel import DecisionTreePanel
 from pa_agent.gui.future_trend_panel import FutureTrendPanel
 from pa_agent.gui.prompt_files_panel import PromptFilesPanel
