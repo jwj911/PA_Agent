@@ -13,6 +13,25 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百四十六轮：继续 L7，扩展 Ruff 到 widgets 包入口）
+
+本轮继续推进 **L7：CI 增强**。第一百四十五轮已把 seq label widget 纳入 focused Ruff；本轮继续收束 GUI widgets 边界，选择已经 Ruff clean 的 `pa_agent/gui/widgets/__init__.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/gui/widgets/__init__.py`。
+- **保持运行逻辑不变**：本轮不修改 widgets 包导出、导入顺序、公开类名、widget 初始化路径或任何运行代码，仅扩大 focused Ruff 覆盖面。
+- **保留后续候选**：`chart_panel.py` 与 `ai_turn_card.py` 仍包含用户可见中文图例/按钮文案；`analysis_modes.py`、`speed_profiles.py`、`analysis_prep_worker.py` 也仍有中文文案或异常兜底 lint，暂不直接纳入本轮门禁。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确 Ruff 门禁已覆盖 widgets 包入口。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/gui/widgets/__init__.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/gui/widgets/__init__.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百四十五轮：继续 L7，扩展 Ruff 到 seq label widget）
 
 本轮继续推进 **L7：CI 增强**。第一百四十四轮已把 candle item widget 纳入 focused Ruff；本轮继续处理 GUI widgets 小文件，选择仅有无效条件表达式 lint 的 `pa_agent/gui/widgets/seq_label_item.py`。

@@ -305,6 +305,7 @@ pytest -m live
 - 第一百四十三轮 L7 补充：focused Ruff 新增 `pa_agent/gui/widgets/summary_strip.py`，仅移除 `resizeEvent()` 上 stale `N802` noqa；本轮不修改 summary card 标题、默认值、metric 更新、reset 或响应式 relayout 行为。
 - 第一百四十四轮 L7 补充：focused Ruff 新增 `pa_agent/gui/widgets/candle_item.py`，仅移除 `KlineBar` quoted annotations；本轮不修改蜡烛绘制、forming bar 样式、body/wick 几何计算、颜色、bounding rect 或增量 `update_bar()` 行为。
 - 第一百四十五轮 L7 补充：focused Ruff 新增 `pa_agent/gui/widgets/seq_label_item.py`，仅把 forming/non-forming 两侧相同的序号文本条件表达式简化为单一赋值；本轮不修改序号文本格式、forming 颜色、默认颜色、字体、anchor 或位置。
+- 第一百四十六轮 L7 补充：focused Ruff 新增 `pa_agent/gui/widgets/__init__.py`，覆盖 widgets 包入口导出；本轮不修改包导出、公开类名、widget 初始化路径或任何运行代码。
 
 ***
 
