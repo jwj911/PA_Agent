@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百八十四轮：继续 L7，补充 seq label item 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百八十三轮已给 summary strip widget helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/gui/widgets/seq_label_item.py`，补充 K 线图序号标签 item 的直接覆盖。
+
+### 工程治理
+
+- **新增 seq label item 单测**：新增 `tests/unit/test_seq_label_item.py`，覆盖 `SeqLabelItem` 的序号文本格式、默认颜色、形成中 K 线颜色、字体字号、anchor 和坐标合同。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_seq_label_item.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_seq_label_item.py`。
+- **保持运行逻辑不变**：本轮不修改 `seq_label_item.py`、默认/形成中颜色、字体、anchor、位置或 chart widget 集成路径。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 sequence label item helper。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_seq_label_item.py --tb=short -q -p no:cacheprovider` → **2 passed**。
+- `py -3.12 -m ruff check pa_agent/gui/widgets/seq_label_item.py tests/unit/test_seq_label_item.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/gui/widgets/seq_label_item.py tests/unit/test_seq_label_item.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...`，共 **211** 个目标 → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百八十三轮：继续 L7，补充 summary strip 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百八十二轮已给 flow bar widget helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/gui/widgets/summary_strip.py`，补充 AI 面板 summary strip widget helper 的直接覆盖。
