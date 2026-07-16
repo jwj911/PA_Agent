@@ -13,6 +13,25 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百四十一轮：继续 L7，扩展 Ruff 到 toast widget）
+
+本轮继续推进 **L7：CI 增强**。第一百四十轮已把 flow bar widget 纳入 focused Ruff；本轮继续处理 GUI widgets 小文件，选择仅有 import 排序问题的 `pa_agent/gui/widgets/toast.py`。
+
+### 工程治理
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `pa_agent/gui/widgets/toast.py`。
+- **清理 Toast import lint**：按 Ruff/isort 要求将 `PyQt6.QtCore` import 排序为 `Qt, QTimer`，消除 `I001`。
+- **保持运行逻辑不变**：本轮不修改 toast 消息显示、自动关闭、布局定位、尺寸计算、样式或父窗口依赖。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确 Ruff 门禁已覆盖 toast widget。
+
+### 验证
+
+- `py -3.12 -m ruff check pa_agent/gui/widgets/toast.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/gui/widgets/toast.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百四十轮：继续 L7，扩展 Ruff 到 flow bar widget）
 
 本轮继续推进 **L7：CI 增强**。第一百三十九轮已把 model selector widget 纳入 focused Ruff；本轮继续处理 GUI widgets 小文件，选择仅有 import 排序问题的 `pa_agent/gui/widgets/flow_bar.py`。

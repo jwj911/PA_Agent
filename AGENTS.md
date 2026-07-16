@@ -300,6 +300,7 @@ pytest -m live
 - 第一百三十八轮 L7 补充：focused Ruff 新增 `pa_agent/gui/widgets/status_bar.py`，仅清理 status bar widget 的 docstring 标点；本轮不修改消息显示、进度条、颜色切换、TPS 显示或样式逻辑。
 - 第一百三十九轮 L7 补充：focused Ruff 新增 `pa_agent/gui/widgets/model_selector.py`，覆盖模型选择下拉 widget；本轮不修改模型分组、下拉定位、选中态刷新、信号发射、按钮文案或样式逻辑。
 - 第一百四十轮 L7 补充：focused Ruff 新增 `pa_agent/gui/widgets/flow_bar.py`，仅按 Ruff/isort 拆分 `PyQt6.QtWidgets` import；本轮不修改 FlowBar 步骤名称、默认 caption、状态颜色或更新/reset 行为。
+- 第一百四十一轮 L7 补充：focused Ruff 新增 `pa_agent/gui/widgets/toast.py`，仅按 Ruff/isort 调整 `PyQt6.QtCore` import 顺序；本轮不修改 toast 消息显示、自动关闭、布局定位、尺寸计算或样式逻辑。
 
 ***
 
