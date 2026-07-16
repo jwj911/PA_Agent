@@ -74,6 +74,7 @@ jobs:
           tests/unit/test_pending_writer_sanitize.py
           tests/unit/test_pending_writer_no_plaintext_key.py
           tests/unit/test_timefmt.py
+          tests/unit/test_threading_utils.py
           tests/unit/test_datetime_ts.py
           tests/unit/test_kline_bar_normalize.py
           tests/unit/test_atr_true_range.py
@@ -272,6 +273,7 @@ jobs:
           tests/unit/test_pending_writer_sanitize.py
           tests/unit/test_pending_writer_no_plaintext_key.py
           tests/unit/test_timefmt.py
+          tests/unit/test_threading_utils.py
           tests/unit/test_datetime_ts.py
           tests/unit/test_kline_bar_normalize.py
           tests/unit/test_overlay_lines.py
