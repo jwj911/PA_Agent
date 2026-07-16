@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百六十五轮：继续 L7，补充 bar geometry 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百六十四轮已给 East Money quote API constants 补充单测；本轮转向已在 focused Ruff 清单内、stdlib-only 的 AI 叶子模块 `pa_agent/ai/bar_geometry.py`，补充决策节点几何 primitive 的确定性覆盖。
+
+### 工程治理
+
+- **新增 bar geometry 单测**：新增 `tests/unit/test_bar_geometry.py`，覆盖 `_count_trend_bars()` 的 body/close-position 阈值与 malformed bar 忽略、`_mean_overlap_ratio()` 的相邻重叠均值与最少有效 pair 要求、`_find_swings()` 的 left/right 2-bar pivot 和短窗口空结果。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_bar_geometry.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_bar_geometry.py`。
+- **保持运行逻辑不变**：本轮不修改 trend-bar 阈值、overlap ratio 算法、swing pivot 判定、decision node / trend context 调用站点或任何运行代码。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已覆盖 bar geometry primitives。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_bar_geometry.py --tb=line -q -p no:cacheprovider` → **4 passed**。
+- `py -3.12 -m ruff check pa_agent/ai/bar_geometry.py tests/unit/test_bar_geometry.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/ai/bar_geometry.py tests/unit/test_bar_geometry.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百六十四轮：继续 L7，补充 eastmoney quote api 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百六十三轮已给 East Money field enum helper 补充单测；本轮转向同属 East Money 盘口协议边界、已在 focused Ruff 清单内的 `pa_agent/data/eastmoney_quote_api.py`，补充 HTTP/SSE path 与盘口字段常量的确定性覆盖。
