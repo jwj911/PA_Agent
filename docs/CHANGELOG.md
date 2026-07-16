@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第二百轮：继续 L7，补充 crash diagnostics 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百九十九轮已给轻量包入口补充 package marker 合同单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/util/crash_diagnostics.py`，补充 crash diagnostics 内部 logging handler 检测 helper 的确定性覆盖。
+
+### 工程治理
+
+- **新增 crash diagnostics 单测**：新增 `tests/unit/test_crash_diagnostics.py`，使用临时 `logging.Logger` 与 `RotatingFileHandler` 覆盖 `_log_file_handler_attached()` 对匹配、缺失、不匹配 log file handler 的判定。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_crash_diagnostics.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_crash_diagnostics.py`。
+- **保持运行逻辑不变**：本轮不启用 `faulthandler`、不写真实 crash log、不修改 crash diagnostics、日志 handler 配置或 crash/log 路径常量。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 crash diagnostics helper。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_crash_diagnostics.py --tb=short -q -p no:cacheprovider` → **2 passed**。
+- `py -3.12 -m ruff check pa_agent/util/crash_diagnostics.py tests/unit/test_crash_diagnostics.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/util/crash_diagnostics.py tests/unit/test_crash_diagnostics.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...`，共 **227** 个目标 → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百九十九轮：继续 L7，补充 package markers 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百九十八轮已给集中路径常量补充合同单测；本轮转向同属已在 focused Ruff 清单内的轻量包入口，补充 package marker import 与文档合同覆盖。
