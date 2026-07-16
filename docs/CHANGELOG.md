@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第二百零二轮：继续 L7，补充 mask secret 单测）
+
+本轮继续推进 **L7：CI 增强**。第二百零一轮已给 safe filename helper 补充直接边界单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/util/mask_secret.py`，补充密钥掩码纯函数的直接边界覆盖。
+
+### 工程治理
+
+- **新增 mask secret 单测**：新增 `tests/unit/test_mask_secret.py`，覆盖 `mask_secret()` 对空串、短串、四字符边界、普通密钥和 Unicode 字符串的掩码输出。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_mask_secret.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_mask_secret.py`。
+- **保持运行逻辑不变**：本轮不修改脱敏规则、日志 formatter、`PendingWriter` 记录脱敏或任何密钥持久化逻辑。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 mask secret helper。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_mask_secret.py --tb=short -q -p no:cacheprovider` → **6 passed**。
+- `py -3.12 -m ruff check pa_agent/util/mask_secret.py tests/unit/test_mask_secret.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/util/mask_secret.py tests/unit/test_mask_secret.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...`，共 **229** 个目标 → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第二百零一轮：继续 L7，补充 safe filename 单测）
 
 本轮继续推进 **L7：CI 增强**。第二百轮已给 crash diagnostics helper 补充确定性单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/util/safe_filename.py`，补充文件名组件清洗 helper 的直接边界覆盖。
