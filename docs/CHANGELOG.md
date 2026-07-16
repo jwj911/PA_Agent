@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百七十二轮：继续 L7，补充 business rules 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百七十一轮已给 strategy files 注册表补充合同测试；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/ai/business_rules.py`，补充 Stage 2 业务规则校验器的直接单测，减少仅经 `JsonValidator` 兼容入口间接覆盖的空白。
+
+### 工程治理
+
+- **新增 business rules 单测**：新增 `tests/unit/test_business_rules.py`，覆盖 `check_no_order_invariant()` 的不下单↔价格字段铁律、`check_breakout_order_basis()` 的突破单 basis/extreme/rule 校验、`check_breakout_price_extreme()` 对轻量 K 线 frame 的数值极值检查、`_parse_k_seq()` / `_bar_by_seq()` / `_all_stage2_reasons()` 防御性 helper，以及 `check_signal_chain()` 对 weak signal 缺少 §9 tradable token 的拒绝和 token 豁免。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_business_rules.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_business_rules.py`。
+- **保持运行逻辑不变**：本轮不修改 `business_rules.py`、`JsonValidator._check_x` 重绑定、trade metrics call-time import、Stage 2 校验编排或任何生产代码。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 business-rule validators。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_business_rules.py --tb=short -q -p no:cacheprovider` → **6 passed**。
+- `py -3.12 -m ruff check pa_agent/ai/business_rules.py tests/unit/test_business_rules.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/ai/business_rules.py tests/unit/test_business_rules.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百七十一轮：继续 L7，补充 strategy files 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百七十轮已给 validation messages helper 补充单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/ai/strategy_files.py`，补充策略/提示文件名注册表的直接合同测试。
