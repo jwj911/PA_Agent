@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百八十六轮：继续 L7，补充 toast overlay 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百八十五轮已给 candle item helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/gui/widgets/toast.py`，补充非阻塞 toast overlay widget 的直接覆盖。
+
+### 工程治理
+
+- **新增 toast overlay 单测**：新增 `tests/unit/test_toast_overlay.py`，覆盖 `_ToastLabel` 的 message、word-wrap、center alignment 与样式片段，`ToastOverlay.show_message()` 的 toast 列表/布局追加和 bottom-right 定位，`_dismiss()` 移除 toast 与 layout item，以及无 parent 时 `_reposition()` no-op 合同。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_toast_overlay.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_toast_overlay.py`。
+- **保持运行逻辑不变**：本轮不修改 `toast.py`、自动关闭计时器、样式、定位公式、父窗口依赖或主窗口集成路径。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 toast overlay helper。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_toast_overlay.py --tb=short -q -p no:cacheprovider` → **4 passed**。
+- `py -3.12 -m ruff check pa_agent/gui/widgets/toast.py tests/unit/test_toast_overlay.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/gui/widgets/toast.py tests/unit/test_toast_overlay.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...`，共 **213** 个目标 → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百八十五轮：继续 L7，补充 candle item 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百八十四轮已给 seq label item helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/gui/widgets/candle_item.py`，补充 K 线图蜡烛图元的直接几何合同覆盖。
