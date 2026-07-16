@@ -13,6 +13,29 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百七十轮：继续 L7，补充 validation messages 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百六十九轮已给 retry policy helper 补充单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/ai/validation_messages.py`，补充验证错误摘要格式化 helper 的直接覆盖。
+
+### 工程治理
+
+- **新增 validation messages 单测**：新增 `tests/unit/test_validation_messages.py`，覆盖 `format_validation_errors()` 的 missing fields 前置、invalid fields 按 `max_items` 截断、额外条目计数、空输入返回空串，以及 `_label_one()` 对 prefix / embedded-prefix 的标签匹配和未知文本 fallback。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_validation_messages.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_validation_messages.py`。
+- **保持运行逻辑不变**：本轮不修改验证错误中文标签、摘要拼接规则、`retry_feedback.py` 调用路径或任何生产代码。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已覆盖 validation message formatter。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_validation_messages.py --tb=short -q -p no:cacheprovider` → **5 passed**。
+- `py -3.12 -m ruff check pa_agent/ai/validation_messages.py tests/unit/test_validation_messages.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/ai/validation_messages.py tests/unit/test_validation_messages.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+- `git diff --check` → 通过。
+- 敏感字面量扫描（常见 access key、OpenAI key 与 key-value secret patterns）→ 无命中。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百六十九轮：继续 L7，补充 retry policy 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百六十八轮已给 token counter helper 补充单测；本轮转向同属已在 focused Ruff 清单内的 AI 校验辅助模块 `pa_agent/ai/retry_policy.py`，补充验证重试策略纯函数的直接覆盖。
