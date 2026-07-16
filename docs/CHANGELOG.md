@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第二百零八轮：继续 L7，补充 GUI theme apply 单测）
+
+本轮继续推进 **L7：CI 增强**。第二百零七轮已给 GUI theme design tokens 补充直接常量合同覆盖；本轮转向同属 `pa_agent/gui/theme` 包级 focused Ruff 范围内的 `pa_agent/gui/theme/apply.py`，补充 `apply_theme()` 的 QSS 加载与 Fusion 样式设置合同。
+
+### 工程治理
+
+- **新增 GUI theme apply 单测**：新增 `tests/unit/test_gui_theme_apply.py`，用 fake application 覆盖 `_QSS_PATH` 存在时读取 stylesheet 并设置 `Fusion` style，以及 `_QSS_PATH` 缺失时仍设置 `Fusion` style。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_gui_theme_apply.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_gui_theme_apply.py`。
+- **保持运行逻辑不变**：本轮不修改 QSS、theme tokens、`apply_theme()` 实现、QApplication 集成或任何 GUI 运行逻辑。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 GUI theme apply helper。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_gui_theme_apply.py --tb=short -q -p no:cacheprovider` → **2 passed**。
+- `py -3.12 -m ruff check pa_agent/gui/theme/apply.py tests/unit/test_gui_theme_apply.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/gui/theme/apply.py tests/unit/test_gui_theme_apply.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...`，共 **235** 个目标 → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第二百零七轮：继续 L7，补充 GUI theme tokens 单测）
 
 本轮继续推进 **L7：CI 增强**。第二百零六轮已给 security package marker 补充合同覆盖；本轮转向同属 `pa_agent/gui/theme` 包级 focused Ruff 范围内的 `pa_agent/gui/theme/tokens.py`，补充 GUI theme design tokens 的直接常量合同覆盖。
