@@ -18,6 +18,36 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第二百一十轮：继续 L7，补充日志配置单测）
+
+本轮继续推进 **L7：CI 增强**。`pa_agent/util/logging.py` 已在 focused Ruff 范围内，但此前仅通过 property 测试间接验证明文 API Key 不会写入日志文件，缺少对 formatter 更新、handler 识别、重复配置与 handler 丢失恢复路径的直接合同覆盖。
+
+### 工程治理
+
+- **新增日志配置单测**：新增 `tests/unit/test_logging.py`，覆盖 `MaskingFormatter` 的 API Key 替换与运行时更新、`update_api_key()` 对全部活动 formatter 的同步、`verify_logging_handlers()` 对缺失/错误路径/匹配 `RotatingFileHandler` 的判定，以及 `configure_logging()` 的首次配置、重复配置复用、root handler 被外部清除后的恢复、第三方 logger handler 绑定与 propagation 关闭。
+
+- **全局状态隔离**：测试 fixture 在每个涉及 `configure_logging()` 的用例前后保存并恢复 root、`urllib3`、`openai`、`httpx` logger 的 handlers、level、propagation、disabled 状态及 logging 模块的 `_configured` / `_active_formatters` 状态，关闭本轮临时 handler，避免污染 pytest 捕获 handler 或后续用例。
+
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_logging.py`。
+
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_logging.py`。
+
+- **保持运行逻辑不变**：本轮不修改 `MaskingFormatter`、日志 handler 配置、第三方 logger 行为、全局锁或 API Key 脱敏规则。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen PYTHONDONTWRITEBYTECODE=1 py -3.12 -m pytest tests/unit/test_logging.py tests/property/test_logs_have_no_plaintext_key.py --tb=short -q -p no:cacheprovider` → **5 passed**。
+
+- `QT_QPA_PLATFORM=offscreen PYTHONDONTWRITEBYTECODE=1 py -3.12 -m pytest -m "not e2e and not live" --tb=line -q -p no:cacheprovider` → **通过**。
+
+- `py -3.12 -m ruff check pa_agent/util/logging.py tests/unit/test_logging.py` → **All checks passed**。
+
+- `py -3.12 -m py_compile pa_agent/util/logging.py tests/unit/test_logging.py` → 通过。
+
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...`，共 **237** 个目标 → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第二百零九轮：继续 L7，补充 EventBus 单测）
 
 本轮继续推进 **L7：CI 增强**。第二百零八轮已给 GUI theme apply helper 补充直接合同覆盖；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/util/event_bus.py`，补充 EventBus 信号 hub 的直接单元覆盖。

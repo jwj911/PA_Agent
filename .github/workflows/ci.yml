@@ -165,6 +165,7 @@ jobs:
           tests/unit/test_demo_record_loader.py
           tests/unit/test_demo_replayer.py
           tests/unit/test_event_bus.py
+          tests/unit/test_logging.py
           tests/property
           tests/integration/test_next_bar_prediction.py
           tests/integration/test_two_stage_no_order_with_prices.py
@@ -418,6 +419,7 @@ jobs:
           tests/unit/test_demo_record_loader.py
           tests/unit/test_demo_replayer.py
           tests/unit/test_event_bus.py
+          tests/unit/test_logging.py
           tests/property
           tests/integration
           tests/e2e
