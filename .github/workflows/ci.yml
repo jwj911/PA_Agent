@@ -94,6 +94,7 @@ jobs:
           tests/unit/test_pushplus_notifier.py
           tests/unit/test_debug_widget_masks_key.py
           tests/unit/test_secret_store.py
+          tests/unit/test_config_paths.py
           tests/unit/test_settings_round_trip.py
           tests/unit/test_pending_writer_sanitize.py
           tests/unit/test_pending_writer_no_plaintext_key.py
@@ -332,6 +333,7 @@ jobs:
           tests/unit/test_pushplus_notifier.py
           tests/unit/test_debug_widget_masks_key.py
           tests/unit/test_secret_store.py
+          tests/unit/test_config_paths.py
           tests/unit/test_settings_round_trip.py
           tests/unit/test_pending_writer_sanitize.py
           tests/unit/test_pending_writer_no_plaintext_key.py
