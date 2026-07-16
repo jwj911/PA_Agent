@@ -28,3 +28,9 @@ python scripts/check_ruff_baseline.py
 
 不要通过扩大 Ruff `ignore`、全局 `noqa` 或删除被检查范围来绕过门禁。Ruff 版本由
 `pyproject.toml` 的开发依赖固定；升级 Ruff 时必须先审查新版本诊断，再显式更新版本和基线。
+
+## Targeted 测试覆盖率
+
+CI 的 targeted pytest 集执行 `--cov=pa_agent --cov-fail-under=50`，并同时输出终端报告和
+`coverage.xml`。51% 是 2026-07-17 Windows/Python 3.12 的实测基线；50% 为保留一百分点
+环境波动余量后的门禁，不得通过缩小测试集或排除业务包来维持通过。

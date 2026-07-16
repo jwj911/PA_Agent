@@ -175,6 +175,8 @@ jobs:
           -p pytest_cov
           --cov=pa_agent
           --cov-report=term-missing:skip-covered
+          --cov-report=xml
+          --cov-fail-under=50
 
       - name: Run non-live non-e2e tests
         env:

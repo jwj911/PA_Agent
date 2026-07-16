@@ -18,6 +18,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-17（第二百一十三轮：targeted 覆盖率阈值门禁）
+
+本轮继续推进 **L7：CI 增强**。CI 的 targeted pytest 先前只输出覆盖率报告，测试集缩减或关键路径
+覆盖退化不会阻断合并。实测 Windows/Python 3.12 基线为 51%，据此加入保守的 50% 最低覆盖率。
+
+### 工程治理
+
+- **覆盖率门禁**：`.github/workflows/ci.yml` 的 targeted pytest 新增 `--cov-fail-under=50`，低于
+  门槛时 CI 失败；原有 `--cov=pa_agent` 测试范围和终端报告保持不变。
+- **覆盖率产物**：新增 `--cov-report=xml`，生成 `coverage.xml` 供 CI 平台和后续趋势分析消费。
+- **操作文档**：`docs/ci_quality_gates.md` 记录 51% 实测基线、50% 阈值以及禁止缩小被测范围绕过
+  门禁的规则。
+
+### 验证
+
+- targeted pytest 覆盖率基线：**51%**。
+- `--cov-fail-under=50` 通过；将阈值临时提高到 52 时受控失败。
+
+---
+
 ## [Unreleased] — 2026-07-17（第二百一十一轮：全仓 Ruff 基线门禁）
 
 本轮继续推进 **L7：CI 增强**。此前 CI 的 237 个 focused Ruff 目标能守住已覆盖的小范围，
@@ -68,17 +88,6 @@
   JSON/KV-cache 敏感字符串；不把尚未通过检查的全仓文件纳入该门禁。
 - **验收**：固定版本的 `black --version`、`black --check` 与 CI 三次独立运行均正常退出；
   focused Ruff、目标 pytest 与非 live/非 E2E 回归均通过。
-
-### 第二百一十三轮：覆盖率阈值门禁
-
-- **目标**：将现有仅输出 `pytest-cov` 报告的 CI 改为有明确下限的质量门禁，防止关键测试
-  集覆盖率回退。
-- **实施范围**：以 CI 当前的 targeted pytest 集为唯一统计范围，连续测量 Windows 基线；
-  将稳定、可复现的最小覆盖率写入 `--cov-fail-under`，同时输出 `coverage.xml` 供后续追踪。
-- **约束**：阈值必须来自实测基线并预留环境浮动余量，不能为使 CI 通过而降低被测范围、排除
-  业务包或移除现有测试；不以单次偶然高值作为门槛。
-- **验收**：CI targeted pytest 在新阈值下通过；覆盖率低于阈值的受控验证命令明确失败；
-  非 live/非 E2E 回归和 focused Ruff 继续通过。
 
 ---
 
