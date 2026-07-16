@@ -81,6 +81,7 @@ jobs:
           tests/unit/test_threading_utils.py
           tests/unit/test_datetime_ts.py
           tests/unit/test_kline_adjust.py
+          tests/unit/test_ashare_common.py
           tests/unit/test_ashare_limits.py
           tests/unit/test_eastmoney_urls.py
           tests/unit/test_eastmoney_field_enums.py
@@ -298,6 +299,7 @@ jobs:
           tests/unit/test_threading_utils.py
           tests/unit/test_datetime_ts.py
           tests/unit/test_kline_adjust.py
+          tests/unit/test_ashare_common.py
           tests/unit/test_ashare_limits.py
           tests/unit/test_eastmoney_urls.py
           tests/unit/test_eastmoney_field_enums.py
