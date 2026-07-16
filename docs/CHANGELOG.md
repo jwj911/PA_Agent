@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百六十一轮：继续 L7，补充 ashare limits 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百六十轮已给 K-line 复权偏好 helper 补充单测；本轮转向同属数据层小文件组、已在 focused Ruff 清单内的 `pa_agent/data/ashare_limits.py`，补充 A 股涨跌停辅助函数的确定性覆盖。
+
+### 工程治理
+
+- **新增 ashare limits 单测**：新增 `tests/unit/test_ashare_limits.py`，覆盖 `normalize_stock_code()`、`limit_pct()`、`limit_prices()`、`effective_pct_chg()`、`limit_bar_label()` 与 `limit_labels_for_frame()`。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_ashare_limits.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_ashare_limits.py`。
+- **保持运行逻辑不变**：本轮不修改 A 股代码归一化、板块涨跌停比例、价格四舍五入、交易日 close cache、日期换算或标签判定逻辑。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已覆盖 A 股涨跌停 helper。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_ashare_limits.py --tb=line -q -p no:cacheprovider` → **6 passed**。
+- `py -3.12 -m ruff check pa_agent/data/ashare_limits.py tests/unit/test_ashare_limits.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/data/ashare_limits.py tests/unit/test_ashare_limits.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百六十轮：继续 L7，补充 kline adjust 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百五十九轮已给刷新策略 helper 补充单测；本轮转向同属数据层小文件组、已在 focused Ruff 清单内的 `pa_agent/data/kline_adjust.py`，补充 K-line 复权偏好全局状态 helper 的确定性覆盖。
