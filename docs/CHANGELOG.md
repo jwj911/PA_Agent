@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百七十七轮：继续 L7，补充 ashare common 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百七十六轮已给 East Money low-level client helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/data/ashare_common.py`，补充 A 股共享 helper 的直接覆盖。
+
+### 工程治理
+
+- **新增 ashare common 单测**：新增 `tests/unit/test_ashare_common.py`，覆盖 `normalize_ashare_symbol()` 对股票/指数输入的归一、`is_index_symbol()` 与 `index_symbol_for_api()` 的指数识别、`ashare_session_open()` / `ashare_trading_day()` / `ashare_head_bar_live()` 的交易时段边界、`quote_volume_lots_to_shares()` 的股票与指数手数转换、`apply_session_quote_to_forming_row()` 的日线 forming row 更新，以及 `resample_rows_to_4h()` 的 4 根合并与尾桶保留。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_ashare_common.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_ashare_common.py`。
+- **保持运行逻辑不变**：本轮不修改 `ashare_common.py`、A 股数据源、East Money/Baostock/AkShare 调用、pandas 转换路径或任何网络逻辑。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 A 股共享 helpers。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_ashare_common.py --tb=short -q -p no:cacheprovider` → **6 passed**。
+- `py -3.12 -m ruff check pa_agent/data/ashare_common.py tests/unit/test_ashare_common.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/data/ashare_common.py tests/unit/test_ashare_common.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百七十六轮：继续 L7，补充 eastmoney client 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百七十五轮已给 QClaw relay helper 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/data/eastmoney_client.py`，补充东方财富底层 HTTP client 中不发真实网络请求的解析与参数 helper 覆盖。
