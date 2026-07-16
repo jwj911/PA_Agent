@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百六十轮：继续 L7，补充 kline adjust 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百五十九轮已给刷新策略 helper 补充单测；本轮转向同属数据层小文件组、已在 focused Ruff 清单内的 `pa_agent/data/kline_adjust.py`，补充 K-line 复权偏好全局状态 helper 的确定性覆盖。
+
+### 工程治理
+
+- **新增 kline adjust 单测**：新增 `tests/unit/test_kline_adjust.py`，覆盖 `set_kline_adjust()` / `get_kline_adjust()` 支持值、非法值默认回退、`apply_kline_adjust_from_settings()` 读取 `general.kline_adjust`，以及 `settings is None` 时重置默认值。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_kline_adjust.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_kline_adjust.py`。
+- **保持运行逻辑不变**：本轮不修改复权模式白名单、默认值、线程锁、settings 读取规则或任何数据源调用逻辑。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已覆盖 K-line 复权偏好 helper。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_kline_adjust.py --tb=line -q -p no:cacheprovider` → **4 passed**。
+- `py -3.12 -m ruff check pa_agent/data/kline_adjust.py tests/unit/test_kline_adjust.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/data/kline_adjust.py tests/unit/test_kline_adjust.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百五十九轮：继续 L7，补充 refresh policy 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百五十八轮已给基础线程工具补充单测；本轮转向纯函数刷新策略 helper `pa_agent/data/refresh_policy.py`，补充 HTTP 轮询源刷新间隔、缓存 TTL 与 zombie join timeout 覆盖。
