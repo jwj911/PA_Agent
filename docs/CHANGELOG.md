@@ -13,6 +13,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-16（第一百七十三轮：继续 L7，补充 schema validator 单测）
+
+本轮继续推进 **L7：CI 增强**。第一百七十二轮已给 Stage 2 business rules 补充直接单测；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/ai/schema_validator.py`，补充 JSON Schema 结构校验分类 helper 的直接覆盖。
+
+### 工程治理
+
+- **新增 schema validator 单测**：新增 `tests/unit/test_schema_validator.py`，覆盖 `SchemaValidationResult.has_errors`、`collect_schema_errors()` 对合法对象的空结果、`required` 错误的 `missing_fields` / `first_validator` 分类，以及 `enum` 错误的 `invalid_fields` / `allowed_values` 分类。
+- **CI 目标测试扩容**：`.github/workflows/ci.yml` 的 `Run targeted tests` 新增 `tests/unit/test_schema_validator.py`。
+- **CI Ruff 门禁扩容**：`.github/workflows/ci.yml` 的 `Run focused Ruff checks` 新增 `tests/unit/test_schema_validator.py`。
+- **保持运行逻辑不变**：本轮不修改 `schema_validator.py`、`JsonValidator.validate()` 的 category/message 组装、normalizer、business rules 或任何生产代码。
+- **同步 `AGENTS.md`**：补充 CI 状态说明，明确目标测试已直接覆盖 schema structural validator。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_schema_validator.py --tb=short -q -p no:cacheprovider` → **4 passed**。
+- `py -3.12 -m ruff check pa_agent/ai/schema_validator.py tests/unit/test_schema_validator.py` → **All checks passed**。
+- `py -3.12 -m py_compile pa_agent/ai/schema_validator.py tests/unit/test_schema_validator.py` → 通过。
+- 扩展后 Ruff：从 `.github/workflows/ci.yml` 解析 `Run focused Ruff checks` 清单 → `py -3.12 -m ruff check ...` → **All checks passed**。
+
+---
+
 ## [Unreleased] — 2026-07-16（第一百七十二轮：继续 L7，补充 business rules 单测）
 
 本轮继续推进 **L7：CI 增强**。第一百七十一轮已给 strategy files 注册表补充合同测试；本轮转向同属已在 focused Ruff 清单内的 `pa_agent/ai/business_rules.py`，补充 Stage 2 业务规则校验器的直接单测，减少仅经 `JsonValidator` 兼容入口间接覆盖的空白。
