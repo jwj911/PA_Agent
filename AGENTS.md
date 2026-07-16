@@ -302,6 +302,7 @@ pytest -m live
 - 第一百四十轮 L7 补充：focused Ruff 新增 `pa_agent/gui/widgets/flow_bar.py`，仅按 Ruff/isort 拆分 `PyQt6.QtWidgets` import；本轮不修改 FlowBar 步骤名称、默认 caption、状态颜色或更新/reset 行为。
 - 第一百四十一轮 L7 补充：focused Ruff 新增 `pa_agent/gui/widgets/toast.py`，仅按 Ruff/isort 调整 `PyQt6.QtCore` import 顺序；本轮不修改 toast 消息显示、自动关闭、布局定位、尺寸计算或样式逻辑。
 - 第一百四十二轮 L7 补充：focused Ruff 新增 `pa_agent/gui/widgets/overlay_lines.py`，仅移除 `PlotItem` quoted annotations 与 stale `BLE001` noqa；本轮不修改 entry/TP/SL 线绘制、label 精确价格存储、view range 更新连接或异常日志兜底。
+- 第一百四十三轮 L7 补充：focused Ruff 新增 `pa_agent/gui/widgets/summary_strip.py`，仅移除 `resizeEvent()` 上 stale `N802` noqa；本轮不修改 summary card 标题、默认值、metric 更新、reset 或响应式 relayout 行为。
 
 ***
 
