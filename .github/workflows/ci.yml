@@ -94,6 +94,7 @@ jobs:
           tests/unit/test_api_key_configured.py
           tests/unit/test_pushplus_notifier.py
           tests/unit/test_debug_widget_masks_key.py
+          tests/unit/test_security_package.py
           tests/unit/test_secret_store.py
           tests/unit/test_config_paths.py
           tests/unit/test_settings_round_trip.py
@@ -340,6 +341,7 @@ jobs:
           tests/unit/test_api_key_configured.py
           tests/unit/test_pushplus_notifier.py
           tests/unit/test_debug_widget_masks_key.py
+          tests/unit/test_security_package.py
           tests/unit/test_secret_store.py
           tests/unit/test_config_paths.py
           tests/unit/test_settings_round_trip.py
