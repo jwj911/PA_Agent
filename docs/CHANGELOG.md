@@ -18,6 +18,31 @@
 
 ---
 
+## [Unreleased] — 2026-07-17（第二百一十四轮：CI Python 版本矩阵）
+
+本轮收敛 CI 实际验证环境与项目支持范围、覆盖率基线之间的证据差异。项目声明
+Python `>=3.11`，但此前 GitHub Actions 只执行 3.11，而覆盖率门槛与本地质量说明均以
+Windows/Python 3.12 的实测数据为依据，导致当前开发基线未被 CI 直接验证。
+
+### 工程治理
+
+- **Windows Python 矩阵**：`.github/workflows/ci.yml` 的 `test` job 改为 Python 3.11 与
+  3.12 矩阵，且设置 `fail-fast: false`。安装验证、targeted coverage、完整非 live/non-e2e
+  回归、Ruff 基线、focused Ruff 与 focused Black 都在两个版本上执行。
+- **质量文档对齐**：`docs/ci_quality_gates.md` 明确 3.11 是项目声明的最低支持版本、3.12 是
+  当前开发与覆盖率校准环境；50% 覆盖率门槛现在要求两个矩阵任务同时满足。
+- **不改变质量范围**：本轮不缩小 pytest、Ruff 或 Black 的检查集，也不调整覆盖率阈值，仅扩大
+  同一套质量门禁的解释器覆盖范围。
+
+### 验证
+
+- Windows/Python 3.12 使用 CI 当前 142 个 targeted 测试路径执行覆盖率命令通过，覆盖率
+  **50.95%**，满足 `--cov-fail-under=50`。
+- 矩阵工作流的 3.11 任务将由 GitHub Actions 在本次推送后验证，以确保最低声明版本同样通过
+  安装、测试与全部静态检查门禁。
+
+---
+
 ## [Unreleased] — 2026-07-17（第二百一十二轮：固定 Black 格式门禁）
 
 本轮完成 **L7：CI 增强** 中尚未落地的 Black 格式门禁。此前 `black>=24.4` 会解析到不同版本，

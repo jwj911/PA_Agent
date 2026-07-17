@@ -1,5 +1,11 @@
 # CI 质量门禁
 
+## Python 版本矩阵
+
+CI 在 `windows-latest` 上同时运行 Python **3.11** 与 **3.12**。3.11 是
+`pyproject.toml` 中 `requires-python = ">=3.11"` 声明的最低支持版本，3.12 是当前开发和
+覆盖率校准环境。所有安装、测试、Ruff 与 Black 门禁必须在两个矩阵任务中通过。
+
 ## Ruff 全仓基线
 
 CI 使用固定的 `ruff 0.15.13` 运行：
@@ -55,6 +61,7 @@ python -m black --check @targets
 
 ## Targeted 测试覆盖率
 
-CI 的 targeted pytest 集执行 `--cov=pa_agent --cov-fail-under=50`，并同时输出终端报告和
-`coverage.xml`。51% 是 2026-07-17 Windows/Python 3.12 的实测基线；50% 为保留一百分点
-环境波动余量后的门禁，不得通过缩小测试集或排除业务包来维持通过。
+CI 的 targeted pytest 集在 Python 3.11 与 3.12 上均执行
+`--cov=pa_agent --cov-fail-under=50`，并同时输出终端报告和 `coverage.xml`。2026-07-17
+在 Windows/Python 3.12 实测基线为 **50.95%**；50% 为保留环境波动余量后的门槛。两条矩阵
+任务都必须满足该门槛，不得通过缩小测试集或排除业务包来维持通过。
