@@ -6,6 +6,7 @@ configure_logging(api_key: str = "") -> None
 update_api_key(new_key: str) -> None
 verify_logging_handlers() -> bool
 """
+
 from __future__ import annotations
 
 import logging

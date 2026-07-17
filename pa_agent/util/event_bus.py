@@ -1,4 +1,5 @@
 """Event bus for inter-component communication via Qt signals."""
+
 from __future__ import annotations
 
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -19,11 +20,11 @@ class EventBus(QObject):
     disk_error  : emitted when persisting a record to disk fails
     """
 
-    data_frame = pyqtSignal(object)    # KlineFrame
-    status = pyqtSignal(str)           # status text
-    exception = pyqtSignal(object)     # AlarmPayload
-    token_update = pyqtSignal(dict)    # token/cost update dict
-    disk_error = pyqtSignal(dict)      # {"path": str, "error": str}
+    data_frame = pyqtSignal(object)  # KlineFrame
+    status = pyqtSignal(str)  # status text
+    exception = pyqtSignal(object)  # AlarmPayload
+    token_update = pyqtSignal(dict)  # token/cost update dict
+    disk_error = pyqtSignal(dict)  # {"path": str, "error": str}
 
     def emit_status(self, text: str) -> None:
         """Convenience wrapper — emit a status string."""

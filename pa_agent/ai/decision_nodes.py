@@ -3,6 +3,7 @@
 The section judges and shared helpers live in focused modules. This module keeps
 the historical ``from pa_agent.ai.decision_nodes import ...`` import path stable.
 """
+
 from __future__ import annotations
 
 from pa_agent.ai.always_in_judges import judge_always_in, judge_momentum_strength

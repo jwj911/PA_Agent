@@ -1,4 +1,5 @@
 """Tests for filename component sanitization."""
+
 from __future__ import annotations
 
 import pytest

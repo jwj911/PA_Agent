@@ -2,6 +2,7 @@
 
 Covers correctness properties P1–P7 from design.md.
 """
+
 # ruff: noqa: RUF002
 from __future__ import annotations
 
@@ -20,9 +21,13 @@ _probability_value = st.integers(min_value=0, max_value=100)
 
 _direction_enum = st.sampled_from(["bullish", "bearish", "neutral"])
 
-_features_used = st.lists(st.text(min_size=1, max_size=40, alphabet="abcdefghijklmnopqrstuvwxyz_"), min_size=0, max_size=5)
+_features_used = st.lists(
+    st.text(min_size=1, max_size=40, alphabet="abcdefghijklmnopqrstuvwxyz_"), min_size=0, max_size=5
+)
 
-_reasoning_text = st.text(min_size=0, max_size=3000, alphabet=st.characters(whitelist_categories=("L", "N", "P", "Z")))
+_reasoning_text = st.text(
+    min_size=0, max_size=3000, alphabet=st.characters(whitelist_categories=("L", "N", "P", "Z"))
+)
 
 _raw_probability = st.one_of(
     st.integers(min_value=-10, max_value=110),
@@ -55,6 +60,7 @@ _prediction_dict = st.fixed_dictionaries(
 
 # ── P4: Reasoning length ≤ 1500 after normalization ──────────────────────────
 
+
 @given(pred=_prediction_dict)
 @h_settings(max_examples=200)
 def test_p4_reasoning_length_bounded(pred: dict):
@@ -65,6 +71,7 @@ def test_p4_reasoning_length_bounded(pred: dict):
 
 
 # ── P5: features_used minimum set + dedup ────────────────────────────────────
+
 
 @given(pred=_prediction_dict)
 @h_settings(max_examples=200)
@@ -79,6 +86,7 @@ def test_p5_features_used_min_set_dedup(pred: dict):
 
 # ── P6: Normalizer is idempotent and orthogonal to order_type ────────────────
 
+
 @given(pred=_prediction_dict)
 @h_settings(max_examples=200)
 def test_p6_normalizer_idempotent(pred: dict):
@@ -91,6 +99,7 @@ def test_p6_normalizer_idempotent(pred: dict):
 
 
 # ── P1: Probabilities are valid [0, 100] ints with sum in [99, 101] ──────────
+
 
 @given(pred=_prediction_dict)
 @h_settings(max_examples=200)
@@ -109,6 +118,7 @@ def test_p1_probabilities_valid_after_normalize(pred: dict):
 
 
 # ── P2: direction = argmax after normalization ───────────────────────────────
+
 
 @given(pred=_prediction_dict)
 @h_settings(max_examples=200)
@@ -131,6 +141,7 @@ def test_p2_direction_equals_argmax(pred: dict):
 
 # ── P3: unpredictable branch null consistency ────────────────────────────────
 
+
 @given(pred=_prediction_dict)
 @h_settings(max_examples=200)
 def test_p3_unpredictable_null_consistency(pred: dict):
@@ -142,6 +153,7 @@ def test_p3_unpredictable_null_consistency(pred: dict):
 
 
 # ── P7: Validator c-category errors have correct prefix ──────────────────────
+
 
 @given(pred=_prediction_dict)
 @h_settings(max_examples=200)

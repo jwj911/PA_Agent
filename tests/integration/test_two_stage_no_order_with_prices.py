@@ -1,4 +1,5 @@
 """Integration test: stage 2 no-order price slips are normalized."""
+
 from __future__ import annotations
 
 import copy
@@ -13,7 +14,10 @@ from .conftest import VALID_STAGE1, VALID_STAGE2, make_reply
 
 
 def test_no_order_with_non_null_price_is_normalized(
-    frame, pending_writer, assembler, exp_reader,
+    frame,
+    pending_writer,
+    assembler,
+    exp_reader,
 ) -> None:
     bad_s2 = copy.deepcopy(VALID_STAGE2)
     bad_s2["decision"]["order_type"] = "不下单"

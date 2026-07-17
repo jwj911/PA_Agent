@@ -1,4 +1,5 @@
 """Tests for JSON Schema structural error classification."""
+
 from __future__ import annotations
 
 from pa_agent.ai.schema_validator import SchemaValidationResult, collect_schema_errors

@@ -1,4 +1,5 @@
 """Tests for the indicators package marker."""
+
 from __future__ import annotations
 
 import importlib

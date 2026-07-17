@@ -1,4 +1,5 @@
 """Tests for lightweight threading helpers."""
+
 from __future__ import annotations
 
 from pa_agent.util.threading import CancelToken, OrchestratorEvent

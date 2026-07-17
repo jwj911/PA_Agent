@@ -1,4 +1,5 @@
 """Tests for GUI theme design tokens."""
+
 from __future__ import annotations
 
 import re

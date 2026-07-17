@@ -1,4 +1,5 @@
 """Tests for Exponential Moving Average helpers."""
+
 from __future__ import annotations
 
 import math

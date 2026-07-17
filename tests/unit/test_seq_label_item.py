@@ -1,4 +1,5 @@
 """Tests for the chart sequence label item."""
+
 from __future__ import annotations
 
 from PyQt6.QtWidgets import QApplication

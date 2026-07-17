@@ -1,4 +1,5 @@
 """Tests for signal-bar context helpers."""
+
 from __future__ import annotations
 
 from pa_agent.ai.signal_context import (

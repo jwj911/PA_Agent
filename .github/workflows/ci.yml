@@ -431,3 +431,33 @@ jobs:
           tests/integration
           tests/e2e
           tests/fixtures
+
+      - name: Run focused Black format check
+        shell: pwsh
+        run: |
+          # Reuse the focused Ruff target list so both quality gates cover identical files.
+          $workflow = Get-Content .github/workflows/ci.yml
+          $start = [Array]::IndexOf($workflow, '      - name: Run focused Ruff checks')
+          if ($start -lt 0) {
+            throw 'Focused Ruff step was not found.'
+          }
+
+          $targets = @()
+          $collect = $false
+          foreach ($line in $workflow[$start..($workflow.Length - 1)]) {
+            if ($line.Trim() -eq 'python -m ruff check') {
+              $collect = $true
+              continue
+            }
+            if ($collect -and $line -match '^\s{6}- name:') {
+              break
+            }
+            if ($collect -and $line -match '^\s{10}(.+)$') {
+              $targets += $Matches[1].Trim()
+            }
+          }
+
+          if ($targets.Count -eq 0) {
+            throw 'Focused Ruff target list is empty.'
+          }
+          python -m black --check @targets

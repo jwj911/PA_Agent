@@ -1,4 +1,5 @@
 """Tests for lightweight package marker modules."""
+
 from __future__ import annotations
 
 import importlib

@@ -1,4 +1,5 @@
 """Tests for K-line adjustment preference helpers."""
+
 from __future__ import annotations
 
 from types import SimpleNamespace

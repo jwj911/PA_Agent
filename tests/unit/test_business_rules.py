@@ -1,4 +1,5 @@
 """Tests for Stage 2 business-rule validators."""
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -75,10 +76,13 @@ def test_check_breakout_price_extreme_validates_entry_against_bar() -> None:
         {"decision": {**decision, "entry_price": 99.5}},
         frame,
     ) == ["做多突破单 entry_price=99.5 must be above K3.high=100"]
-    assert business_rules.check_breakout_price_extreme(
-        {"decision": {**decision, "entry_price": 100.5}},
-        frame,
-    ) == []
+    assert (
+        business_rules.check_breakout_price_extreme(
+            {"decision": {**decision, "entry_price": 100.5}},
+            frame,
+        )
+        == []
+    )
 
 
 def test_k_seq_and_stage2_reason_helpers_are_defensive() -> None:
@@ -89,12 +93,15 @@ def test_k_seq_and_stage2_reason_helpers_are_defensive() -> None:
     assert business_rules._parse_k_seq("bad") is None
     assert business_rules._bar_by_seq(frame, 12) is frame.bars[1]
     assert business_rules._bar_by_seq(frame, 99) is None
-    assert business_rules._all_stage2_reasons(
-        {
-            "decision": {"reasoning": "alpha", "risk_assessment": "beta"},
-            "decision_trace": [{"reason": "gamma"}, "noise"],
-        }
-    ) == "alpha\n\nbeta\ngamma"
+    assert (
+        business_rules._all_stage2_reasons(
+            {
+                "decision": {"reasoning": "alpha", "risk_assessment": "beta"},
+                "decision_trace": [{"reason": "gamma"}, "noise"],
+            }
+        )
+        == "alpha\n\nbeta\ngamma"
+    )
 
 
 def test_check_signal_chain_requires_reasoning_for_weak_signal() -> None:

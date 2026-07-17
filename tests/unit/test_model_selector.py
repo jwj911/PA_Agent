@@ -1,4 +1,5 @@
 """Tests for the model selector widgets."""
+
 from __future__ import annotations
 
 from PyQt6.QtWidgets import QApplication

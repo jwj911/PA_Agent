@@ -18,6 +18,39 @@
 
 ---
 
+## [Unreleased] — 2026-07-17（第二百一十二轮：固定 Black 格式门禁）
+
+本轮完成 **L7：CI 增强** 中尚未落地的 Black 格式门禁。此前 `black>=24.4` 会解析到不同版本，
+本机的二进制分发还会在语法缓存初始化阶段阻塞，无法作为可靠的 CI 质量信号。本轮固定经
+Windows/Python 3.12 验证的 `black 24.10.0`，并只格式化已有 focused Ruff 范围，保持业务逻辑、
+Prompt 文本和用户可见文案不变。
+
+### 工程治理
+
+- **固定 Black 版本**：`pyproject.toml` 开发依赖改为 `black==24.10.0`，使开发机和 Windows CI
+  使用同一格式化器。
+- **机械格式化 focused 范围**：对 focused Ruff 清单展开的 238 个路径执行 Black，格式化 244 个
+  文件；目录项内的文件按既有范围递归处理，不把未验证的全仓代码纳入门禁。
+- **CI 格式门禁**：`.github/workflows/ci.yml` 新增 `Run focused Black format check`。该步骤读取
+  `Run focused Ruff checks` 的目标路径并执行 `python -m black --check`，避免维护两份易漂移的
+  文件列表。
+- **Ruff 基线同步**：Black 变更了部分现有 Ruff 诊断的位置；基线清单将在本轮格式化结果验证后
+  同步重建，仍严格拒绝后续新增、变更或未同步移除的诊断。
+- **操作文档**：`docs/ci_quality_gates.md` 记录固定版本、范围复用机制和本地复现命令。
+- **端口测试稳定性**：`test_qclaw_relay` 不再假定紧邻端口可用，改为验证候选端口跳过已占用端口
+  且可实际绑定，避免并发环境中 `base + 1` 恰好也被占用时出现误报。
+
+### 验证
+
+- `python -m black --version` 确认版本为 `24.10.0`；focused Black 覆盖 238 个路径、展开后 282 个
+  文件，全部通过。
+- `scripts/check_ruff_baseline.py --write-baseline` 重建为 **3,725** 条 `ruff 0.15.13` 诊断；
+  随后的严格基线校验通过，focused Ruff 238 个路径也全部通过。
+- CI targeted pytest 完整通过，覆盖率 **50.95%**，满足 `--cov-fail-under=50` 门槛。
+- `pytest -m "not e2e and not live" --tb=line -q -p no:cacheprovider` 通过。
+
+---
+
 ## [Unreleased] — 2026-07-17（第二百一十三轮：targeted 覆盖率阈值门禁）
 
 本轮继续推进 **L7：CI 增强**。CI 的 targeted pytest 先前只输出覆盖率报告，测试集缩减或关键路径
@@ -69,25 +102,6 @@
   拒绝，删除探针后再次通过。
 - `QT_QPA_PLATFORM=offscreen PYTHONDONTWRITEBYTECODE=1 py -3.12 -m pytest -m "not e2e and not live" --tb=line -q -p no:cacheprovider` → **通过**。
 - 从 CI 清单解析的 238 个 focused Ruff 目标 → **All checks passed**。
-
----
-
-## 后续迭代计划（未执行）
-
-> 本节是 L7 的剩余治理任务清单，不代表已经完成的变更。每项完成后，须移入文件顶部的
-> `[Unreleased]` 记录，并按项目约定完成验证、原子提交与推送。
-
-### 第二百一十二轮：固定版本的 Black 格式门禁
-
-- **目标**：消除当前 Black 版本/执行不稳定问题，为已进入 CI 的源码和测试范围增加可重复的
-  格式检查。
-- **实施范围**：在开发与 CI 环境固定经 Windows 验证可运行的 Black 版本；对 focused
-  Ruff 清单对应的文件执行纯机械格式化；在 CI 增加同一范围的
-  `python -m black --check ...` 步骤。
-- **约束**：本轮只做格式化、导入和空白调整，不改变运行逻辑、Prompt 文本、用户可见文案或
-  JSON/KV-cache 敏感字符串；不把尚未通过检查的全仓文件纳入该门禁。
-- **验收**：固定版本的 `black --version`、`black --check` 与 CI 三次独立运行均正常退出；
-  focused Ruff、目标 pytest 与非 live/非 E2E 回归均通过。
 
 ---
 

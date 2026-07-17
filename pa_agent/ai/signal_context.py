@@ -22,6 +22,7 @@ modules), so ``signal_context`` ← ``decision_nodes`` has no import cycle.
 working byte-for-byte. Behaviour (§9.0P detection, planned-limit predicate
 branches, default K1 fallback) must stay identical to the originals.
 """
+
 from __future__ import annotations
 
 import logging
@@ -31,7 +32,6 @@ logger = logging.getLogger(__name__)
 
 
 def _get_signal_seq(out: dict[str, Any], bars: Any) -> int:
-
     """Locate signal bar seq: prefer bar_analysis.signal_bar.bar, else K1."""
 
     try:
@@ -93,11 +93,7 @@ def is_planned_limit_order(out: dict[str, Any]) -> bool:
         return False
     strength = str(entry_bar.get("strength", "") or "").strip().lower()
     freshness = str(entry_bar.get("freshness", "") or "").strip().lower()
-    pending = (
-        strength == "not_triggered"
-        or entry_bar.get("bar") is None
-        or freshness == "pending"
-    )
+    pending = strength == "not_triggered" or entry_bar.get("bar") is None or freshness == "pending"
     if not pending:
         return False
     quality = str(signal_bar.get("quality", "") or "").strip().lower()

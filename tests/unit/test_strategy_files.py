@@ -1,4 +1,5 @@
 """Tests for the prompt strategy filename registry."""
+
 from __future__ import annotations
 
 from pa_agent.ai import prompt_assembler, router, strategy_files

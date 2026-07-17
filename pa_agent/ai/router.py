@@ -3,6 +3,7 @@
 Implements 使用说明 §11 routing table exactly.
 This is a pure function: no side effects, no external state.
 """
+
 from __future__ import annotations
 
 import logging
@@ -52,35 +53,37 @@ _TRIANGLE_FILE = sf.TRIANGLE
 _DOUBLE_TOP_BOTTOM_FILE = sf.DOUBLE_TOP_BOTTOM
 
 # All valid file names (used for dedup validation)
-_ALL_VALID_FILES: frozenset[str] = frozenset([
-    sf.PERSONA,
-    sf.MARKET_DIAGNOSIS,
-    sf.KLINE_SIGNAL,
-    sf.STOP_TARGET_POSITION,
-    sf.MEASURED_MOVE,
-    sf.BULLISH_CHANNEL_ID,
-    sf.BULLISH_CHANNEL_STRATEGY,
-    sf.CHANNEL_WIDTH,
-    sf.BEARISH_CHANNEL_ID,
-    sf.BEARISH_CHANNEL_STRATEGY,
-    sf.BULLISH_SPIKE_ID,
-    sf.BULLISH_SPIKE_STRATEGY,
-    sf.BEARISH_SPIKE_ID,
-    sf.BEARISH_SPIKE_STRATEGY,
-    sf.RANGE_ID,
-    sf.RANGE_STRATEGY,
-    sf.WEDGE,
-    sf.REVERSAL,
-    sf.BREAKOUT_FAILURE,
-    sf.H1H2,
-    sf.ALWAYS_IN,
-    sf.BARBWIRE,
-    sf.MAGNET,
-    sf.FINAL_FLAG,
-    sf.MTR,
-    sf.TRIANGLE,
-    sf.DOUBLE_TOP_BOTTOM,
-])
+_ALL_VALID_FILES: frozenset[str] = frozenset(
+    [
+        sf.PERSONA,
+        sf.MARKET_DIAGNOSIS,
+        sf.KLINE_SIGNAL,
+        sf.STOP_TARGET_POSITION,
+        sf.MEASURED_MOVE,
+        sf.BULLISH_CHANNEL_ID,
+        sf.BULLISH_CHANNEL_STRATEGY,
+        sf.CHANNEL_WIDTH,
+        sf.BEARISH_CHANNEL_ID,
+        sf.BEARISH_CHANNEL_STRATEGY,
+        sf.BULLISH_SPIKE_ID,
+        sf.BULLISH_SPIKE_STRATEGY,
+        sf.BEARISH_SPIKE_ID,
+        sf.BEARISH_SPIKE_STRATEGY,
+        sf.RANGE_ID,
+        sf.RANGE_STRATEGY,
+        sf.WEDGE,
+        sf.REVERSAL,
+        sf.BREAKOUT_FAILURE,
+        sf.H1H2,
+        sf.ALWAYS_IN,
+        sf.BARBWIRE,
+        sf.MAGNET,
+        sf.FINAL_FLAG,
+        sf.MTR,
+        sf.TRIANGLE,
+        sf.DOUBLE_TOP_BOTTOM,
+    ]
+)
 
 _CHANNEL_STATES = frozenset(["micro_channel", "tight_channel", "normal_channel", "broad_channel"])
 _RANGE_STATES = frozenset(["trading_range", "trending_tr"])
@@ -143,11 +146,19 @@ def route_strategy_files(stage1_json: dict[str, Any]) -> list[str]:
         files.append(_BREAKOUT_FAILURE_FILE)
     if any(p in patterns for p in ("always_in", "ail", "ais", "20gb", "gap_bar")):
         files.append(_ALWAYS_IN_FILE)
-    if cp in _RANGE_STATES or any(p in patterns for p in ("barbwire", "wire", "overlap", "middle_range")):
+    if cp in _RANGE_STATES or any(
+        p in patterns for p in ("barbwire", "wire", "overlap", "middle_range")
+    ):
         files.append(_BARBWIRE_FILE)
     if any(
         p in patterns
-        for p in ("failed_signal", "breakout_failure", "failed_breakout", "magnet", "trapped_traders")
+        for p in (
+            "failed_signal",
+            "breakout_failure",
+            "failed_breakout",
+            "magnet",
+            "trapped_traders",
+        )
     ):
         files.append(_MAGNET_FILE)
     if any(

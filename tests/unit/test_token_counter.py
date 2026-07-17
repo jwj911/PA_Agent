@@ -1,4 +1,5 @@
 """Tests for lightweight token estimation."""
+
 from __future__ import annotations
 
 import sys
@@ -21,13 +22,16 @@ def test_estimate_tokens_uses_tiktoken_encoding_when_available(monkeypatch) -> N
 
     monkeypatch.setitem(sys.modules, "tiktoken", SimpleNamespace(get_encoding=get_encoding))
 
-    assert estimate_tokens(
-        [
-            {"role": "system", "content": "alpha beta"},
-            {"role": "user", "content": "gamma", "ignored": 123},
-        ],
-        model_hint="fake_base",
-    ) == 15
+    assert (
+        estimate_tokens(
+            [
+                {"role": "system", "content": "alpha beta"},
+                {"role": "user", "content": "gamma", "ignored": 123},
+            ],
+            model_hint="fake_base",
+        )
+        == 15
+    )
     assert calls == ["fake_base"]
 
 

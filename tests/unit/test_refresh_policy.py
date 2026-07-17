@@ -1,4 +1,5 @@
 """Tests for data refresh policy helpers."""
+
 from __future__ import annotations
 
 from pa_agent.data.refresh_policy import (

@@ -1,4 +1,5 @@
 """Tests for forming-bar close detection."""
+
 from __future__ import annotations
 
 import time

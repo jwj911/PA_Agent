@@ -1,4 +1,5 @@
 """Gold default symbol / exchange normalization."""
+
 from __future__ import annotations
 
 from pa_agent.data.market_defaults import (

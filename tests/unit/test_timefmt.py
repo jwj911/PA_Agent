@@ -1,4 +1,5 @@
 """Tests for time formatting helpers."""
+
 from __future__ import annotations
 
 from pa_agent.util import timefmt

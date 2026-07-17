@@ -1,4 +1,5 @@
 """Tests for East Money Baostock fallback helpers."""
+
 from __future__ import annotations
 
 import pytest

@@ -19,6 +19,7 @@ never pulls in PyQt6 (via ``pa_agent.util``) or the cycle enums.
 so existing ``JsonValidator._check_x(...)`` call sites (production and tests) keep
 working byte-for-byte.
 """
+
 from __future__ import annotations
 
 import re
@@ -140,9 +141,7 @@ def check_trade_metrics(
         decision,
         decision_stance=decision_stance,
         kline_frame=kline_frame,
-        bar_analysis=obj.get("bar_analysis")
-        if isinstance(obj.get("bar_analysis"), dict)
-        else None,
+        bar_analysis=obj.get("bar_analysis") if isinstance(obj.get("bar_analysis"), dict) else None,
     )
 
 
@@ -203,7 +202,9 @@ def check_next_cycle_prediction(obj: dict) -> list[str]:
         if pred.get("direction") is not None:
             errors.append("next_cycle_prediction.direction: must be null when unpredictable=true")
         if pred.get("probabilities") is not None:
-            errors.append("next_cycle_prediction.probabilities: must be null when unpredictable=true")
+            errors.append(
+                "next_cycle_prediction.probabilities: must be null when unpredictable=true"
+            )
         return errors
 
     # unpredictable=false path
@@ -224,9 +225,7 @@ def check_next_cycle_prediction(obj: dict) -> list[str]:
     for key in CYCLE_ORDER:
         value = probs.get(key)
         if not isinstance(value, int) or not (0 <= value <= 100):
-            errors.append(
-                f"next_cycle_prediction.probabilities.{key}: must be int in [0, 100]"
-            )
+            errors.append(f"next_cycle_prediction.probabilities.{key}: must be int in [0, 100]")
     if errors:
         return errors
 
@@ -337,9 +336,7 @@ def check_signal_chain(
     quality = str(signal_bar.get("quality", "")).strip().lower()
     pattern = str(signal_bar.get("pattern", "") or "").strip().lower()
     pending_entry = (
-        strength == "not_triggered"
-        or freshness == "pending"
-        or entry_bar.get("bar") is None
+        strength == "not_triggered" or freshness == "pending" or entry_bar.get("bar") is None
     )
     order_type = decision.get("order_type")
     planned_without_signal = (
@@ -376,9 +373,7 @@ def check_signal_chain(
         and pattern in _planned_limit_boundary_patterns
         and signal_bar.get("bar") is None
     )
-    planned_entry = (
-        planned_without_signal or planned_limit_weak or planned_limit_invalid_boundary
-    )
+    planned_entry = planned_without_signal or planned_limit_weak or planned_limit_invalid_boundary
     if sig_seq is None and not planned_entry:
         errors.append("bar_analysis.signal_bar.bar must be a K{n} reference")
     if entry_seq is None and not pending_entry:
@@ -395,11 +390,7 @@ def check_signal_chain(
             if seq is not None and _bar_by_seq(kline_frame, seq) is None:
                 errors.append(f"bar_analysis.{label}.bar K{seq} not found in current K-line frame")
 
-    if (
-        not lenient
-        and quality in ("weak", "invalid")
-        and not planned_entry
-    ):
+    if not lenient and quality in ("weak", "invalid") and not planned_entry:
         reasons = _all_stage2_reasons(obj)
         if not any(token in reasons for token in _EXPLICIT_S9_TRADABLE_TOKENS):
             errors.append(
@@ -415,15 +406,8 @@ def check_signal_chain(
         trade_conf_num = 0
     if freshness in ("stale", "invalid") and not (lenient and pending_entry):
         errors.append("entry_bar.freshness stale/invalid cannot support a new order")
-    if (
-        not lenient
-        and no_follow
-        and not pending_entry
-        and trade_conf_num >= 50
-    ):
-        errors.append(
-            "entry_bar.follow_through=false/failed cannot support trade_confidence >= 50"
-        )
+    if not lenient and no_follow and not pending_entry and trade_conf_num >= 50:
+        errors.append("entry_bar.follow_through=false/failed cannot support trade_confidence >= 50")
     return errors
 
 

@@ -11,6 +11,7 @@ GUI stack. ``PromptAssembler`` re-binds ``render_experience`` as
 header / Chinese caveat / per-case markdown fence / truncation ellipsis must stay
 byte-for-byte identical (the model is prompted against this exact block shape).
 """
+
 from __future__ import annotations
 
 import json

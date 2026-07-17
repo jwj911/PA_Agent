@@ -1,4 +1,5 @@
 """Unit tests for pa_agent.security.secret_store (M8 local encryption)."""
+
 from __future__ import annotations
 
 import pytest

@@ -37,7 +37,7 @@ dev = [
     "pytest-qt>=4.4",
     "hypothesis>=6",
     "ruff==0.15.13",
-    "black>=24.4",
+    "black==24.10.0",
 ]
 
 [project.scripts]

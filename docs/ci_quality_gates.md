@@ -29,6 +29,30 @@ python scripts/check_ruff_baseline.py
 不要通过扩大 Ruff `ignore`、全局 `noqa` 或删除被检查范围来绕过门禁。Ruff 版本由
 `pyproject.toml` 的开发依赖固定；升级 Ruff 时必须先审查新版本诊断，再显式更新版本和基线。
 
+## Focused Black 格式
+
+CI 使用固定的 `black 24.10.0`。`Run focused Black format check` 从同一工作流的
+`Run focused Ruff checks` 步骤读取目标路径，并运行 `python -m black --check`；两个门禁因此
+始终覆盖完全相同的范围，修改 focused Ruff 清单时无需维护第二份路径列表。
+
+本地可使用以下命令复现：
+
+```powershell
+$workflow = Get-Content .github/workflows/ci.yml
+$start = [Array]::IndexOf($workflow, '      - name: Run focused Ruff checks')
+$targets = @()
+$collect = $false
+foreach ($line in $workflow[$start..($workflow.Length - 1)]) {
+    if ($line.Trim() -eq 'python -m ruff check') { $collect = $true; continue }
+    if ($collect -and $line -match '^\s{6}- name:') { break }
+    if ($collect -and $line -match '^\s{10}(.+)$') { $targets += $Matches[1].Trim() }
+}
+python -m black --check @targets
+```
+
+格式化仅限上述 focused 范围；不要通过缩小 Ruff 目标列表、跳过 Black 步骤或将尚未验证的全仓文件
+并入该门禁来获得通过。
+
 ## Targeted 测试覆盖率
 
 CI 的 targeted pytest 集执行 `--cov=pa_agent --cov-fail-under=50`，并同时输出终端报告和

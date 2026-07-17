@@ -1,4 +1,5 @@
 """Tests for the GUI theme package exports."""
+
 from __future__ import annotations
 
 from pa_agent.gui import theme

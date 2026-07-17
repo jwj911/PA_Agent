@@ -1,4 +1,5 @@
 """Tests for shared A-share data helpers."""
+
 from __future__ import annotations
 
 from datetime import datetime

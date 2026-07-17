@@ -1,4 +1,5 @@
 """Property-based tests for JsonValidator category classification (task 8.4 / PR7)."""
+
 # ruff: noqa: RUF001,RUF002
 from __future__ import annotations
 
@@ -12,6 +13,7 @@ validator = strict_test_validator()
 lenient_validator = schema_test_validator()
 
 # ── Minimal valid Stage 1 object ──────────────────────────────────────────────
+
 
 def _valid_stage1() -> dict:
     return {
@@ -95,6 +97,7 @@ def _valid_stage2() -> dict:
 
 
 # ── Category tests ────────────────────────────────────────────────────────────
+
 
 def test_valid_stage1_returns_ok():
     """Valid Stage 1 JSON returns Ok.

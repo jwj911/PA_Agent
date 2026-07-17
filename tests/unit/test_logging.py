@@ -1,4 +1,5 @@
 """Tests for logging configuration and API-key masking helpers."""
+
 from __future__ import annotations
 
 import logging

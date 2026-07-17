@@ -1,4 +1,5 @@
 """Unit tests for Cursor SDK stream event mapping."""
+
 from __future__ import annotations
 
 import subprocess
@@ -170,7 +171,7 @@ def test_ensure_cursor_sdk_patches_stub_bridge_without_launching_real_sdk(
     _assert_sanitized(popen_calls[-1], "--tool-callback-auth-token")
 
     discovery = bridge_mod._read_discovery(  # type: ignore[attr-defined]
-        _FakeProcess(["noise\n", "cursor-sdk-bridge ready {\"port\":1}\n"]),
+        _FakeProcess(["noise\n", 'cursor-sdk-bridge ready {"port":1}\n']),
         timeout=1.0,
     )
     assert discovery == {"line": 'cursor-sdk-bridge ready {"port":1}'}

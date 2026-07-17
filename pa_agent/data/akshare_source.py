@@ -3,6 +3,7 @@
 Primary APIs: East Money minute/daily history + spot snapshot for forming bars.
 Optional fallback: Baostock when env ``PA_AGENT_BAOSTOCK_FALLBACK=1`` (off by default).
 """
+
 from __future__ import annotations
 
 import logging
@@ -142,9 +143,7 @@ def _df_to_bars_asc(df: Any, *, time_col: str) -> list[dict[str, Any]]:
         lo = float(row["low"])
         c = float(row["close"])
         vol = float(row.get("volume", 0.0) or 0.0)
-        rows.append(
-            {"ts_open": ts, "open": o, "high": h, "low": lo, "close": c, "volume": vol}
-        )
+        rows.append({"ts_open": ts, "open": o, "high": h, "low": lo, "close": c, "volume": vol})
     return rows
 
 
@@ -178,8 +177,7 @@ def _normalize_ohlcv_df(df: Any, *, time_col: str) -> Any:
     drop_cols = [
         c
         for c in out.columns
-        if str(c).strip() in ("时间", "日期", "date", "datetime", "time")
-        and c != time_col
+        if str(c).strip() in ("时间", "日期", "date", "datetime", "time") and c != time_col
     ]
     if drop_cols:
         out = out.drop(columns=drop_cols, errors="ignore")
@@ -290,7 +288,9 @@ class AkShareSource(DataSource):
             )
         code = normalize_ashare_symbol(symbol)
         if not code:
-            raise ValueError("A股代码无效，请输入 6 位数字（如 600519）或指数 sh000300")  # noqa: RUF001
+            raise ValueError(
+                "A股代码无效，请输入 6 位数字（如 600519）或指数 sh000300"  # noqa: RUF001
+            )
         self._symbol = code
         self._timeframe = timeframe
         logger.info("AkShareSource subscribed: %s %s", code, timeframe)
@@ -320,9 +320,7 @@ class AkShareSource(DataSource):
             raise DataSourceTransientError(f"AkShare 拉取失败: {exc}") from exc
 
         if not rows_asc:
-            raise DataSourceTransientError(
-                f"AkShare 未返回数据: {self._symbol} {self._timeframe}"
-            )
+            raise DataSourceTransientError(f"AkShare 未返回数据: {self._symbol} {self._timeframe}")
 
         if _ashare_session_open():
             self._apply_spot_to_forming(rows_asc)
@@ -344,11 +342,7 @@ class AkShareSource(DataSource):
         """Use AkShare's current A-share session rule for the live head bar."""
         if not bars_newest_first or bars_newest_first[0].closed:
             return False
-        now = (
-            datetime.fromtimestamp(int(now_ms) / 1000, tz=_CN_TZ)
-            if now_ms is not None
-            else None
-        )
+        now = datetime.fromtimestamp(int(now_ms) / 1000, tz=_CN_TZ) if now_ms is not None else None
         return _ashare_session_open(now)
 
     # ── Fetch ─────────────────────────────────────────────────────────────────
@@ -485,13 +479,13 @@ class AkShareSource(DataSource):
             return []
         return _df_to_bars_asc(norm.tail(n + 8), time_col="time")
 
-    def _fetch_history_baostock(
-        self, symbol: str, timeframe: str, n: int
-    ) -> list[dict[str, Any]]:
+    def _fetch_history_baostock(self, symbol: str, timeframe: str, n: int) -> list[dict[str, Any]]:
         import baostock as bs
 
         if is_index_symbol(symbol) and timeframe != "1d":
-            raise DataSourceTransientError("Baostock 不提供指数分钟线，请稍后重试 AkShare")  # noqa: RUF001
+            raise DataSourceTransientError(
+                "Baostock 不提供指数分钟线，请稍后重试 AkShare"  # noqa: RUF001
+            )
         code = _baostock_code(symbol)
         freq = {"1d": "d", "1h": "60", "4h": "60"}.get(timeframe, "d")
         end = _cn_now().strftime("%Y-%m-%d")
@@ -588,7 +582,6 @@ class AkShareSource(DataSource):
         except Exception as exc:
             logger.debug("AkShare spot fetch failed: %s", exc)
             return None
-
 
     def _baostock_login(self) -> None:
         if self._baostock_logged_in:

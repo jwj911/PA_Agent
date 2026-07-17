@@ -1,4 +1,5 @@
 """Tests for provider synchronization service."""
+
 from __future__ import annotations
 
 from types import SimpleNamespace

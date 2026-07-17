@@ -1,4 +1,5 @@
 """Tests for order-opportunity detection."""
+
 from __future__ import annotations
 
 from pa_agent.gui.order_opportunity import (

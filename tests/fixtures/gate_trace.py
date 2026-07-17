@@ -1,4 +1,5 @@
 """Full stage-1 gate_trace fixtures for validator coherence tests."""
+
 # ruff: noqa: RUF001
 from __future__ import annotations
 

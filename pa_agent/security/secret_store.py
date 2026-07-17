@@ -16,6 +16,7 @@ degrades: :func:`encrypt_secret` returns ``None`` and callers fall back to
 plaintext-at-rest (the pre-existing behaviour), still protected by
 ``.gitignore`` + pre-commit + runtime masking.
 """
+
 from __future__ import annotations
 
 import base64

@@ -4,6 +4,7 @@ Centralizes startup synchronization for provider routes that derive settings
 from the host environment (QClaw / WorkBuddy / Cursor).  Individual connector
 modules still own route detection, provider mutation, persistence, and logging.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

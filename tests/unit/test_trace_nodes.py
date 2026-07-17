@@ -1,4 +1,5 @@
 """Tests for trace-node result helpers."""
+
 from __future__ import annotations
 
 from dataclasses import FrozenInstanceError

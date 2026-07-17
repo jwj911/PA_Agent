@@ -23,6 +23,7 @@ tolerance, lazy ``node_label`` lookup fallback). The two builders reach into
 import-time project dependency (only stdlib ``logging`` / ``dataclasses`` /
 ``typing``).
 """
+
 from __future__ import annotations
 
 import logging
@@ -52,9 +53,9 @@ class NodeFill:
     """Intermediate representation of a program-filled trace node."""
 
     node_id: str
-    answer: str        # ∈ TRACE_ANSWERS: 是/否/中性/等待/不适用
-    reason: str        # non-empty
-    bar_range: str     # like "K20-K1" / "K1" / "不适用"
+    answer: str  # ∈ TRACE_ANSWERS: 是/否/中性/等待/不适用
+    reason: str  # non-empty
+    bar_range: str  # like "K20-K1" / "K1" / "不适用"
     branch: str | None = None
     section: str | None = None
 

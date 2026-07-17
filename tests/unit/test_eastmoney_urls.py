@@ -1,4 +1,5 @@
 """Tests for East Money quote page URL helpers."""
+
 from __future__ import annotations
 
 from pa_agent.data.eastmoney_urls import quote_page_url, quote_page_url_simple

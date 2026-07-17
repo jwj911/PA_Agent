@@ -4,6 +4,7 @@ Used to build record/log filenames from user- or market-derived values
 (symbol, timeframe) so they cannot cause path traversal or produce
 illegal names on Windows.
 """
+
 from __future__ import annotations
 
 import re
@@ -13,7 +14,10 @@ _ILLEGAL_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
 # Windows reserved device names (case-insensitive), with or without extension.
 _RESERVED_NAMES = {
-    "con", "prn", "aux", "nul",
+    "con",
+    "prn",
+    "aux",
+    "nul",
     *(f"com{i}" for i in range(1, 10)),
     *(f"lpt{i}" for i in range(1, 10)),
 }

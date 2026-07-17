@@ -1,4 +1,5 @@
 """Tests for pure bar-geometry primitives."""
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -12,10 +13,10 @@ def _bar(open_: float, high: float, low: float, close: float) -> SimpleNamespace
 
 def test_count_trend_bars_uses_body_and_close_position_thresholds() -> None:
     bars = [
-        _bar(10.0, 13.0, 9.0, 12.0),   # bull trend, close position 0.75
-        _bar(12.0, 13.0, 9.0, 10.0),   # bear trend, close position 0.25
-        _bar(10.0, 13.0, 9.0, 10.8),   # body ratio <= 0.25, ignored
-        SimpleNamespace(open=1.0),      # malformed, ignored
+        _bar(10.0, 13.0, 9.0, 12.0),  # bull trend, close position 0.75
+        _bar(12.0, 13.0, 9.0, 10.0),  # bear trend, close position 0.25
+        _bar(10.0, 13.0, 9.0, 10.8),  # body ratio <= 0.25, ignored
+        SimpleNamespace(open=1.0),  # malformed, ignored
     ]
 
     assert _count_trend_bars(bars, W=10) == (1, 1)

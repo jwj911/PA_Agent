@@ -1,4 +1,5 @@
 """Tests for timezone-safe market data timestamp helpers."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime

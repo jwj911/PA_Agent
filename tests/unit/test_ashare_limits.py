@@ -1,4 +1,5 @@
 """Tests for A-share limit-up / limit-down helpers."""
+
 from __future__ import annotations
 
 from datetime import datetime

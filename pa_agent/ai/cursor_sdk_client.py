@@ -405,7 +405,9 @@ class CursorSdkClient:
             on_content_token(final_text)
 
         request_id = str(getattr(result, "id", "") or "")
-        usage = AIUsage(prompt_tokens=0, cached_prompt_tokens=0, completion_tokens=0, total_tokens=0)
+        usage = AIUsage(
+            prompt_tokens=0, cached_prompt_tokens=0, completion_tokens=0, total_tokens=0
+        )
 
         if thinking:
             self._log.debug(

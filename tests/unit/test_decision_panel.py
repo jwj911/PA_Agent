@@ -1,4 +1,5 @@
 """Unit tests for DecisionPanel diagnosis and trade rendering."""
+
 # ruff: noqa: RUF001
 from __future__ import annotations
 

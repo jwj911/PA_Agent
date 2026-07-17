@@ -1,4 +1,5 @@
 """Tests for Stage 2 experience-library rendering."""
+
 from __future__ import annotations
 
 from types import SimpleNamespace

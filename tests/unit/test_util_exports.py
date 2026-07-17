@@ -1,4 +1,5 @@
 """Tests for the utility package exports."""
+
 from __future__ import annotations
 
 from pa_agent import util

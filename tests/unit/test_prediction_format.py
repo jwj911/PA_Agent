@@ -1,4 +1,5 @@
 """Tests for shared prediction display formatting helpers."""
+
 from __future__ import annotations
 
 from pa_agent.gui.prediction_format import (
@@ -31,7 +32,9 @@ def test_dominant_prediction_direction_returns_highest_numeric_value() -> None:
 
 
 def test_dominant_prediction_direction_ignores_invalid_values() -> None:
-    assert _dominant_prediction_direction({"bullish": "bad", "bearish": "", "neutral": 7}) == "neutral"
+    assert (
+        _dominant_prediction_direction({"bullish": "bad", "bearish": "", "neutral": 7}) == "neutral"
+    )
 
 
 def test_dominant_prediction_direction_returns_none_without_parseable_values() -> None:

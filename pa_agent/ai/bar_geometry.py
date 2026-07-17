@@ -10,6 +10,7 @@ Behaviour must stay identical to the originals: the section-judges depend on
 these exact classification thresholds (trend-bar body/close-position cutoffs,
 overlap ratio, 2-bar swing pivots).
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -85,17 +86,21 @@ def _find_swings(bars: Any, W: int) -> tuple[list[float], list[float]]:
 
     for i in range(2, len(window) - 2):
         h = float(window[i].high)
-        if (float(window[i - 1].high) < h and
-                float(window[i - 2].high) < h and
-                float(window[i + 1].high) < h and
-                float(window[i + 2].high) < h):
+        if (
+            float(window[i - 1].high) < h
+            and float(window[i - 2].high) < h
+            and float(window[i + 1].high) < h
+            and float(window[i + 2].high) < h
+        ):
             swing_highs.append(h)
 
         lo = float(window[i].low)
-        if (float(window[i - 1].low) > lo and
-                float(window[i - 2].low) > lo and
-                float(window[i + 1].low) > lo and
-                float(window[i + 2].low) > lo):
+        if (
+            float(window[i - 1].low) > lo
+            and float(window[i - 2].low) > lo
+            and float(window[i + 1].low) > lo
+            and float(window[i + 2].low) > lo
+        ):
             swing_lows.append(lo)
 
     return swing_highs, swing_lows

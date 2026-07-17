@@ -1,4 +1,5 @@
 """Tests for the enhanced status bar widget."""
+
 from __future__ import annotations
 
 from PyQt6.QtWidgets import QApplication

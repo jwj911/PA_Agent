@@ -12,6 +12,7 @@ the exact same ordered file lists as before.
 `ai/pattern_routing.py` embeds these names inside KV-cache-sensitive prompt
 markdown prose (not code literals) and is intentionally left untouched.
 """
+
 from __future__ import annotations
 
 # ── Common system files (both stages) ───────────────────────────────────────────

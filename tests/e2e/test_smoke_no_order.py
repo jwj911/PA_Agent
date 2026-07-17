@@ -2,6 +2,7 @@
 
 Task 19.2
 """
+
 from __future__ import annotations
 
 import json
@@ -78,16 +79,11 @@ def test_no_order_shows_no_trade_conclusion(qtbot, tmp_path):
 
     # DecisionPanel should show 不下单
     conclusion_text = window._decision_panel._conclusion_label.text()
-    assert "不下单" in conclusion_text, (
-        f"Expected 不下单 conclusion, got: {conclusion_text!r}"
-    )
+    assert "不下单" in conclusion_text, f"Expected 不下单 conclusion, got: {conclusion_text!r}"
 
     # Chart should have no InfiniteLine items (no entry/TP/SL lines)
     chart = window._chart_widget
-    infinite_lines = [
-        item for item in chart.items()
-        if isinstance(item, pg.InfiniteLine)
-    ]
-    assert len(infinite_lines) == 0, (
-        f"Expected no InfiniteLine items for 不下单, found {len(infinite_lines)}"
-    )
+    infinite_lines = [item for item in chart.items() if isinstance(item, pg.InfiniteLine)]
+    assert (
+        len(infinite_lines) == 0
+    ), f"Expected no InfiniteLine items for 不下单, found {len(infinite_lines)}"

@@ -1,4 +1,5 @@
 """Tests for East Money quote field enum helpers."""
+
 from __future__ import annotations
 
 from pa_agent.data.eastmoney_field_enums import (

@@ -1,4 +1,5 @@
 """Tests for the chart candlestick graphics item."""
+
 from __future__ import annotations
 
 import pytest

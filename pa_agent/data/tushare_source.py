@@ -1,4 +1,5 @@
 """Tushare-based A-share K-line data source."""
+
 from __future__ import annotations
 
 import logging
@@ -160,7 +161,9 @@ class TushareSource(DataSource):
         try:
             import tushare as ts
         except ImportError as exc:
-            raise DataSourceTransientError("未安装 tushare，请执行: pip install tushare") from exc  # noqa: RUF001
+            raise DataSourceTransientError(
+                "未安装 tushare，请执行: pip install tushare"  # noqa: RUF001
+            ) from exc
         ts.set_token(token)
         self._token = token
         self._connected = True

@@ -1,4 +1,5 @@
 """Tests for East Money quote payload parsers."""
+
 from __future__ import annotations
 
 from pa_agent.data.eastmoney_quote import parse_order_book_payload, parse_tick_lines

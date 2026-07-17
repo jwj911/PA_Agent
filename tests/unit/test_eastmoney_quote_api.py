@@ -1,4 +1,5 @@
 """Tests for captured East Money quote API constants."""
+
 from __future__ import annotations
 
 from pa_agent.data.eastmoney_field_enums import FIELDS_TEN_DEPTH

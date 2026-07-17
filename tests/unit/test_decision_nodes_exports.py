@@ -1,4 +1,5 @@
 """Tests for the decision node compatibility facade exports."""
+
 from __future__ import annotations
 
 from pa_agent.ai import (

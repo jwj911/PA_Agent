@@ -3,6 +3,7 @@
 All runtime directories are rooted at PROJECT_ROOT.
 Import this module everywhere instead of hard-coding paths.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

@@ -1,4 +1,5 @@
 """Tests for East Money low-level client helpers."""
+
 from __future__ import annotations
 
 from datetime import datetime

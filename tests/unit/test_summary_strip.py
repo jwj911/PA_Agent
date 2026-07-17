@@ -1,4 +1,5 @@
 """Tests for the AI summary strip widget."""
+
 from __future__ import annotations
 
 from PyQt6.QtWidgets import QApplication
@@ -22,7 +23,13 @@ def test_summary_strip_initializes_default_metric_cards() -> None:
     strip = _make_summary_strip()
 
     assert strip.objectName() == "summaryStrip"
-    assert list(_card_values(strip)) == ["当前趋势", "当前市场周期", "下一个市场周期", "支撑区", "阻力区"]
+    assert list(_card_values(strip)) == [
+        "当前趋势",
+        "当前市场周期",
+        "下一个市场周期",
+        "支撑区",
+        "阻力区",
+    ]
     assert set(_card_values(strip).values()) == {"—"}
     assert strip._layout.count() == 5
     assert strip._columns == 5

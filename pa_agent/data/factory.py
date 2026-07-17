@@ -1,4 +1,5 @@
 """Construct :class:`DataSource` implementations by kind id."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
@@ -76,9 +77,7 @@ def default_symbol_for_kind(kind: str | None) -> str:
     return _DEFAULT_SYMBOLS[normalize_data_source_kind(kind)]
 
 
-def create_data_source(
-    kind: str | None, settings: Settings | None = None
-) -> DataSource:
+def create_data_source(kind: str | None, settings: Settings | None = None) -> DataSource:
     """Instantiate a fresh data source for *kind* (not connected).
 
     ``settings`` is injected by callers that already hold the loaded

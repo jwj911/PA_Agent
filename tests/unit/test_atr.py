@@ -1,4 +1,5 @@
 """Tests for Average True Range helpers."""
+
 from __future__ import annotations
 
 import math

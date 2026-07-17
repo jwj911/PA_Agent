@@ -1,4 +1,5 @@
 """Tests for the local QClaw relay HTTP helper."""
+
 from __future__ import annotations
 
 import http.server
@@ -24,7 +25,10 @@ def test_find_free_port_skips_occupied_port() -> None:
         sock.listen()
         occupied = sock.getsockname()[1]
 
-        assert qclaw_relay._find_free_port(occupied) == occupied + 1
+        candidate = qclaw_relay._find_free_port(occupied)
+        assert candidate > occupied
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.bind((qclaw_relay.LISTEN_HOST, candidate))
 
 
 def test_relay_health_endpoint_returns_service_metadata() -> None:

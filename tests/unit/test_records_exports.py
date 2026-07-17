@@ -1,4 +1,5 @@
 """Tests for the records package exports."""
+
 from __future__ import annotations
 
 from pa_agent import records

@@ -1,4 +1,5 @@
 """Tests for validation error summary formatting."""
+
 from __future__ import annotations
 
 from pa_agent.ai.validation_messages import _label_one, format_validation_errors

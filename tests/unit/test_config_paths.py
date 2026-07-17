@@ -1,4 +1,5 @@
 """Tests for centralised path constants."""
+
 from __future__ import annotations
 
 from pa_agent.config import paths

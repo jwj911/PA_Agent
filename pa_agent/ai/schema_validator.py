@@ -5,6 +5,7 @@ and classify schema errors into missing fields, invalid fields, allowed enum
 values, and first-error metadata. Semantic / business-rule checks remain in
 ``JsonValidator`` and ``business_rules``.
 """
+
 from __future__ import annotations
 
 import logging
@@ -30,7 +31,9 @@ class SchemaValidationResult:
         return self.error_count > 0
 
 
-def collect_schema_errors(obj: dict[str, Any], schema: dict[str, Any]) -> SchemaValidationResult | None:
+def collect_schema_errors(
+    obj: dict[str, Any], schema: dict[str, Any]
+) -> SchemaValidationResult | None:
     """Return classified Draft 7 schema errors, or ``None`` if jsonschema is absent."""
 
     try:
