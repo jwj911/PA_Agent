@@ -28,6 +28,9 @@ jobs:
       - name: Verify install
         run: python -c "import pa_agent; print('OK')"
 
+      - name: Check CI workflow target lists
+        run: python scripts/check_ci_workflow_targets.py
+
       - name: Run targeted tests
         env:
           QT_QPA_PLATFORM: offscreen
@@ -172,6 +175,7 @@ jobs:
           tests/unit/test_event_bus.py
           tests/unit/test_logging.py
           tests/unit/test_ruff_baseline.py
+          tests/unit/test_ci_workflow_targets.py
           tests/property
           tests/integration/test_next_bar_prediction.py
           tests/integration/test_two_stage_no_order_with_prices.py
@@ -287,6 +291,7 @@ jobs:
           pa_agent/demo
           pa_agent/indicators
           pa_agent/gui/theme
+          scripts/check_ci_workflow_targets.py
           tests/__init__.py
           tests/e2e/__init__.py
           tests/fixtures/__init__.py
@@ -432,6 +437,7 @@ jobs:
           tests/unit/test_event_bus.py
           tests/unit/test_logging.py
           tests/unit/test_ruff_baseline.py
+          tests/unit/test_ci_workflow_targets.py
           tests/property
           tests/integration
           tests/e2e

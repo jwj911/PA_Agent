@@ -18,7 +18,33 @@
 
 ---
 
-## [Unreleased] — 2026-07-18（第二百一十五轮：L5 经验库全量相关性排序）
+## [Unreleased] — 2026-07-17（第二百一十六轮：CI workflow 目标清单自检）
+
+本轮继续推进 **L7：CI 增强**。当前 targeted pytest、focused Ruff 与 focused Black 依赖
+`.github/workflows/ci.yml` 中手工维护的长路径清单；此前缺少对重复路径、失效路径和 Black 复用
+Ruff 目标锚点漂移的直接检查，清单一旦手误只会在后续测试或格式步骤中间接暴露。
+
+### 工程治理
+
+- **CI 目标清单自检**：新增 `scripts/check_ci_workflow_targets.py`，使用 stdlib 解析
+  `.github/workflows/ci.yml` 的 targeted pytest 与 focused Ruff 目标清单，检查非空、重复路径、
+  不存在路径，并确认 focused Black 仍通过 Ruff step 锚点复用同一份 `@targets`。
+- **CI 接入与覆盖**：GitHub Actions 在安装验证后运行该脚本；targeted pytest 新增
+  `tests/unit/test_ci_workflow_targets.py`，focused Ruff/Black 新增 CI 清单自检脚本和对应测试文件。
+- **操作文档**：`docs/ci_quality_gates.md` 记录清单自检的本地复现命令和维护规则。
+
+### 验证
+
+- `py -3.12 scripts\check_ci_workflow_targets.py` → targeted pytest **143** 个目标、focused Ruff
+  **240** 个目标，清单自检通过。
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests\unit\test_experience_reader.py tests\unit\test_ci_workflow_targets.py --tb=short -q -p no:cacheprovider` → **5 passed**。
+- `py -3.12 -m py_compile pa_agent\records\experience_reader.py scripts\check_ci_workflow_targets.py tests\unit\test_experience_reader.py tests\unit\test_ci_workflow_targets.py` → 通过。
+- `py -3.12 -m ruff check pa_agent\records\experience_reader.py scripts\check_ci_workflow_targets.py tests\unit\test_experience_reader.py tests\unit\test_ci_workflow_targets.py` → **All checks passed**。
+- `py -3.12 scripts\check_ruff_baseline.py` → **Ruff baseline passed: 3725 approved diagnostics (ruff 0.15.13)**。
+
+---
+
+## [Unreleased] — 2026-07-17（第二百一十五轮：L5 经验库全量相关性排序）
 
 本轮完成后端审查路线图 L5 的第一阶段。此前 `ExperienceReader.read_for_stage2()` 先调用
 `read_top5()`，仅对最新五条经验案例评分；较早但方向、形态更匹配的案例会在评分前被丢弃，
@@ -45,6 +71,7 @@
   → **All checks passed**。
 
 ---
+
 ## [Unreleased] — 2026-07-17（第二百一十四轮：CI Python 版本矩阵）
 
 本轮收敛 CI 实际验证环境与项目支持范围、覆盖率基线之间的证据差异。项目声明

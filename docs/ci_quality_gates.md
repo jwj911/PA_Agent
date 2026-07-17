@@ -6,6 +6,25 @@ CI 在 `windows-latest` 上同时运行 Python **3.11** 与 **3.12**。3.11 是
 `pyproject.toml` 中 `requires-python = ">=3.11"` 声明的最低支持版本，3.12 是当前开发和
 覆盖率校准环境。所有安装、测试、Ruff 与 Black 门禁必须在两个矩阵任务中通过。
 
+## CI 工作流目标清单自检
+
+CI 在安装验证后执行：
+
+```cmd
+python scripts/check_ci_workflow_targets.py
+```
+
+该脚本使用 stdlib 解析 `.github/workflows/ci.yml` 中的 `Run targeted tests` 与
+`Run focused Ruff checks` 目标清单，并检查：
+
+- 目标清单非空；
+- 同一清单内不存在重复路径；
+- 每个目标路径在仓库中真实存在；
+- focused Black 仍通过 `Run focused Ruff checks` 锚点复用同一份 `@targets`。
+
+修改 targeted pytest 或 focused Ruff 清单时，应先运行该脚本。不要手工复制第二份 Black 目标列表；
+Black 门禁必须继续复用 focused Ruff 的目标集合，避免两个质量门禁覆盖范围漂移。
+
 ## Ruff 全仓基线
 
 CI 使用固定的 `ruff 0.15.13` 运行：
