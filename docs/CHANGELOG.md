@@ -18,6 +18,33 @@
 
 ---
 
+## [Unreleased] — 2026-07-18（第二百一十五轮：L5 经验库全量相关性排序）
+
+本轮完成后端审查路线图 L5 的第一阶段。此前 `ExperienceReader.read_for_stage2()` 先调用
+`read_top5()`，仅对最新五条经验案例评分；较早但方向、形态更匹配的案例会在评分前被丢弃，
+使 Stage 2 获得的参考案例偏向时间而非当前市场上下文。
+
+### 功能修复
+
+- **全量候选后再截断**：`read_for_stage2()` 现在枚举并加载指定周期位置下的全部可读 JSON
+  案例，按既有规则（方向匹配 +2、每个检测形态重叠 +1、时间戳兜底）完成排序后才应用
+  `max_entries`。因此较早但更相关的案例可以被选择。
+- **保留 `read_top5()` 兼容性**：候选扫描与条目加载拆为私有辅助；`read_top5()` 仍只加载和返回
+  时间最新的五条，避免改变其公开 API 的读取范围、顺序和损坏文件处理行为。
+- **回归测试**：新增 `tests/unit/test_experience_reader.py`，覆盖“六条案例中较早的方向/形态完全
+  匹配案例优先于五条较新的不匹配案例”，以及 `read_top5()` 仍按时间倒序取五条的兼容性。
+
+### 路线图与验证
+
+- `docs/backend_review_report.md` 将 L5 更新为第一阶段完成：全局 pattern + direction 排序已落地；
+  后续增强项为基于 K 线特征的相似度评分。
+- `py -3.12 -m pytest tests/unit/test_experience_reader.py tests/unit/test_records_exports.py --tb=short -q -p no:cacheprovider`
+  → **4 passed**。
+- `py -3.12 -m py_compile pa_agent/records/experience_reader.py tests/unit/test_experience_reader.py` → 通过。
+- `py -3.12 -m ruff check pa_agent/records/experience_reader.py tests/unit/test_experience_reader.py`
+  → **All checks passed**。
+
+---
 ## [Unreleased] — 2026-07-17（第二百一十四轮：CI Python 版本矩阵）
 
 本轮收敛 CI 实际验证环境与项目支持范围、覆盖率基线之间的证据差异。项目声明

@@ -275,7 +275,7 @@ PA Agent 的后端已经具备一个生产级桌面应用的核心骨架：
 | L2 | Prompt 模板引擎化 | `prompt_engineering/`、`ai/prompt_assembler.py` | 使用 Jinja2 或结构化模板，支持热更新 |
 | L3 | 引入 Pipeline Builder | `orchestrator/two_stage.py` | 用 Pipeline/StateMachine 替代巨型 `submit()` |
 | L4 | 性能优化 | `data/snapshot.py`、`ai/kline_features.py`、`records/analysis_history.py`、`records/pending_writer.py`、`ai/deepseek_client.py` | 增量指标、索引、追加写、复用 HTTP client |
-| L5 | 经验库升级 | `records/experience_reader.py` | 从时间排序升级为 pattern + direction + 相似度排序 |
+| L5 | 经验库升级（第一阶段完成） | `records/experience_reader.py` | Stage 2 已按全量案例的 pattern + direction 排序；后续可增加 K 线相似度评分 |
 | L6 | 无 GUI 运行支持 | `util/event_bus.py`、`app_context.py` | 抽象 EventBus，允许 headless/CLI/服务端运行 |
 | L7 | CI 增强 | `.github/workflows/ci.yml` | 运行 `pytest -m "not e2e"`、ruff、black、覆盖率 |
 

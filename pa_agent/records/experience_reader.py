@@ -99,6 +99,54 @@ class ExperienceReader:
             Up to 5 entries, newest first.  Returns an empty list when no
             readable entries are found.
         """
+        candidates = self._list_candidates(cycle_position)
+        return self._load_entries(candidates[:5], cycle_position)
+
+    def read_for_stage2(
+        self,
+        cycle_position: str,
+        *,
+        direction: str = "",
+        patterns: list[str] | None = None,
+        max_entries: int = 3,
+        max_chars_per_entry: int = 400,
+    ) -> list[ExperienceEntry]:
+        """Return the most relevant experience entries for Stage 2.
+
+        All readable entries for the requested cycle position are ranked before
+        applying ``max_entries``. Restricting candidates to the newest five
+        first would otherwise discard older cases that match the current
+        direction and patterns more closely.
+        """
+        entries = self._load_entries(self._list_candidates(cycle_position), cycle_position)
+        if not entries:
+            return []
+
+        dir_norm = str(direction or "").strip().lower()
+        pattern_set = {str(p).strip().lower() for p in (patterns or []) if str(p).strip()}
+
+        def _score(entry: ExperienceEntry) -> int:
+            content = entry.content
+            score = 0
+            ent_dir = str(content.get("direction", "") or "").strip().lower()
+            if dir_norm and ent_dir == dir_norm:
+                score += 2
+            ent_patterns = content.get("detected_patterns") or []
+            if pattern_set and isinstance(ent_patterns, list):
+                overlap = pattern_set.intersection({str(p).strip().lower() for p in ent_patterns})
+                score += len(overlap)
+            return score
+
+        ranked = sorted(entries, key=lambda entry: (_score(entry), entry.timestamp_ms), reverse=True)
+        cap = max(0, min(max_entries, 10))
+        return ranked[:cap]
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _list_candidates(self, cycle_position: str) -> list[tuple[int, str, Path]]:
+        """List timestamped JSON candidates in newest-first order."""
         base_dir = self._experience_dir / cycle_position
         candidates: list[tuple[int, str, Path]] = []  # (timestamp_ms, case_type, path)
 
@@ -127,12 +175,18 @@ class ExperienceReader:
 
                 candidates.append((ts_ms, case_type, file_path))
 
-        # Sort by timestamp descending (newest first), then take top 5.
+        # Sort by timestamp descending (newest first).
         candidates.sort(key=lambda t: t[0], reverse=True)
-        top5 = candidates[:5]
+        return candidates
 
+    def _load_entries(
+        self,
+        candidates: list[tuple[int, str, Path]],
+        cycle_position: str,
+    ) -> list[ExperienceEntry]:
+        """Load readable experience entries from already ordered candidates."""
         entries: list[ExperienceEntry] = []
-        for ts_ms, case_type, file_path in top5:
+        for ts_ms, case_type, file_path in candidates:
             content = self._read_json(file_path)
             if content is None:
                 continue
@@ -146,43 +200,6 @@ class ExperienceReader:
             entries.append(entry)
 
         return entries
-
-    def read_for_stage2(
-        self,
-        cycle_position: str,
-        *,
-        direction: str = "",
-        patterns: list[str] | None = None,
-        max_entries: int = 3,
-        max_chars_per_entry: int = 400,
-    ) -> list[ExperienceEntry]:
-        """Return recent experience entries filtered for Stage 2 relevance."""
-        entries = self.read_top5(cycle_position)
-        if not entries:
-            return []
-
-        dir_norm = str(direction or "").strip().lower()
-        pattern_set = {str(p).strip().lower() for p in (patterns or []) if str(p).strip()}
-
-        def _score(entry: ExperienceEntry) -> int:
-            content = entry.content if isinstance(entry.content, dict) else {}
-            score = 0
-            ent_dir = str(content.get("direction", "") or "").strip().lower()
-            if dir_norm and ent_dir == dir_norm:
-                score += 2
-            ent_patterns = content.get("detected_patterns") or []
-            if pattern_set and isinstance(ent_patterns, list):
-                overlap = pattern_set.intersection({str(p).strip().lower() for p in ent_patterns})
-                score += len(overlap)
-            return score
-
-        ranked = sorted(entries, key=lambda e: (_score(e), e.timestamp_ms), reverse=True)
-        cap = max(0, min(max_entries, 10))
-        return ranked[:cap]
-
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
 
     def _read_json(self, path: Path) -> dict | None:
         """Read and parse a JSON file.
