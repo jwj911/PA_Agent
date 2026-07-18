@@ -18,6 +18,31 @@
 
 ---
 
+## [Unreleased] — 2026-07-18（第二百一十九轮：L5 K 线相似度排序）
+
+本轮继续推进路线图 **L5：经验库升级**。第二百一十五轮已完成全量案例的
+`pattern + direction` 相关性排序，本轮补上第二阶段的 K 线几何相似度，用于在上下文
+相关性相同的案例之间识别更接近当前市场结构的历史样本，同时保持旧经验 JSON 的读取兼容。
+
+### 功能
+
+- **新增 `experience_similarity.py`**：基于最近最多 12 根 K 线的方向、实体比例、收盘位置和
+  相对中位波幅计算 `[0, 1]` 的尺度无关相似度；绝对价格与时间戳不参与评分，避免跨品种/价格区间
+  失真。
+- **接入 Stage 2 经验排序**：`ExperienceReader.read_for_stage2()` 新增可选 `current_bars`；
+  先保持既有的方向匹配与形态重叠优先级，再用相似度作为同分并列时的次级排序键，最后仍以时间戳
+  作为稳定兜底。缺少 `kline_data`、数据损坏或 K 线不足三根时返回无评分，不影响旧案例排序。
+- **编排链路透传当前 K 线**：`TwoStageOrchestrator` 在路由经验案例时传入当前帧的 K 线；不修改
+  Stage 1/Stage 2 prompt、JSON schema 或交易决策规则。
+
+### 测试与质量门禁
+
+- `tests/unit/test_experience_reader.py` 新增尺度不变、旧/损坏案例降级，以及“旧但形状更相似案例”
+  优先的回归覆盖。
+- CI targeted pytest 与 focused Ruff 清单纳入 `test_experience_reader.py`，防止 L5 读取逻辑脱离持续验证。
+
+---
+
 ## [Unreleased] — 2026-07-18（第二百一十八轮：CI Black @targets 复用测试）
 
 本轮继续推进 **L7：CI 增强**。第二百一十六轮的 workflow 自检要求 focused Black 复用 focused Ruff

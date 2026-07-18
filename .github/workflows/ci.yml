@@ -170,6 +170,7 @@ jobs:
           tests/unit/test_retry_policy.py
           tests/unit/test_validation_retry.py
           tests/unit/test_analysis_history.py
+          tests/unit/test_experience_reader.py
           tests/unit/test_demo_record_loader.py
           tests/unit/test_demo_replayer.py
           tests/unit/test_event_bus.py
@@ -432,6 +433,7 @@ jobs:
           tests/unit/test_retry_policy.py
           tests/unit/test_validation_retry.py
           tests/unit/test_analysis_history.py
+          tests/unit/test_experience_reader.py
           tests/unit/test_demo_record_loader.py
           tests/unit/test_demo_replayer.py
           tests/unit/test_event_bus.py

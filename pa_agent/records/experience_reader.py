@@ -21,8 +21,13 @@ import logging
 import re
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
+from pa_agent.records.experience_similarity import score_kline_similarity
 from pa_agent.records.schema import ExperienceEntry
+
+if TYPE_CHECKING:
+    from pa_agent.data.base import KlineBar
 
 # Regex to extract the timestamp portion from a filename.
 _TS_PATTERN = re.compile(r"(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})")
@@ -110,13 +115,16 @@ class ExperienceReader:
         patterns: list[str] | None = None,
         max_entries: int = 3,
         max_chars_per_entry: int = 400,
+        current_bars: tuple[KlineBar, ...] | None = None,
     ) -> list[ExperienceEntry]:
         """Return the most relevant experience entries for Stage 2.
 
         All readable entries for the requested cycle position are ranked before
         applying ``max_entries``. Restricting candidates to the newest five
         first would otherwise discard older cases that match the current
-        direction and patterns more closely.
+        direction and patterns more closely. When *current_bars* is supplied,
+        K-line geometry similarity breaks ties between entries with the same
+        direction/pattern relevance score.
         """
         entries = self._load_entries(self._list_candidates(cycle_position), cycle_position)
         if not entries:
@@ -137,7 +145,17 @@ class ExperienceReader:
                 score += len(overlap)
             return score
 
-        ranked = sorted(entries, key=lambda entry: (_score(entry), entry.timestamp_ms), reverse=True)
+        def _similarity(entry: ExperienceEntry) -> float:
+            if current_bars is None:
+                return -1.0
+            score = score_kline_similarity(current_bars, entry.content)
+            return score if score is not None else -1.0
+
+        ranked = sorted(
+            entries,
+            key=lambda entry: (_score(entry), _similarity(entry), entry.timestamp_ms),
+            reverse=True,
+        )
         cap = max(0, min(max_entries, 10))
         return ranked[:cap]
 

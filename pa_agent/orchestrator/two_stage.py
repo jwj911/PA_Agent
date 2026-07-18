@@ -307,7 +307,7 @@ class TwoStageOrchestrator:
         return ValidationSettings()
 
     def _route_and_load_experience(
-        self, stage1_json: dict
+        self, stage1_json: dict, *, current_bars: tuple[Any, ...] | None = None
     ) -> tuple[list[str], list[Any]]:
         """Route strategy files and load experience entries from Stage 1 diagnosis.
 
@@ -338,7 +338,7 @@ class TwoStageOrchestrator:
                 direction=direction,
                 patterns=patterns,
                 max_entries=max_exp,
-                max_chars_per_entry=max_chars,
+                max_chars_per_entry=max_chars, current_bars=current_bars,
             )
         else:
             experience_entries = self._exp_reader.read_top5(cycle_position)[:max_exp]
@@ -1106,7 +1106,10 @@ class TwoStageOrchestrator:
         stage1_json, messages_s1, reply_s1, s1_usage_calls, _thinking, _effort = _s1
 
         # ── Step 10-11: Route strategy files + load experience entries ────────
-        strategy_files, experience_entries = self._route_and_load_experience(stage1_json)
+        strategy_files, experience_entries = self._route_and_load_experience(
+            stage1_json,
+            current_bars=frame.bars,
+        )
 
         # ── Step 12: Pre-Stage-2 cancel check ────────────────────────────────
         if cancel_token.is_set():

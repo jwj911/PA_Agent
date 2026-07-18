@@ -146,6 +146,7 @@ price_action_agent/
 - **`pa_agent/records/`**：持久化。
   - `pending_writer.py`：分析记录写入（自动对明文 API Key 脱敏）。
   - `experience_reader.py`：经验库读取。
+  - `experience_similarity.py`：基于最近 K 线几何的可选经验案例相似度评分。
   - `trade_logger.py`：交易 CSV/截图日志。
   - `analysis_history.py`：历史记录管理。
   - `schema.py`：记录数据结构定义。
