@@ -26,6 +26,7 @@
 - 贡献指南：[`CONTRIBUTING.md`](./CONTRIBUTING.md)
 - 安全策略：[`SECURITY.md`](./SECURITY.md)
 - 迭代记录：[`docs/CHANGELOG.md`](./docs/CHANGELOG.md)
+- 架构升级路线图：[`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md)
 
 ---
 

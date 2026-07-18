@@ -18,6 +18,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-18（第二百二十二轮：L1-L6 架构升级规划）
+
+本轮根据 L1 Provider/数据源注册表和 L5 经验库第二阶段的完成状态，补充后续 L1-L6
+架构升级的正式迁移规划。该轮只新增规划文档和文档索引，不改变业务代码。
+
+### 文档
+
+- **新增 `docs/architecture_roadmap.md`**：明确 L1-L6 的当前状态、模块边界、目标接口、
+  依赖顺序、strangler migration、feature flag、测试门禁、验收标准、回滚策略和风险清单。
+- **明确实施顺序**：L1 收口 → L6 Headless core → L2 Prompt 模板引擎 → L3 Pipeline Builder；
+  L4 转为性能预算与持续基准，L5 等真实经验样本后再进行离线评估和权重校准。
+- **同步文档索引**：`AGENTS.md` 和 `docs/backend_review_report.md` 指向新的架构主路线图。
+
+### 规划决策
+
+- 暂不继续调整 L5 线上相似度权重；当前经验目录缺少真实案例，先建立数据集和离线指标。
+- L6 优先于 L3，以便用 headless harness 验证 Prompt、Pipeline 和记录结果，不把 GUI 作为
+  架构测试前提。
+
+---
+
 ## [Unreleased] — 2026-07-18（第二百二十一轮：L1 AI Provider 注册表）
 
 本轮完成路线图 **L1：Provider/数据源注册表** 的第二阶段。上一轮已将数据源工厂注册表化，
