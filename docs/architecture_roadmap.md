@@ -17,7 +17,7 @@
 | 路线 | 当前状态 | 已有基础 | 主要剩余工作 |
 |---|---|---|---|
 | L1 Provider/数据源注册表 | 第二阶段完成 | `data/registry.py`、`ai/provider_registry.py` 已支持规格、优先级、延迟 builder 和运行时注册 | 插件发现、配置持久化和扩展契约仍需在后续治理中固化 |
-| L2 Prompt 模板引擎 | 未启动 | `Stage1PromptBuilder`、`Stage2PromptBuilder`、多个 PyQt6-free renderer 已从 `PromptAssembler` 拆出 | 把大段静态文本、模板上下文和动态渲染边界正式化 |
+| L2 Prompt 模板引擎 | 合同化基线完成，模板引擎未启动 | `Stage1PromptBuilder`、`Stage2PromptBuilder`、多个 PyQt6-free renderer 已从 `PromptAssembler` 拆出；prompt 文件顺序、阶段边界、硬禁令和 Spike/Climax 约束已有合同测试 | 把大段静态文本、模板上下文和动态渲染边界正式化，并补充 TemplateStore、manifest、golden snapshots |
 | L3 Pipeline Builder | 部分准备 | `TwoStageOrchestrator.submit()` 已拆出 `_run_stage1`、`_run_stage2`、路由和持久化方法 | 用显式状态和步骤协议替代方法内隐式局部状态与 early return |
 | L4 性能优化 | 主要目标完成 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁 | 增加基准、预算和回归监控，不再无证据地继续优化 |
 | L5 经验库升级 | 第二阶段完成 | 全量相关性排序 + K 线几何相似度 | 等待真实经验样本后做离线评估、特征版本化和权重校准 |
@@ -160,6 +160,11 @@ Client/DataSource:
 
 已经存在的 `Stage1PromptBuilder`、`Stage2PromptBuilder`、`kline_table_renderer`、
 `experience_renderer`、`stage2_guidance` 是迁移的叶子边界，不应重新合并。
+
+当前已先建立 prompt engineering 合同化基线：`test_prompt_txt_files.py` 固定策略文件注册、
+真实 `.txt` 存在性和 Stage 1 / Stage 2 组装顺序；`test_prompt_assembler.py` 固定阶段一/阶段二
+边界、Stage 2 关键输出契约、禁止逆势三价、禁止 SCS/追高潮、禁止仓位管理、不依赖成交量以及
+Spike/Climax 文本约束。TemplateStore、manifest 和 golden snapshots 仍属于后续 L2 迁移工作。
 
 ### 5.2 目标模块
 

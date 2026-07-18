@@ -78,6 +78,46 @@ def assembler(tmp_path: Path) -> PromptAssembler:
     return PromptAssembler(prompt_dir=tmp_path)
 
 
+REAL_PROMPT_DIR = Path(__file__).resolve().parents[2] / "prompt_engineering"
+SPIKE_CONTRACT_STRATEGY_FILES = [
+    "极速上涨分析识别.txt",
+    "极速上涨交易策略.txt",
+    "震荡区间分析识别.txt",
+    "震荡区间交易策略.txt",
+]
+
+
+@pytest.fixture()
+def real_assembler() -> PromptAssembler:
+    """PromptAssembler backed by the real prompt_engineering directory."""
+    return PromptAssembler(prompt_dir=REAL_PROMPT_DIR)
+
+
+def _stage1_json_contract(user_prompt: str) -> str:
+    start = user_prompt.index("```json\n{")
+    end = user_prompt.index("```\n\n## 阶段一闸门", start)
+    return user_prompt[start:end]
+
+
+def _stage2_spike_user_prompt(assembler: PromptAssembler) -> str:
+    frame = _make_frame(8)
+    stage1_json = {
+        "cycle_position": "spike",
+        "direction": "bullish",
+        "gate_result": "proceed",
+        "spike_stage": "active",
+        "climax_risk": "warning",
+        "risk_warning": "高潮风险禁止追原方向",
+        "detected_patterns": ["spike_active"],
+    }
+    return assembler.build_stage2(
+        frame,
+        stage1_json,
+        SPIKE_CONTRACT_STRATEGY_FILES,
+        [],
+    )[1]["content"]
+
+
 def test_stage1_system_prompt_order(assembler: PromptAssembler):
     """Stage 1 system: shared persona + full binary tree; user: framework + signals."""
     frame = _make_frame()
@@ -248,6 +288,61 @@ def test_stage2_output_contract_present(assembler: PromptAssembler):
     assert "EMA缺口数" in user
     assert "decision_trace" in user
     assert "terminal" in user
+
+
+def test_real_stage2_prompt_keeps_key_hard_bans(real_assembler: PromptAssembler):
+    """Real Stage 2 prompt text must keep the key PA Agent hard bans."""
+    user = _stage2_spike_user_prompt(real_assembler)
+    assert "逆势三价" in user
+    assert "禁止 SCS" in user
+    assert "禁止追高潮" in user
+    assert "禁止仓位管理" in user
+    assert "不依赖成交量" in user
+
+
+def test_real_stage1_stage2_boundary_contracts(real_assembler: PromptAssembler):
+    """Stage 1 diagnoses only; Stage 2 carries Stage 1 JSON and decision contract."""
+    frame = _make_frame(8)
+    stage1_user = real_assembler.build_stage1(frame)[1]["content"]
+
+    assert "你现在只执行阶段一：市场诊断与闸门判断。不要评估具体下单、止损、止盈或仓位。" in stage1_user
+    assert "**禁止在阶段一评估：**" in stage1_user
+    assert "- **§9–§11**（入场、风险、下单均属阶段二）" in stage1_user
+
+    stage1_schema = _stage1_json_contract(stage1_user)
+    assert '"gate_trace"' in stage1_schema
+    assert '"gate_result"' in stage1_schema
+    for field in [
+        '"decision"',
+        '"entry_price"',
+        '"take_profit_price"',
+        '"stop_loss_price"',
+        '"order_type"',
+        '"terminal"',
+    ]:
+        assert field not in stage1_schema
+
+    stage2_user = _stage2_spike_user_prompt(real_assembler)
+    assert "## 阶段一诊断结果\n\n```json" in stage2_user
+    assert '"cycle_position": "spike"' in stage2_user
+    assert '"direction": "bullish"' in stage2_user
+    assert '"decision_trace"' in stage2_user
+    assert '"terminal": {' in stage2_user
+    assert "当 order_type 为“不下单”时" in stage2_user
+    assert "entry_price、take_profit_price、take_profit_price_2、stop_loss_price、order_direction 必须全部为 null" in stage2_user
+
+
+def test_real_stage2_prompt_keeps_spike_climax_contract(real_assembler: PromptAssembler):
+    """Spike routing and climax bans must stay explicit in the real Stage 2 prompt."""
+    user = _stage2_spike_user_prompt(real_assembler)
+    assert "弱尖峰候选" in user
+    assert "1根时不得输出 cycle_position=spike" in user
+    assert "最低可路由尖峰：2根以上连续趋势棒" in user
+    assert "可输出 spike 路由" in user
+    assert "2根及以上：**仅 SPS**；**禁止 SCS 追单**" in user
+    assert "climax_risk≠none" in user
+    assert "一律 wait 或等 SPS" in user
+    assert "禁追原方向" in user
 
 
 def test_stage2_experience_entries_included(assembler: PromptAssembler):

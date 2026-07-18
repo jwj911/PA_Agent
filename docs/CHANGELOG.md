@@ -18,6 +18,43 @@
 
 ---
 
+## [Unreleased] — 2026-07-18（第二百二十七轮：L2 prompt engineering 合同化与文本优化）
+
+本轮推进 **L2 Prompt 模板引擎化** 前的合同化基线。目标是在不改变 JSON schema、枚举字段、
+AI Provider 路由或数据源行为的前提下，先把现有 prompt 文件顺序、阶段边界和高风险 Spike/Climax
+约束固定进测试，再对极速上涨/下跌相关 prompt 文本做小范围一致性修正。
+
+### Prompt engineering
+
+- **补充 prompt 文件合同测试**：`tests/unit/test_prompt_txt_files.py` 校验 `strategy_files.py`
+  注册的 `.txt` 文件均存在，Stage 1 / Stage 2 文件顺序保持稳定，且废弃的
+  `二元决策_闸门.txt` 不再进入组装路径。
+- **补充真实 prompt 组装合同测试**：`tests/unit/test_prompt_assembler.py` 覆盖阶段一只做市场诊断、
+  阶段二携带 Stage 1 JSON / `decision_trace` / `terminal` / 不下单空值规则，并断言禁止逆势三价、
+  禁止 SCS/追高潮、禁止仓位管理和不依赖成交量等硬约束继续存在。
+- **收敛 Spike/Climax 文本**：优化 `极速上涨分析识别.txt`、`极速下跌分析识别.txt`、
+  `极速上涨交易策略.txt`、`极速下跌交易策略.txt`，统一 1 根只作候选、2 根以上才可路由、3-5 根为
+  标准尖峰、6 根以上仅为高潮预警，以及衰竭信号触发后禁止追原方向的表述。
+- **保持输出契约不变**：本轮不修改 prompt 文件名、JSON 字段名、schema、normalizer、
+  validator 或 Provider/数据源路径，只加强测试和文字约束。
+
+### 文档
+
+- 同步 `AGENTS.md` 的 prompt 修改指引，要求后续改动 prompt 文本或组装顺序时运行本轮新增的
+  prompt 合同测试。
+- 同步 `docs/architecture_roadmap.md` 的 L2 当前状态，标记为合同化基线已建立、TemplateStore /
+  manifest / golden snapshots 仍为后续工作。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests/unit/test_prompt_txt_files.py tests/unit/test_prompt_assembler.py --tb=short -q -p no:cacheprovider` → **40 passed**。
+- `py -3.12 -m ruff check tests/unit/test_prompt_txt_files.py tests/unit/test_prompt_assembler.py` → **All checks passed**。
+- `py -3.12 -m py_compile tests/unit/test_prompt_txt_files.py tests/unit/test_prompt_assembler.py` → 通过。
+- `py -3.12 scripts/check_ci_workflow_targets.py` → 通过。
+- `py -3.12 scripts/check_ruff_baseline.py` → 通过。
+
+---
+
 ## [Unreleased] — 2026-07-18（第二百二十五轮：L6 bootstrap 边界拆分）
 
 本轮继续推进 **L6 Headless core** 的 `AppContext` 启动边界拆分。此前 headless 入口已可

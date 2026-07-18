@@ -375,7 +375,7 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
 ## 10. 给 AI 代理的实用提示
 
 1. **先读配置再改代码**：很多行为由 `config/settings.json` 与 `pa_agent/config/settings.py` 中的 Pydantic 模型控制。新增配置字段时，同步更新 example 文件、GUI 设置对话框、相关测试。
-2. **Prompt 文本在 `prompt_engineering/`**：策略路由、阶段一/阶段二的 prompt 片段多为中文 `.txt` 文件。修改这些文件可能改变模型输出格式，需要同步更新 `tests/` 中的 JSON fixture 与校验用例。
+2. **Prompt 文本在 `prompt_engineering/`**：策略路由、阶段一/阶段二的 prompt 片段多为中文 `.txt` 文件。修改这些文件可能改变模型输出格式，需要同步更新 `tests/` 中的 JSON fixture 与校验用例；涉及文件顺序、阶段边界、Spike/Climax 或硬禁令时，至少运行 `tests/unit/test_prompt_txt_files.py` 和 `tests/unit/test_prompt_assembler.py`，确保阶段一不输出三价、阶段二保留 Stage 1 JSON/`decision_trace`/`terminal`/不下单空值规则，并继续满足禁止逆势三价、禁止 SCS/追高潮、禁止仓位管理和不依赖成交量的合同。
 3. **JSON schema 在 `pa_agent/ai/prompts/schemas.py`**：阶段一/阶段二的输出结构严格受 schema 约束，改动需同步更新 `json_validator.py` 与 normalizer。
 4. **MainWindow 是巨型文件**：`pa_agent/gui/main_window.py` 接近 4000+ 行。做小改动时优先定位到具体方法；做大重构时建议与维护者沟通。
 5. **API Key 至静态加密，但内存态是明文**：磁盘上（Windows）经 DPAPI 加密为 `dpapi:v1:` 令牌存于 `api_key_encrypted`，非 Windows 回退明文；但**内存态 `provider.api_key` 始终为明文**。任何涉及密钥持久化的新功能都要统一走 `save_settings`（自动加密），任何日志/记录落盘仍须经运行时脱敏。
