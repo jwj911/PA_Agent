@@ -375,3 +375,6 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
 9. **新增文件/字段时注意更新本文件**：如果你新增了模块、数据源、AI 提供商、安全机制、构建流程等，请同步更新本 `AGENTS.md` 中的对应章节。
 10. **热路径注意性能**：`data/snapshot.py`、`ai/kline_features.py`、`records/analysis_history.py`、`ai/deepseek_client.py` 等属于高频路径，改动时避免重复计算与无条件构造大字符串。
 11. **进程级缓存/全局状态需线程安全**：后台 QThread 会并发访问模块级缓存。新增全局可变状态时，应配套加锁（耗时构建/IO 放锁外，用双检锁），保持输出与语义不变。
+12. **L1 当前进度**：数据源侧注册表已完成第一阶段；下一轮 Provider 侧注册表必须保留
+    `openclaw_cs` → Cursor SDK 的专用路由，以及其余模型 → OpenAI-compatible client 的兼容行为，
+    不把 QClaw / WorkBuddy / Cursor 的启动同步逻辑重复搬入 client factory。

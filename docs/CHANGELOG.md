@@ -45,6 +45,14 @@
 - 数据源/记录聚焦测试 **22 passed**；`py_compile`、Ruff、Ruff format、CI 目标清单和 Ruff
   基线 **3725 条**均通过。
 
+### 下一轮路线（文档同步）
+
+- L1 下一切片聚焦 `ai/client_factory.py` 的 Provider 规格注册与客户端 builder。
+- `openclaw_cs` 及其子模型必须继续路由到 Cursor SDK；其他模型继续路由到
+  OpenAI-compatible client。
+- QClaw / WorkBuddy / Cursor 的启动同步和 fallback 仍由现有连接器与
+  `provider_sync_service.py` 负责，本轮不重复迁移。
+
 ---
 
 ## [Unreleased] — 2026-07-18（第二百一十九轮：L5 K 线相似度排序）
