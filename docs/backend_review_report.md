@@ -271,7 +271,7 @@ PA Agent 的后端已经具备一个生产级桌面应用的核心骨架：
 
 | 编号 | 任务 | 目标文件 | 预期收益 |
 |---|---|---|---|
-| L1 | 引入 Provider/数据源注册表（数据源侧第一阶段完成） | `ai/client_factory.py`、`data/factory.py`、`data/registry.py` | 数据源已支持规格注册、延迟 builder 与运行时扩展；AI provider 注册表仍待后续切片 |
+| L1 | 引入 Provider/数据源注册表（第二阶段完成） | `ai/client_factory.py`、`ai/provider_registry.py`、`data/factory.py`、`data/registry.py` | AI client 与数据源均支持规格注册、优先级/延迟 builder 与运行时扩展；Provider 同步仍由现有 service 负责 |
 | L2 | Prompt 模板引擎化 | `prompt_engineering/`、`ai/prompt_assembler.py` | 使用 Jinja2 或结构化模板，支持热更新 |
 | L3 | 引入 Pipeline Builder | `orchestrator/two_stage.py` | 用 Pipeline/StateMachine 替代巨型 `submit()` |
 | L4 | 性能优化 | `data/snapshot.py`、`ai/kline_features.py`、`records/analysis_history.py`、`records/pending_writer.py`、`ai/deepseek_client.py` | 增量指标、索引、追加写、复用 HTTP client |

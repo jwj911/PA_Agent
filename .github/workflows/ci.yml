@@ -257,6 +257,7 @@ jobs:
           pa_agent/ai/provider_errors.py
           pa_agent/ai/retry_policy.py
           pa_agent/ai/client_factory.py
+          pa_agent/ai/provider_registry.py
           pa_agent/ai/session_ledger.py
           pa_agent/ai/cursor_sdk_client.py
           pa_agent/ai/prompts

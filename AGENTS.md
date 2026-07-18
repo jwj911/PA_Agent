@@ -103,6 +103,7 @@ price_action_agent/
 
 - **`pa_agent/ai/`**：项目核心算法层。
   - `client_factory.py`：根据模型选择客户端（DeepSeekClient / CursorSdkClient）。
+  - `provider_registry.py`：AI 客户端 Provider 规格注册表与优先级 matcher。
   - `deepseek_client.py`：OpenAI 兼容通用客户端，支持流式、reasoning_content、KV cache，内置 MiMo、QClaw、WorkBuddy、PackyAPI、KKAI、MiniMax 等网关适配。
   - `provider_sync_service.py`：provider 同步服务，集中启动期编排 QClaw → WorkBuddy → Cursor 的同步与降级尾部处理。
   - `cursor_sdk_client.py` / `cursor_connector.py`：Cursor SDK 路由。

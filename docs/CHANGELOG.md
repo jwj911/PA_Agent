@@ -18,6 +18,30 @@
 
 ---
 
+## [Unreleased] — 2026-07-18（第二百二十一轮：L1 AI Provider 注册表）
+
+本轮完成路线图 **L1：Provider/数据源注册表** 的第二阶段。上一轮已将数据源工厂注册表化，
+本轮继续处理 `ai/client_factory.py` 的客户端路由；Provider 同步、QClaw/WorkBuddy/Cursor
+环境检测与 fallback 仍保留在原有连接器和 `provider_sync_service.py`。
+
+### 架构升级
+
+- **新增 `pa_agent/ai/provider_registry.py`**：引入线程安全的 `AIClientSpec` /
+  `AIClientRegistry`，以 matcher、优先级和 lazy builder 描述 AI 客户端路由。
+- **客户端工厂注册表化**：Cursor SDK 路由优先级高于 OpenAI-compatible 兜底路由；保留
+  `openclaw_cs` 及子模型识别、原有日志文本和两类客户端构造行为。
+- **运行时扩展 API**：新增 `register_ai_client_provider()`、`unregister_ai_client_provider()`
+  和 `ai_client_provider_specs()`；自定义 Provider 可在不修改工厂核心分支的情况下接入。
+- **明确职责边界**：注册表只负责 client route 匹配与构造，不复制 Provider 启动同步、配置持久化
+  或自动 fallback 逻辑。
+
+### 测试与质量门禁
+
+- `tests/unit/test_client_factory.py` 新增内置优先级、自定义 matcher、重复名称拒绝和注销恢复测试。
+- `.github/workflows/ci.yml` 将 `provider_registry.py` 纳入 focused Ruff，focused Black 继续复用同一目标列表。
+
+---
+
 ## [Unreleased] — 2026-07-18（第二百二十轮：L1 数据源注册表第一阶段）
 
 本轮开始推进路线图 **L1：Provider/数据源注册表**，先完成数据源侧的低风险切片。此前
