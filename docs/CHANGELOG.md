@@ -18,6 +18,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-18（第二百一十八轮：CI Black @targets 复用测试）
+
+本轮继续推进 **L7：CI 增强**。第二百一十六轮的 workflow 自检要求 focused Black 复用 focused Ruff
+解析出的 `@targets`，第二百一十七轮已补齐 Black 锚点漂移测试；本轮补上另一条失败路径：Black step
+锚点仍正确，但命令本身不再使用 `@targets`。
+
+### 工程治理
+
+- **补齐 Black 目标复用回归测试**：`tests/unit/test_ci_workflow_targets.py` 新增失败路径测试，构造
+  focused Black 仍查找 `Run focused Ruff checks`，但执行命令改成硬编码单一路径的 workflow，断言
+  `validate_workflow_targets()` 会报告 focused Black 不再复用解析后的 `@targets`。
+- **保持运行逻辑不变**：本轮不修改 CI 自检脚本、CI workflow 或任何业务代码，仅补齐自检脚本的测试
+  合同，防止后续维护者绕开同一目标清单机制。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests\unit\test_ci_workflow_targets.py --tb=short -q -p no:cacheprovider` → **5 passed**。
+- `py -3.12 -m ruff check scripts\check_ci_workflow_targets.py tests\unit\test_ci_workflow_targets.py` → **All checks passed**。
+- `py -3.12 -m py_compile scripts\check_ci_workflow_targets.py tests\unit\test_ci_workflow_targets.py` → 通过。
+
+---
+
 ## [Unreleased] — 2026-07-18（第二百一十七轮：CI Black 锚点漂移测试）
 
 本轮继续推进 **L7：CI 增强**。第二百一十六轮新增的 CI workflow 目标清单自检会检查 focused Black

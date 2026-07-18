@@ -117,6 +117,28 @@ def test_validate_workflow_targets_reports_black_anchor_drift(
     assert "focused Black step no longer anchors on the focused Ruff step name." in errors
 
 
+def test_validate_workflow_targets_reports_black_target_reuse_drift(
+    tmp_path,
+    ci_workflow_targets_module,
+) -> None:
+    (tmp_path / "tests" / "unit").mkdir(parents=True)
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "tests" / "unit" / "test_one.py").write_text("", encoding="utf-8")
+    (tmp_path / "scripts" / "check_ci_workflow_targets.py").write_text("", encoding="utf-8")
+
+    workflow_text = _workflow_text(
+        pytest_targets=["tests/unit/test_one.py"],
+        ruff_targets=["scripts/check_ci_workflow_targets.py"],
+    ).replace(
+        "python -m black --check @targets",
+        "python -m black --check scripts/check_ci_workflow_targets.py",
+    )
+
+    _, errors = ci_workflow_targets_module.validate_workflow_targets(tmp_path, workflow_text)
+
+    assert "focused Black step no longer reuses the parsed @targets list." in errors
+
+
 def test_current_ci_workflow_targets_are_valid(ci_workflow_targets_module) -> None:
     workflow_text = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
