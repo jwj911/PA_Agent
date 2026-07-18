@@ -18,6 +18,33 @@
 
 ---
 
+## [Unreleased] — 2026-07-18（第二百二十三轮：L6 事件端口第一阶段）
+
+本轮按 `docs/architecture_roadmap.md` 的 Phase 2 开始推进 **L6 Headless core**。目标是先建立
+PyQt-free 的应用事件端口，为后续拆分 `AppContext` 的 headless/gui bootstrap 和 CLI runner
+提供最小可用边界；本轮不改变现有 GUI signal 连接和业务流程。
+
+### 架构升级
+
+- **新增 `pa_agent/util/events.py`**：定义 `AppEvent` 与 status、exception、data frame、
+  token update、disk error 五类事件工厂，事件对象不依赖 PyQt6。
+- **新增 `pa_agent/util/event_sink.py`**：定义 `EventSink` Protocol、`NullEventSink` 和线程安全的
+  `CollectingEventSink`，用于测试和 headless orchestration 收集事件。
+- **兼容 Qt EventBus**：`EventBus.publish(AppEvent)` 将应用事件转发到既有 Qt signals；
+  `emit_status()` 等旧方法保持不变。
+- **避免 headless import 拉入 Qt**：`pa_agent.util.EventBus` 改为懒加载导出；
+  `import pa_agent.util` 不再急切导入 `pa_agent.util.event_bus`。
+
+### 测试与质量门禁
+
+- 新增 `tests/unit/test_event_sink.py`，覆盖事件工厂、收集型 sink 快照、Null sink，以及 util 包导入
+  不急切加载 Qt EventBus。
+- 扩展 `tests/unit/test_event_bus.py`，验证 `publish(AppEvent)` 仍能转发到旧 Qt signals。
+- `.github/workflows/ci.yml` 将 `events.py`、`event_sink.py` 和 `test_event_sink.py` 纳入
+  targeted/focused 质量门禁。
+
+---
+
 ## [Unreleased] — 2026-07-18（第二百二十二轮：L1-L6 架构升级规划）
 
 本轮根据 L1 Provider/数据源注册表和 L5 经验库第二阶段的完成状态，补充后续 L1-L6

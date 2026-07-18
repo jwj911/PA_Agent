@@ -1,10 +1,11 @@
-﻿"""Unit tests for EventBus signal hub."""
+"""Unit tests for EventBus signal hub."""
 
 from __future__ import annotations
 
 from unittest.mock import MagicMock
 
 from pa_agent.util.event_bus import EventBus
+from pa_agent.util.events import AppEvent
 
 
 def test_event_bus_initializes_with_signals() -> None:
@@ -58,3 +59,29 @@ def test_emit_disk_error_forwards_to_signal() -> None:
     data = {"path": "/test/path", "error": "write failed"}
     bus.emit_disk_error(data)
     mock_receiver.assert_called_once_with(data)
+
+
+def test_publish_forwards_app_events_to_existing_signals() -> None:
+    bus = EventBus()
+    status = MagicMock()
+    exception = MagicMock()
+    data_frame = MagicMock()
+    token_update = MagicMock()
+    disk_error = MagicMock()
+    bus.status.connect(status)
+    bus.exception.connect(exception)
+    bus.data_frame.connect(data_frame)
+    bus.token_update.connect(token_update)
+    bus.disk_error.connect(disk_error)
+
+    bus.publish(AppEvent.status("ready", timestamp_ms=1))
+    bus.publish(AppEvent.exception({"category": "a"}, timestamp_ms=2))
+    bus.publish(AppEvent.data_frame({"bars": []}, timestamp_ms=3))
+    bus.publish(AppEvent.token_update({"tokens": 1}, timestamp_ms=4))
+    bus.publish(AppEvent.disk_error({"path": "x", "error": "failed"}, timestamp_ms=5))
+
+    status.assert_called_once_with("ready")
+    exception.assert_called_once_with({"category": "a"})
+    data_frame.assert_called_once_with({"bars": []})
+    token_update.assert_called_once_with({"tokens": 1})
+    disk_error.assert_called_once_with({"path": "x", "error": "failed"})

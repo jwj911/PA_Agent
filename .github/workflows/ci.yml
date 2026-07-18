@@ -174,6 +174,7 @@ jobs:
           tests/unit/test_demo_record_loader.py
           tests/unit/test_demo_replayer.py
           tests/unit/test_event_bus.py
+          tests/unit/test_event_sink.py
           tests/unit/test_logging.py
           tests/unit/test_ruff_baseline.py
           tests/unit/test_ci_workflow_targets.py
@@ -282,6 +283,8 @@ jobs:
           pa_agent/util/__init__.py
           pa_agent/util/crash_diagnostics.py
           pa_agent/util/event_bus.py
+          pa_agent/util/event_sink.py
+          pa_agent/util/events.py
           pa_agent/util/logging.py
           pa_agent/util/safe_filename.py
           pa_agent/util/mask_secret.py
@@ -438,6 +441,7 @@ jobs:
           tests/unit/test_demo_record_loader.py
           tests/unit/test_demo_replayer.py
           tests/unit/test_event_bus.py
+          tests/unit/test_event_sink.py
           tests/unit/test_logging.py
           tests/unit/test_ruff_baseline.py
           tests/unit/test_ci_workflow_targets.py

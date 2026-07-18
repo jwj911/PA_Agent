@@ -6,6 +6,14 @@ from PyQt6.QtCore import QObject, pyqtSignal
 
 from pa_agent.data.base import KlineFrame
 from pa_agent.records.schema import AlarmPayload
+from pa_agent.util.events import (
+    EVENT_DATA_FRAME,
+    EVENT_DISK_ERROR,
+    EVENT_EXCEPTION,
+    EVENT_STATUS,
+    EVENT_TOKEN_UPDATE,
+    AppEvent,
+)
 
 
 class EventBus(QObject):
@@ -25,6 +33,21 @@ class EventBus(QObject):
     exception = pyqtSignal(object)  # AlarmPayload
     token_update = pyqtSignal(dict)  # token/cost update dict
     disk_error = pyqtSignal(dict)  # {"path": str, "error": str}
+
+    def publish(self, event: AppEvent) -> None:
+        """Publish a PyQt-free application event through the existing Qt signals."""
+        if event.type == EVENT_STATUS:
+            self.emit_status(str(event.payload.get("text", "")))
+        elif event.type == EVENT_EXCEPTION:
+            self.emit_exception(event.payload.get("payload"))
+        elif event.type == EVENT_DATA_FRAME:
+            self.emit_data_frame(event.payload.get("frame"))
+        elif event.type == EVENT_TOKEN_UPDATE:
+            data = event.payload.get("data")
+            self.emit_token_update(data if isinstance(data, dict) else {})
+        elif event.type == EVENT_DISK_ERROR:
+            data = event.payload.get("data")
+            self.emit_disk_error(data if isinstance(data, dict) else {})
 
     def emit_status(self, text: str) -> None:
         """Convenience wrapper — emit a status string."""

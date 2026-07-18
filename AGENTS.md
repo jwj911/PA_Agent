@@ -161,7 +161,8 @@ price_action_agent/
   - `logging.py`：日志配置与 API Key 掩码格式化。
   - `mask_secret.py`：密钥掩码函数。
   - `safe_filename.py`：安全文件名组件。
-  - `event_bus.py`：应用内事件总线。
+  - `events.py` / `event_sink.py`：PyQt-free 应用事件对象与 headless 事件端口。
+  - `event_bus.py`：Qt 事件总线，兼容旧 signal，并可发布 `AppEvent`。
   - `crash_diagnostics.py`：崩溃诊断与启动信息记录。
   - `threading.py`：取消令牌、worker 事件等并发原语。
 
