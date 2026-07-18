@@ -99,6 +99,10 @@ price_action_agent/
    - 配置日志（API Key 脱敏）；
    - 创建 `EventBus`、数据源、AI 客户端；
    - 创建 `PromptAssembler`、`JsonValidator`、记录写入器、经验库读取器等。
+4. `AppContext.bootstrap_headless()` 提供无 GUI 核心装配：
+   - 不创建 Qt `EventBus`，使用 `EventSink`；
+   - 不连接数据源；
+   - 创建 AI 客户端、Prompt、Validator、PendingWriter、ExperienceReader、SessionLedger 等核心组件。
 
 ### 3.2 关键子包职责
 

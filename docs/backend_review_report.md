@@ -276,7 +276,7 @@ PA Agent 的后端已经具备一个生产级桌面应用的核心骨架：
 | L3 | 引入 Pipeline Builder | `orchestrator/two_stage.py` | 用 Pipeline/StateMachine 替代巨型 `submit()` |
 | L4 | 性能优化 | `data/snapshot.py`、`ai/kline_features.py`、`records/analysis_history.py`、`records/pending_writer.py`、`ai/deepseek_client.py` | 增量指标、索引、追加写、复用 HTTP client |
 | L5 | 经验库升级（第二阶段完成） | `records/experience_reader.py`、`records/experience_similarity.py` | Stage 2 先按全量案例的 pattern + direction 排序，再以最近 K 线几何相似度打破同分并列；无 K 线字段的旧案例保持兼容 |
-| L6 | 无 GUI 运行支持（事件端口第一阶段完成） | `util/events.py`、`util/event_sink.py`、`util/event_bus.py`、`app_context.py` | 已有 PyQt-free AppEvent/EventSink；后续拆分 AppContext headless/gui bootstrap，允许 CLI/服务端运行 |
+| L6 | 无 GUI 运行支持（Headless bootstrap 第一阶段完成） | `util/events.py`、`util/event_sink.py`、`util/event_bus.py`、`app_context.py` | 已有 PyQt-free AppEvent/EventSink 和 `bootstrap_headless()`；后续拆分 GUI adapters，增加 CLI/服务端入口 |
 | L7 | CI 增强 | `.github/workflows/ci.yml` | 运行 `pytest -m "not e2e"`、ruff、black、覆盖率 |
 
 ---

@@ -83,6 +83,7 @@ jobs:
           tests/unit/test_gui_theme_exports.py
           tests/unit/test_gui_theme_tokens.py
           tests/unit/test_util_exports.py
+          tests/unit/test_app_context_headless.py
           tests/unit/test_package_metadata.py
           tests/unit/test_package_markers.py
           tests/unit/test_order_method_router.py
@@ -347,6 +348,7 @@ jobs:
           tests/unit/test_gui_theme_exports.py
           tests/unit/test_gui_theme_tokens.py
           tests/unit/test_util_exports.py
+          tests/unit/test_app_context_headless.py
           tests/unit/test_package_metadata.py
           tests/unit/test_package_markers.py
           tests/unit/test_order_method_router.py

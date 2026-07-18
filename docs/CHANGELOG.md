@@ -18,6 +18,29 @@
 
 ---
 
+## [Unreleased] — 2026-07-18（第二百二十四轮：L6 Headless bootstrap 第一阶段）
+
+本轮继续推进 **L6 Headless core**。第二百二十三轮已建立 PyQt-free 事件端口；本轮在
+`AppContext` 层增加最小 headless core 装配入口，使测试和后续 CLI runner 可以在不创建 Qt
+`EventBus`、不连接数据源的情况下初始化核心服务。
+
+### 架构升级
+
+- **新增 `AppContext.bootstrap_headless()`**：支持传入内存态 `Settings`、`EventSink` 和临时目录；
+  默认使用 `NullEventSink`，并可跳过 provider sync / logging 配置，便于 headless 测试。
+- **保留 GUI 启动兼容**：`AppContext.bootstrap()` 仍创建 Qt `EventBus`、连接并订阅数据源；
+  同时把 `event_sink` 指向该 `EventBus`，不改变现有 GUI 行为。
+- **Headless 记录错误事件**：`PendingWriter` 现在兼容旧 `emit_disk_error()` 和新
+  `EventSink.publish(AppEvent.disk_error(...))`，headless sink 可收集磁盘错误。
+
+### 测试与质量门禁
+
+- 新增 `tests/unit/test_app_context_headless.py`，覆盖无 Qt EventBus 的核心组件装配、PendingWriter
+  磁盘错误发布到 `CollectingEventSink`，以及 headless bootstrap 不导入 `pa_agent.util.event_bus`。
+- `.github/workflows/ci.yml` 将 `test_app_context_headless.py` 纳入 targeted/focused 质量门禁。
+
+---
+
 ## [Unreleased] — 2026-07-18（第二百二十三轮：L6 事件端口第一阶段）
 
 本轮按 `docs/architecture_roadmap.md` 的 Phase 2 开始推进 **L6 Headless core**。目标是先建立

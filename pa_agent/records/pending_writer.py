@@ -183,7 +183,13 @@ class PendingWriter:
         """Log the error and optionally emit to the event bus."""
         self._logger.error("PendingWriter: disk error writing %s: %s", path, exc)
         if self._event_bus is not None:
+            data = {"path": str(path), "error": str(exc)}
             try:
-                self._event_bus.emit_disk_error({"path": str(path), "error": str(exc)})
+                if hasattr(self._event_bus, "emit_disk_error"):
+                    self._event_bus.emit_disk_error(data)
+                elif hasattr(self._event_bus, "publish"):
+                    from pa_agent.util.events import AppEvent
+
+                    self._event_bus.publish(AppEvent.disk_error(data))
             except Exception as bus_exc:
                 self._logger.error("PendingWriter: event_bus emit failed: %s", bus_exc)
