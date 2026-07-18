@@ -91,16 +91,19 @@ price_action_agent/
 2. `pa_agent.main:main()`：
    - 启用崩溃诊断与文件日志；
    - 创建 `QApplication` 并应用主题；
-   - 调用 `AppContext.bootstrap()` 装配所有组件；
+   - 调用 `AppContext.bootstrap()`（兼容 facade，当前委托 `AppContext.bootstrap_gui()`）装配 GUI 运行路径；
    - 创建 `MainWindow(ctx)` 并显示。
-3. `AppContext.bootstrap()`（`pa_agent/app_context.py`）：
+3. `AppContext.bootstrap_gui()`（`pa_agent/app_context.py`）：
    - 加载 `config/settings.json`；
    - 通过 `provider_sync_service` 同步特殊 provider（QClaw / WorkBuddy / Cursor）配置；
    - 配置日志（API Key 脱敏）；
-   - 创建 `EventBus`、数据源、AI 客户端；
-   - 创建 `PromptAssembler`、`JsonValidator`、记录写入器、经验库读取器等。
-4. `AppContext.bootstrap_headless()` 提供无 GUI 核心装配：
-   - 不创建 Qt `EventBus`，使用 `EventSink`；
+   - 创建 Qt `EventBus`，并把 `event_sink` 指向该 `EventBus`；
+   - 创建数据源，执行连接和默认 symbol/timeframe 订阅；
+   - 复用共享 core helper 创建 AI 客户端、`PromptAssembler`、`JsonValidator`、记录写入器、经验库读取器等。
+4. `AppContext.bootstrap()` 保持旧 GUI 入口兼容，公开签名不变，委托到 `bootstrap_gui()`。
+5. `AppContext.bootstrap_headless()` 提供无 GUI 核心装配：
+   - 复用同一共享 core helper；
+   - 不导入或创建 Qt `EventBus`，使用显式 `EventSink` 或默认 `NullEventSink`；
    - 不连接数据源；
    - 创建 AI 客户端、Prompt、Validator、PendingWriter、ExperienceReader、SessionLedger 等核心组件。
 
@@ -385,3 +388,7 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
 12. **L1 当前进度**：数据源侧注册表已完成第一阶段；下一轮 Provider 侧注册表必须保留
     `openclaw_cs` → Cursor SDK 的专用路由，以及其余模型 → OpenAI-compatible client 的兼容行为，
     不把 QClaw / WorkBuddy / Cursor 的启动同步逻辑重复搬入 client factory。
+13. **L6 当前进度**：`AppContext` 已拆出共享 core helper 和 `bootstrap_gui()`；`bootstrap()`
+    委托 GUI 路径。headless 复用 core helper，必须继续保持无 Qt `EventBus` import、无数据源连接；
+    GUI adapter 继续负责 `EventBus`、数据源连接/订阅，且 `event_sink` 指向 `EventBus`。后续重点是
+    CLI runner 和 GUI/headless 同 snapshot 等价测试。

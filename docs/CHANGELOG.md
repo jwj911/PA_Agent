@@ -18,6 +18,35 @@
 
 ---
 
+## [Unreleased] — 2026-07-18（第二百二十五轮：L6 bootstrap 边界拆分）
+
+本轮继续推进 **L6 Headless core** 的 `AppContext` 启动边界拆分。此前 headless 入口已可
+在不创建 Qt `EventBus`、不连接数据源的情况下装配核心组件；本轮把 GUI 与 headless 的核心服务
+装配收敛到共享 core helper，并把 GUI 专属 adapter 留在 GUI bootstrap 路径中。
+
+### 架构升级
+
+- **共享 core helper**：`AppContext._build_core()` 统一装配 `Settings`、AI client、
+  `PromptAssembler`、`JsonValidator`、`PendingWriter`、`ExperienceReader`、router 和
+  `SessionTokenLedger`，由 GUI/headless 两条路径复用。
+- **新增 GUI bootstrap 边界**：`AppContext.bootstrap_gui()` 集中创建 Qt `EventBus`、数据源连接
+  和默认 symbol/timeframe 订阅；旧 `AppContext.bootstrap()` 保持公开签名不变并委托 GUI 路径。
+- **Headless 保持 PyQt-free**：`AppContext.bootstrap_headless()` 复用 core helper，仍不导入 Qt
+  `EventBus`、不连接数据源；未传入 sink 时继续使用 `NullEventSink`。
+- **事件端口语义对齐**：GUI 路径的 `event_sink` 指向 Qt `EventBus`，由 `EventBus` 继续负责
+  应用事件到 Qt signals 的适配。
+
+### 文档
+
+- 同步 `docs/CHANGELOG.md`、`AGENTS.md` 和 `docs/architecture_roadmap.md` 的 L6 当前进度。
+
+### 测试与质量门禁
+
+- 扩展 `tests/unit/test_app_context_headless.py`，覆盖共享 core helper 不导入 Qt `EventBus`，以及
+  `AppContext.bootstrap()` 仍保留 GUI `EventBus`、数据源连接/订阅和 `event_sink` 兼容语义。
+
+---
+
 ## [Unreleased] — 2026-07-18（第二百二十四轮：L6 Headless bootstrap 第一阶段）
 
 本轮继续推进 **L6 Headless core**。第二百二十三轮已建立 PyQt-free 事件端口；本轮在
