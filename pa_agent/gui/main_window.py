@@ -396,7 +396,7 @@ class MainWindow(QMainWindow):
             _last_tf = getattr(_settings.general, "last_timeframe", "15m") or "15m"
 
         # Data source
-        from pa_agent.data.factory import DATA_SOURCE_CHOICES, normalize_data_source_kind
+        from pa_agent.data.factory import data_source_choices, normalize_data_source_kind
 
         _last_ds = "mt5"
         if _settings is not None:
@@ -407,7 +407,7 @@ class MainWindow(QMainWindow):
 
         ctrl_layout.addWidget(QLabel("数据来源:"))
         self._data_source_combo = QComboBox()
-        for kind, label in DATA_SOURCE_CHOICES:
+        for kind, label in data_source_choices():
             self._data_source_combo.addItem(label, kind)
         ds_index = self._data_source_combo.findData(_last_ds)
         if ds_index >= 0:

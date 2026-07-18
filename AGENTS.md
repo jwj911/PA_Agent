@@ -124,7 +124,8 @@ price_action_agent/
   - `paths.py`：集中管理项目根目录、配置、日志、记录、prompt 目录等路径常量。
 
 - **`pa_agent/data/`**：市场数据层。
-  - `factory.py`：数据源工厂，返回 MT5 / TradingView / AkShare / EastMoney / Tushare / YFinance 源。
+  - `factory.py`：数据源注册表 facade 与兼容工厂，返回 MT5 / TradingView / AkShare / EastMoney / Tushare / YFinance 源。
+  - `registry.py`：数据源规格注册表与延迟 builder，支持运行时注册/注销自定义数据源。
   - `base.py`：通用数据模型 `KlineFrame`、`KlineBar`、`IndicatorBundle` 与 `DataSource` ABC。
   - `mt5.py` / `tradingview.py` / `tradingview_connectivity.py` / `akshare_source.py` / `eastmoney_source.py` / `tushare_source.py` / `yfinance_source.py`：各数据源实现。
   - `snapshot.py` / `bar_close_wait.py` / `refresh_loop.py`：实时刷新、K 线收盘等待与快照构建。

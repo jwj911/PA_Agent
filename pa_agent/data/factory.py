@@ -1,4 +1,4 @@
-"""Construct :class:`DataSource` implementations by kind id."""
+"""Construct :class:`DataSource` implementations by registered kind id."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from pa_agent.data.market_defaults import (
     GOLD_MT5_SYMBOL,
     GOLD_TV_SYMBOL,
 )
+from pa_agent.data.registry import DataSourceBuilder, DataSourceRegistry, DataSourceSpec
 
 if TYPE_CHECKING:
     from pa_agent.config.settings import Settings
@@ -23,23 +24,76 @@ DataSourceKind = Literal[
     "yfinance",
 ]
 
-# UI-visible sources only — ``eastmoney`` is config/programmatic, not listed here.
-DATA_SOURCE_CHOICES: tuple[tuple[DataSourceKind, str], ...] = (
-    ("mt5", "MT5"),
-    ("tradingview", "TradingView"),
-)
+_REGISTRY = DataSourceRegistry()
 
+
+def _build_mt5(_settings: Settings | None) -> DataSource:
+    from pa_agent.data.mt5 import MT5Source
+
+    return MT5Source()
+
+
+def _build_tradingview(_settings: Settings | None) -> DataSource:
+    from pa_agent.data.tradingview import TradingViewSource
+
+    return TradingViewSource()
+
+
+def _build_akshare(_settings: Settings | None) -> DataSource:
+    from pa_agent.data.akshare_source import AkShareSource
+
+    return AkShareSource()
+
+
+def _build_eastmoney(_settings: Settings | None) -> DataSource:
+    from pa_agent.data.eastmoney_source import EastMoneySource
+
+    return EastMoneySource()
+
+
+def _build_tushare(settings: Settings | None) -> DataSource:
+    if settings is None:
+        from pa_agent.config.paths import SETTINGS_JSON_PATH
+        from pa_agent.config.settings import load_settings
+
+        settings = load_settings(SETTINGS_JSON_PATH)
+
+    from pa_agent.data.tushare_source import TushareSource
+
+    return TushareSource(settings=settings)
+
+
+def _build_yfinance(_settings: Settings | None) -> DataSource:
+    from pa_agent.data.yfinance_source import YFinanceSource
+
+    return YFinanceSource()
+
+
+def _register_builtin_sources() -> None:
+    """Register built-ins without importing their optional dependencies."""
+    for spec in (
+        DataSourceSpec("mt5", "MT5", GOLD_MT5_SYMBOL, _build_mt5, visible=True),
+        DataSourceSpec(
+            "tradingview", "TradingView", GOLD_TV_SYMBOL, _build_tradingview, visible=True
+        ),
+        DataSourceSpec("akshare", "AkShare", A_SHARE_DEFAULT_SYMBOL, _build_akshare),
+        DataSourceSpec("eastmoney", "东方财富", A_SHARE_DEFAULT_SYMBOL, _build_eastmoney),
+        DataSourceSpec("tushare", "Tushare(A股)", A_SHARE_DEFAULT_SYMBOL, _build_tushare),
+        DataSourceSpec("yfinance", "YFinance", "GC=F", _build_yfinance),
+    ):
+        _REGISTRY.register(spec)
+
+
+_register_builtin_sources()
+
+# Compatibility snapshot for existing GUI callers. New integrations should use
+# ``data_source_choices()`` so runtime registrations are visible dynamically.
+DATA_SOURCE_CHOICES: tuple[tuple[DataSourceKind, str], ...] = _REGISTRY.choices()  # type: ignore[assignment]
 _HIDDEN_KINDS: frozenset[DataSourceKind] = frozenset(
-    {"akshare", "eastmoney", "tushare", "yfinance"}
+    spec.kind for spec in _REGISTRY.specs() if not spec.visible
 )
-
 _DEFAULT_SYMBOLS: dict[DataSourceKind, str] = {
-    "mt5": GOLD_MT5_SYMBOL,
-    "tradingview": GOLD_TV_SYMBOL,
-    "akshare": A_SHARE_DEFAULT_SYMBOL,
-    "eastmoney": A_SHARE_DEFAULT_SYMBOL,
-    "tushare": A_SHARE_DEFAULT_SYMBOL,
-    "yfinance": "GC=F",
+    spec.kind: spec.default_symbol for spec in _REGISTRY.specs()
 }
 
 
@@ -50,31 +104,55 @@ def default_tradingview_exchange() -> str:
 
 def normalize_data_source_kind(kind: str | None) -> DataSourceKind:
     """Return a supported data-source kind, defaulting to MT5."""
-    supported = {k for k, _ in DATA_SOURCE_CHOICES} | _HIDDEN_KINDS
-    if kind in supported:
-        return kind  # type: ignore[return-value]
+    spec = _REGISTRY.get(kind) if kind is not None else None
+    if spec is not None:
+        return spec.kind  # type: ignore[return-value]
     return "mt5"
 
 
 def data_source_label(kind: str | None) -> str:
     """Human-readable label for *kind*."""
     normalized = normalize_data_source_kind(kind)
-    for key, label in DATA_SOURCE_CHOICES:
-        if key == normalized:
-            return label
-    if normalized == "eastmoney":
-        return "东方财富"
-    if normalized == "tushare":
-        return "Tushare(A股)"
-    if normalized == "akshare":
-        return "AkShare"
-    if normalized == "yfinance":
-        return "YFinance"
-    return "MT5"
+    spec = _REGISTRY.get(normalized)
+    return spec.label if spec is not None else "MT5"
 
 
 def default_symbol_for_kind(kind: str | None) -> str:
-    return _DEFAULT_SYMBOLS[normalize_data_source_kind(kind)]
+    normalized = normalize_data_source_kind(kind)
+    spec = _REGISTRY.get(normalized)
+    return spec.default_symbol if spec is not None else GOLD_MT5_SYMBOL
+
+
+def data_source_choices() -> tuple[tuple[str, str], ...]:
+    """Return UI-visible sources, including runtime registrations."""
+    return _REGISTRY.choices()
+
+
+def register_data_source(
+    kind: str,
+    *,
+    label: str,
+    default_symbol: str,
+    builder: DataSourceBuilder,
+    visible: bool = False,
+    replace: bool = False,
+) -> None:
+    """Register a custom data source without editing this factory."""
+    _REGISTRY.register(
+        DataSourceSpec(
+            kind=kind,
+            label=label,
+            default_symbol=default_symbol,
+            builder=builder,
+            visible=visible,
+        ),
+        replace=replace,
+    )
+
+
+def unregister_data_source(kind: str) -> DataSourceSpec | None:
+    """Remove a runtime data source registration."""
+    return _REGISTRY.unregister(kind)
 
 
 def create_data_source(kind: str | None, settings: Settings | None = None) -> DataSource:
@@ -87,31 +165,8 @@ def create_data_source(kind: str | None, settings: Settings | None = None) -> Da
     fallback so standalone/programmatic construction still works.
     """
     normalized = normalize_data_source_kind(kind)
-    if normalized == "tradingview":
-        from pa_agent.data.tradingview import TradingViewSource
-
-        return TradingViewSource()
-    if normalized == "eastmoney":
-        from pa_agent.data.eastmoney_source import EastMoneySource
-
-        return EastMoneySource()
-    if normalized == "tushare":
-        from pa_agent.data.tushare_source import TushareSource
-
-        if settings is None:
-            from pa_agent.config.paths import SETTINGS_JSON_PATH
-            from pa_agent.config.settings import load_settings
-
-            settings = load_settings(SETTINGS_JSON_PATH)
-        return TushareSource(settings=settings)
-    if normalized == "akshare":
-        from pa_agent.data.akshare_source import AkShareSource
-
-        return AkShareSource()
-    if normalized == "yfinance":
-        from pa_agent.data.yfinance_source import YFinanceSource
-
-        return YFinanceSource()
-    from pa_agent.data.mt5 import MT5Source
-
-    return MT5Source()
+    spec = _REGISTRY.get(normalized)
+    if spec is None:
+        spec = _REGISTRY.get("mt5")
+    assert spec is not None
+    return spec.builder(settings)

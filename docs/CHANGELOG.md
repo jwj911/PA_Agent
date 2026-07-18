@@ -18,6 +18,35 @@
 
 ---
 
+## [Unreleased] — 2026-07-18（第二百二十轮：L1 数据源注册表第一阶段）
+
+本轮开始推进路线图 **L1：Provider/数据源注册表**，先完成数据源侧的低风险切片。此前
+`data/factory.py` 同时维护数据源种类、UI 标签、默认品种和 `if/elif` 实例化分支；新增数据源
+必须修改核心工厂，且会在工厂层触发具体实现导入。
+
+### 架构升级
+
+- **新增 `pa_agent/data/registry.py`**：引入不可变 `DataSourceSpec` 与
+  `DataSourceRegistry`，统一保存 kind、标签、默认品种、可见性和延迟 builder；注册表读写使用
+  `RLock`，builder 实例化保持在锁外。
+- **数据源工厂注册表化**：内置 MT5、TradingView、AkShare、东方财富、Tushare、YFinance
+  均通过注册规格创建；具体数据源仍在 builder 内延迟导入，保留可选依赖和 Tushare settings
+  fallback 行为。
+- **运行时扩展 API**：新增 `register_data_source()`、`unregister_data_source()`、
+  `data_source_choices()`；`create_data_source()`、`data_source_label()`、
+  `default_symbol_for_kind()`、`normalize_data_source_kind()` 保持兼容。
+- **GUI 动态选项**：主窗口数据源下拉框改用动态可见选项，运行时注册的可见数据源可直接呈现。
+  AI Provider 注册表不在本轮范围，作为 L1 后续切片。
+
+### 测试与验证
+
+- `tests/unit/test_data_source_factory.py` 新增自定义数据源注册、创建、动态可见和重复 kind
+  拒绝测试。
+- 数据源/记录聚焦测试 **22 passed**；`py_compile`、Ruff、Ruff format、CI 目标清单和 Ruff
+  基线 **3725 条**均通过。
+
+---
+
 ## [Unreleased] — 2026-07-18（第二百一十九轮：L5 K 线相似度排序）
 
 本轮继续推进路线图 **L5：经验库升级**。第二百一十五轮已完成全量案例的
