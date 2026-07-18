@@ -18,6 +18,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-18（第二百一十七轮：CI Black 锚点漂移测试）
+
+本轮继续推进 **L7：CI 增强**。第二百一十六轮新增的 CI workflow 目标清单自检会检查 focused Black
+是否仍复用 focused Ruff 的目标锚点，但测试只覆盖了清单解析、重复路径、缺失路径和当前真实 workflow，
+缺少对 Black 锚点漂移这一失败路径的直接回归。
+
+### 工程治理
+
+- **补齐 Black 锚点漂移回归测试**：`tests/unit/test_ci_workflow_targets.py` 新增失败路径测试，
+  构造 focused Ruff step 保持存在、但 focused Black PowerShell 脚本查找 stale step 名称的 workflow，
+  断言 `validate_workflow_targets()` 会报告 focused Black 不再锚定 focused Ruff step。
+- **保持运行逻辑不变**：本轮不修改 `scripts/check_ci_workflow_targets.py`、CI workflow、targeted
+  pytest 清单、focused Ruff 清单或 Black 执行方式，仅补齐自检脚本的测试合同。
+
+### 验证
+
+- `QT_QPA_PLATFORM=offscreen py -3.12 -m pytest tests\unit\test_ci_workflow_targets.py --tb=short -q -p no:cacheprovider` → **4 passed**。
+- `py -3.12 -m ruff check scripts\check_ci_workflow_targets.py tests\unit\test_ci_workflow_targets.py` → **All checks passed**。
+- `py -3.12 -m py_compile scripts\check_ci_workflow_targets.py tests\unit\test_ci_workflow_targets.py` → 通过。
+
+---
+
 ## [Unreleased] — 2026-07-17（第二百一十六轮：CI workflow 目标清单自检）
 
 本轮继续推进 **L7：CI 增强**。当前 targeted pytest、focused Ruff 与 focused Black 依赖

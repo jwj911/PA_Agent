@@ -95,6 +95,28 @@ def test_validate_workflow_targets_reports_duplicates_and_missing_paths(
     assert "targeted pytest contains missing paths: tests/unit/missing.py" in errors
 
 
+def test_validate_workflow_targets_reports_black_anchor_drift(
+    tmp_path,
+    ci_workflow_targets_module,
+) -> None:
+    (tmp_path / "tests" / "unit").mkdir(parents=True)
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "tests" / "unit" / "test_one.py").write_text("", encoding="utf-8")
+    (tmp_path / "scripts" / "check_ci_workflow_targets.py").write_text("", encoding="utf-8")
+
+    workflow_text = _workflow_text(
+        pytest_targets=["tests/unit/test_one.py"],
+        ruff_targets=["scripts/check_ci_workflow_targets.py"],
+    ).replace(
+        "$start = [Array]::IndexOf($workflow, '      - name: Run focused Ruff checks')",
+        "$start = [Array]::IndexOf($workflow, '      - name: Run stale Ruff checks')",
+    )
+
+    _, errors = ci_workflow_targets_module.validate_workflow_targets(tmp_path, workflow_text)
+
+    assert "focused Black step no longer anchors on the focused Ruff step name." in errors
+
+
 def test_current_ci_workflow_targets_are_valid(ci_workflow_targets_module) -> None:
     workflow_text = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
