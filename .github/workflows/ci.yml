@@ -158,6 +158,7 @@ jobs:
           tests/unit/test_token_counter.py
           tests/unit/test_strategy_files.py
           tests/unit/test_prompt_txt_files.py
+          tests/unit/test_template_store.py
           tests/unit/test_prompt_assembler.py
           tests/unit/test_token_indicator_thresholds.py
           tests/unit/test_free_chat_resend_drops_reasoning.py
@@ -264,6 +265,7 @@ jobs:
           pa_agent/ai/session_ledger.py
           pa_agent/ai/cursor_sdk_client.py
           pa_agent/ai/prompts
+          pa_agent/ai/prompting
           pa_agent/config/paths.py
           pa_agent/orchestrator/validation_retry.py
           pa_agent/gui/__init__.py
@@ -428,6 +430,7 @@ jobs:
           tests/unit/test_token_counter.py
           tests/unit/test_strategy_files.py
           tests/unit/test_prompt_txt_files.py
+          tests/unit/test_template_store.py
           tests/unit/test_prompt_assembler.py
           tests/unit/test_token_indicator_thresholds.py
           tests/unit/test_free_chat_resend_drops_reasoning.py

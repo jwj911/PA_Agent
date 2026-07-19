@@ -18,6 +18,50 @@
 
 ---
 
+## [Unreleased] — 2026-07-19（第二百三十轮：L2 TemplateStore / manifest / golden snapshot 基线）
+
+本轮按既定顺序进入 **L2 Prompt 模板引擎化**，先完成低风险的存储与合同基线，不切换
+`PromptAssembler` 默认路径，也不重写现有中文策略文本。目标是让后续 system、Stage 1、
+Stage 2 和 continuation 迁移都有明确的模板元数据、严格加载错误和字节级回归证据。
+
+### Prompt engineering
+
+- **新增 `pa_agent/ai/prompting/template_manifest.py`**：为现有 29 个 `.txt` 模板声明
+  阶段归属（Stage 1/Stage 2）、角色（system/task/base/strategy）、版本、输出契约和依赖；
+  启动时校验重复名称、非法路径、未知阶段、未知依赖和无版本项。
+- **新增 `pa_agent/ai/prompting/template_store.py`**：只允许加载 manifest 中的模板，统一使用
+  UTF-8，缓存元数据受锁保护，文件读取放在锁外；未知模板、缺失文件、空文件、编码错误和
+  非法阶段均明确失败，不再静默生成不完整模板。
+- **新增 `TemplateSnapshot`**：记录模板版本、UTF-8 字节长度和 SHA-256；对全部 29 个模板
+  及现有 `PromptAssembler` 共享 system prompt 建立 golden digest，作为后续迁移的字节合同。
+- **保持兼容**：本轮没有把 `PromptAssembler._load()` 替换为 `TemplateStore`，没有改变文件顺序、
+  system prefix、KV cache key、Stage 1/Stage 2 输出或 continuation 行为。
+
+### 测试与 CI
+
+- 新增 `tests/unit/test_template_store.py`，覆盖 manifest 覆盖率、阶段合同、golden digest、
+  缓存失效、未知模板、错误阶段、缺失文件和非法 UTF-8。
+- 新增 `tests/fixtures/prompt_golden.json`，固定 29 个模板和共享 system prompt 的 UTF-8 快照。
+- 将 `tests/unit/test_template_store.py` 与 `pa_agent/ai/prompting` 纳入 targeted pytest 和 focused
+  Ruff 清单；CI 目标清单同步自检。
+
+### 未收敛项与后续
+
+- 尚未引入 `TemplateContext`、严格变量渲染或 Jinja/其他模板引擎。
+- `PromptAssembler` 仍是运行时唯一默认读取路径；TemplateStore 当前是兼容旁路和合同层。
+- 后续按风险顺序迁移共享 system prompt、Stage 1 user prompt、Stage 2 user prompt 和
+  continuation，每一步都必须通过旧/新字节等价测试。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_template_store.py tests/unit/test_strategy_files.py tests/unit/test_prompt_txt_files.py tests/unit/test_prompt_assembler.py --tb=short -q -p no:cacheprovider -p no:qt` → **51 passed**。
+- `py -3.12 -m ruff check pa_agent/ai/prompting tests/unit/test_template_store.py` → **All checks passed**。
+- `py -3.12 -m ruff format --check pa_agent/ai/prompting tests/unit/test_template_store.py` → 通过。
+- `py -3.12 -m py_compile pa_agent/ai/prompting/__init__.py pa_agent/ai/prompting/template_manifest.py pa_agent/ai/prompting/template_store.py tests/unit/test_template_store.py` → 通过。
+- `py -3.12 scripts/check_ci_workflow_targets.py` 和 `py -3.12 scripts/check_ruff_baseline.py` → 通过。
+
+---
+
 ## [Unreleased] — 2026-07-19（第二百二十九轮：L6 Headless CLI 最小切片）
 
 本轮按 `docs/iteration_plan.md` 的下一项优先级继续推进 **L6 Headless/编排**。此前

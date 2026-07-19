@@ -1,0 +1,184 @@
+{
+  "manifest_version": "v1",
+  "templates": [
+    {
+      "name": "提示词大纲_人设与思维方式.txt",
+      "version": "v1",
+      "byte_length": 5608,
+      "sha256": "98f4f54a98ae524441f3c155d584e6294a4008fccf3e6602dd536bc0d2f0b12b"
+    },
+    {
+      "name": "二元决策.txt",
+      "version": "v1",
+      "byte_length": 42207,
+      "sha256": "875a1a210b990ff2ade05c01fdfa8e93abccd87480e0e5dcd3d76f68e9d0fda5"
+    },
+    {
+      "name": "市场诊断框架.txt",
+      "version": "v1",
+      "byte_length": 85580,
+      "sha256": "6a74866dbd377f7511ab16d5811419fec5e6a7a2140e9a7ae3cf0427e421999c"
+    },
+    {
+      "name": "文件16-K线信号识别.txt",
+      "version": "v1",
+      "byte_length": 20995,
+      "sha256": "9b61ac25b6d6d235ae282164d4e9e3eefcf6b46cd20bdb972d8bc4a6fb40728e"
+    },
+    {
+      "name": "逐棒分析检查单.txt",
+      "version": "v1",
+      "byte_length": 2304,
+      "sha256": "4e867202df9cba4dcb5a74a6c122bb112880534f9cfeeb24e6ca25df8ab996ea"
+    },
+    {
+      "name": "文件17-止损和止盈与仓位管理.txt",
+      "version": "v1",
+      "byte_length": 3979,
+      "sha256": "e953072fccb182bd391511132fa924ca5b2c5711292051348446df1da7b2a805"
+    },
+    {
+      "name": "文件23-MeasuredMove与结构目标.txt",
+      "version": "v1",
+      "byte_length": 5371,
+      "sha256": "07dbc646c2764230f580e91473ce5e7721283f0cc04366491500cef99ccc4f35"
+    },
+    {
+      "name": "上涨通道分析识别.txt",
+      "version": "v1",
+      "byte_length": 15551,
+      "sha256": "0d0b0fe15d13609f74f3f436158484dbae42ef0938b031c62f6038acc1924282"
+    },
+    {
+      "name": "上涨通道交易策略.txt",
+      "version": "v1",
+      "byte_length": 12688,
+      "sha256": "ded76e748fa9ab2298b1933610c79acb8a14e2a9433921ced86dea0b357fd604"
+    },
+    {
+      "name": "下跌通道分析识别.txt",
+      "version": "v1",
+      "byte_length": 16597,
+      "sha256": "f560ec415902f586a0127c6cbc32c648c0e450516f8e0b6f42e97b60b579fe7b"
+    },
+    {
+      "name": "下跌通道交易策略.txt",
+      "version": "v1",
+      "byte_length": 14651,
+      "sha256": "ef5e84e3955d84ccabc53b3d65bda90a0f9f1a19d5a2dff2aa422a2bb32b1a83"
+    },
+    {
+      "name": "极速上涨分析识别.txt",
+      "version": "v1",
+      "byte_length": 19778,
+      "sha256": "e1614870b72bbbfbe06028dbf982dacb2630dfff83e6513c6aa1f694f5c11594"
+    },
+    {
+      "name": "极速上涨交易策略.txt",
+      "version": "v1",
+      "byte_length": 7519,
+      "sha256": "ad01f837949956ab22224e6b46bd7834d4b2fe5479c36ffb623e04fab5606e7b"
+    },
+    {
+      "name": "极速下跌分析识别.txt",
+      "version": "v1",
+      "byte_length": 20396,
+      "sha256": "3ec57723e60a4168b18da61d515c9547d1ed9a2a3e0d75ab63dcbc38209c3f96"
+    },
+    {
+      "name": "极速下跌交易策略.txt",
+      "version": "v1",
+      "byte_length": 7293,
+      "sha256": "ab982e20c0f0086887832b539e6af4c344b71526f26fb801111b2c187b107b5b"
+    },
+    {
+      "name": "震荡区间分析识别.txt",
+      "version": "v1",
+      "byte_length": 17328,
+      "sha256": "97b09de0b0740e3a421a24f133018cc877389fd0e79f4743960110c275427c16"
+    },
+    {
+      "name": "震荡区间交易策略.txt",
+      "version": "v1",
+      "byte_length": 16746,
+      "sha256": "a402d82f0920828607f701fc4401a903588ef3650388f15deafb5f7850a054b0"
+    },
+    {
+      "name": "文件13-窄通道与宽通道策略.txt",
+      "version": "v1",
+      "byte_length": 15111,
+      "sha256": "b24cb01cad6baa2581c4b6fc99e1b17a8fcc442ea2db538872433128f9e0f93c"
+    },
+    {
+      "name": "文件14-楔形形态分析交易.txt",
+      "version": "v1",
+      "byte_length": 16596,
+      "sha256": "739a7cfb6ae95b8b23180a68d67fae8f8c7e918488217805d350a556849db1fe"
+    },
+    {
+      "name": "文件15-二次入场机会.txt",
+      "version": "v1",
+      "byte_length": 13952,
+      "sha256": "8abf3a4fa6dec5f8123f1925544da2b36f57cc496c7ff072f1a09f8f105e7dfa"
+    },
+    {
+      "name": "文件18-突破失败与突破测试.txt",
+      "version": "v1",
+      "byte_length": 4705,
+      "sha256": "77a233d15d9a3bd3154fcfaa9694c043cd11b1221012c57fedc7ed07b2930d72"
+    },
+    {
+      "name": "文件19-H1H2-L1L2计数.txt",
+      "version": "v1",
+      "byte_length": 3288,
+      "sha256": "a56eb7cebc929cdbca8ad529f410f03fb3efb59c4cdf6bd9af592f0d78e52f57"
+    },
+    {
+      "name": "文件20-AlwaysIn与20GB.txt",
+      "version": "v1",
+      "byte_length": 3690,
+      "sha256": "04654e63a90917664e62094f480ae1bfaeffd2e693249ad75d27a433c0cef683"
+    },
+    {
+      "name": "文件21-铁丝网与无交易环境.txt",
+      "version": "v1",
+      "byte_length": 4204,
+      "sha256": "344e69a655f7a29bba121ce0cdd864310acbbcfb1012e9e16ae4dbb99b5ee984"
+    },
+    {
+      "name": "文件22-信号失败后的磁力位.txt",
+      "version": "v1",
+      "byte_length": 2916,
+      "sha256": "561e029dd934e2c8fdbae83df40b962c82c3c65c1e5c7e981a3a1717bf46e773"
+    },
+    {
+      "name": "文件24-最终旗形与趋势末端.txt",
+      "version": "v1",
+      "byte_length": 4105,
+      "sha256": "8d081612af686239d22a706833b0bf0a999687c8223cb88917ae599df4592c23"
+    },
+    {
+      "name": "文件25-主要趋势反转MTR.txt",
+      "version": "v1",
+      "byte_length": 4323,
+      "sha256": "fb63ae3c5820ee04458f28644a64e5acdf978bf6f69b66b0da103990553a09cf"
+    },
+    {
+      "name": "文件27-三角形与收敛形态.txt",
+      "version": "v1",
+      "byte_length": 3144,
+      "sha256": "1729a8d229f63a7a83be4d82f12af7713cadb109521a24f536968cca3245a60d"
+    },
+    {
+      "name": "文件28-双重顶底与微型结构.txt",
+      "version": "v1",
+      "byte_length": 2401,
+      "sha256": "6047bac659692aace621d476abe5d172c5336124a5efa6eab7d82950efe7306a"
+    }
+  ],
+  "shared_system_prompt": {
+    "byte_length": 52298,
+    "char_length": 24820,
+    "sha256": "214f59d1027c3eae6eca646d374cea426a6fdff8596d348d837aad8d2948269f"
+  }
+}
