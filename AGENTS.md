@@ -27,6 +27,8 @@
 - 安全策略：[`SECURITY.md`](./SECURITY.md)
 - 迭代记录：[`docs/CHANGELOG.md`](./docs/CHANGELOG.md)
 - 架构升级路线图：[`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md)
+- 短中期执行计划：[`docs/iteration_plan.md`](./docs/iteration_plan.md)，在长期边界以
+  `architecture_roadmap` 为准的前提下，拆解后续若干轮交付物、验收标准和依赖顺序。
 
 ---
 
@@ -56,6 +58,7 @@
 ```
 price_action_agent/
 ├── pa_agent/            # 主程序包
+│   ├── cli.py           # PyQt-free headless CLI adapter
 │   ├── main.py          # 应用入口
 │   ├── app_context.py   # 依赖容器与启动装配
 │   ├── ai/              # LLM 客户端、prompt 组装、JSON 校验、归一化、策略路由
@@ -106,6 +109,11 @@ price_action_agent/
    - 不导入或创建 Qt `EventBus`，使用显式 `EventSink` 或默认 `NullEventSink`；
    - 不连接数据源；
    - 创建 AI 客户端、Prompt、Validator、PendingWriter、ExperienceReader、SessionLedger 等核心组件。
+6. `pa-agent headless ...` / `python -m pa_agent.main headless ...` 进入 `pa_agent.cli`：
+   - 不导入或创建 Qt `EventBus`；
+   - `validate-config` 严格校验 settings JSON；
+   - `snapshot` 规范化显式输入的 K 线 JSON；
+   - `analyze` 当前仅执行 provider-free Stage 1 prompt dry-run，不调用 Provider、不写入真实分析记录。
 
 ### 3.2 关键子包职责
 
@@ -172,6 +180,8 @@ price_action_agent/
   - `event_bus.py`：Qt 事件总线，兼容旧 signal，并可发布 `AppEvent`。
   - `crash_diagnostics.py`：崩溃诊断与启动信息记录。
   - `threading.py`：取消令牌、worker 事件等并发原语。
+- **`pa_agent/cli.py`**：PyQt-free headless 命令适配器；只接收显式 JSON/settings 输入，
+  stdout 输出结构化 JSON，诊断写 stderr，不能在此层加入真实下单或隐式数据源连接。
 
 ---
 
@@ -390,5 +400,10 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     不把 QClaw / WorkBuddy / Cursor 的启动同步逻辑重复搬入 client factory。
 13. **L6 当前进度**：`AppContext` 已拆出共享 core helper 和 `bootstrap_gui()`；`bootstrap()`
     委托 GUI 路径。headless 复用 core helper，必须继续保持无 Qt `EventBus` import、无数据源连接；
-    GUI adapter 继续负责 `EventBus`、数据源连接/订阅，且 `event_sink` 指向 `EventBus`。后续重点是
-    CLI runner 和 GUI/headless 同 snapshot 等价测试。
+    GUI adapter 继续负责 `EventBus`、数据源连接/订阅，且 `event_sink` 指向 `EventBus`。第 229 轮已
+    新增 `pa_agent.cli` 和 `pa-agent headless` 最小入口，并验证同 snapshot 的 Stage 1 prompt 等价；
+    当前 `analyze` 仍是 provider-free dry-run，真实两阶段 record 等价、JSONL 事件重放和公开 adapter
+    契约仍未收敛。
+14. **架构任务先读两份计划**：长期模块边界、迁移原则和完成定义以
+    [`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md) 为准；短中期优先级、每轮建议
+    交付物、验收标准和依赖顺序见 [`docs/iteration_plan.md`](./docs/iteration_plan.md)。

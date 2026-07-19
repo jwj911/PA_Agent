@@ -84,6 +84,7 @@ jobs:
           tests/unit/test_gui_theme_tokens.py
           tests/unit/test_util_exports.py
           tests/unit/test_app_context_headless.py
+          tests/unit/test_cli.py
           tests/unit/test_package_metadata.py
           tests/unit/test_package_markers.py
           tests/unit/test_order_method_router.py
@@ -291,6 +292,7 @@ jobs:
           pa_agent/util/mask_secret.py
           pa_agent/util/timefmt.py
           pa_agent/util/threading.py
+          pa_agent/cli.py
           pa_agent/util/trade_metrics.py
           pa_agent/security
           pa_agent/records
@@ -349,6 +351,7 @@ jobs:
           tests/unit/test_gui_theme_tokens.py
           tests/unit/test_util_exports.py
           tests/unit/test_app_context_headless.py
+          tests/unit/test_cli.py
           tests/unit/test_package_metadata.py
           tests/unit/test_package_markers.py
           tests/unit/test_order_method_router.py

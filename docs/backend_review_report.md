@@ -1,9 +1,14 @@
 # PA Agent 后端全面审查报告
 
-> 审查日期：2026-07-12  
+> 初始审查日期：2026-07-12
 > 审查范围：`pa_agent/` 后端核心代码（`ai/`、`data/`、`orchestrator/`、`records/`、`config/`、`util/`、`security/`、`notify/`），以及 `tests/`、`pyproject.toml`、`.githooks/`、`.github/workflows/ci.yml` 等支撑文件。  
 > 审查方法：只读代码审查，结合多维度静态分析，未运行测试与 lint。  
 > 说明：GUI 层的 `main_window.py` 也在部分章节被提及，因为其中包含了部分业务逻辑与主线程交互，但本报告重点仍是后端。
+
+> 状态更新：2026-07-19。R1-R8、M1-M10 及 L1-L6 的实际进度以
+> [`docs/architecture_roadmap.md`](./architecture_roadmap.md) 和
+> [`docs/iteration_plan.md`](./iteration_plan.md) 为准；本报告保留初始审查发现，
+> 不再作为已完成项的唯一状态来源。
 
 ---
 
@@ -23,6 +28,18 @@ PA Agent 的后端已经具备一个生产级桌面应用的核心骨架：
 3. **安全实现与文档承诺不一致**：README / config/README 称 API Key "本地加密存储"，但实际 `settings.json` 仍为明文；`pa_agent/security/` 包为空占位。
 
 整体而言，PA Agent 后端已经"可用"，但要达到"易维护、易扩展、长期稳定"，建议优先进行**模块化拆分、职责下沉、循环依赖治理**，再逐步补齐安全加密与性能优化。
+
+### 1.1 当前进度校正（2026-07-19）
+
+- L1 数据源/Provider 注册表已完成第二阶段基础，仍待插件发现、配置持久化和扩展契约治理。
+- L2 已完成 prompt 文件顺序、阶段边界和 Spike/Climax 硬约束的合同化基线；TemplateStore、
+  manifest 和 golden snapshots 尚未实现。
+- L5 已接入 K 线几何相似度，但真实脱敏数据集和离线指标尚未具备，不应调整线上权重。
+- L6 已完成 `AppEvent`/`EventSink`、`bootstrap_headless()`、共享 core/GUI bootstrap 边界，
+  并在第 229 轮新增 PyQt-free CLI 最小切片。CLI 的 `analyze` 仍是 provider-free dry-run，
+  真实两阶段 runner、最终 record 等价测试和 JSONL 事件重放未收敛。
+- L7 已具备 Python 矩阵、targeted pytest、Ruff baseline、focused Ruff/Black 和覆盖率门槛；
+  全仓历史诊断仍通过基线治理，不能把 focused 门禁等同于全仓零告警。
 
 ---
 
@@ -276,7 +293,7 @@ PA Agent 的后端已经具备一个生产级桌面应用的核心骨架：
 | L3 | 引入 Pipeline Builder | `orchestrator/two_stage.py` | 用 Pipeline/StateMachine 替代巨型 `submit()` |
 | L4 | 性能优化 | `data/snapshot.py`、`ai/kline_features.py`、`records/analysis_history.py`、`records/pending_writer.py`、`ai/deepseek_client.py` | 增量指标、索引、追加写、复用 HTTP client |
 | L5 | 经验库升级（第二阶段完成） | `records/experience_reader.py`、`records/experience_similarity.py` | Stage 2 先按全量案例的 pattern + direction 排序，再以最近 K 线几何相似度打破同分并列；无 K 线字段的旧案例保持兼容 |
-| L6 | 无 GUI 运行支持（Headless bootstrap 第一阶段完成） | `util/events.py`、`util/event_sink.py`、`util/event_bus.py`、`app_context.py` | 已有 PyQt-free AppEvent/EventSink 和 `bootstrap_headless()`；后续拆分 GUI adapters，增加 CLI/服务端入口 |
+| L6 | 无 GUI 运行支持（Core/bootstrap 与 CLI 最小切片完成） | `util/events.py`、`util/event_sink.py`、`util/event_bus.py`、`app_context.py`、`cli.py` | 已有 PyQt-free AppEvent/EventSink、共享 GUI/headless core 和 `pa-agent headless` dry-run；后续真实 runner、record 等价和事件重放 |
 | L7 | CI 增强 | `.github/workflows/ci.yml` | 运行 `pytest -m "not e2e"`、ruff、black、覆盖率 |
 
 ---
@@ -307,12 +324,13 @@ PA Agent 的后端已经具备一个生产级桌面应用的核心骨架：
 L1-L6 的详细边界、依赖顺序、迁移开关、验收标准和回滚策略以
 [`docs/architecture_roadmap.md`](./architecture_roadmap.md) 为准；本节保留审查报告的高层优先级。
 
-建议按以下顺序开始迭代：
+建议按以下顺序开始后续迭代：
 
-1. **先修低风险债务**（R1-R8）：消除重复、补类型、加锁、修正文档、记录异常。这些改动风险低，能立即提升代码可维护性。
-2. **再拆超大文件**（M1-M4）：把 `prompt_assembler.py`、`json_validator.py`、`decision_nodes.py`、`two_stage.py` 拆小，降低心智负担。
-3. **补齐安全短板**（M8-M10）：实现真正的本地加密、修正文档、加固文件名安全。
-4. **最后做架构升级**（L1-L7）：注册表、模板引擎、Pipeline、性能优化、CI 增强。
+1. **先完成 L2 Prompt 模板化证据**：TemplateStore、manifest、严格变量检查和 golden snapshots。
+2. **再推进 L6/L3 等价 harness**：真实 Provider runner、JSONL 事件重放、Pipeline state/step
+   与旧 `submit()` 的 record/事件等价。
+3. **等待数据后推进 L5 离线评估**：固定 train/evaluation 切分、Recall/NDCG 和 ranking stability。
+4. **最后收口 L4 性能预算与 L1 扩展治理**：使用固定 fixture 的 p50/p95 基准，不凭感觉修改热路径。
 
 ---
 

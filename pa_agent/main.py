@@ -5,12 +5,23 @@ from __future__ import annotations
 import logging
 import sys
 
-from PyQt6.QtWidgets import QApplication
-
 logger = logging.getLogger(__name__)
 
 
 def main(argv: list[str] | None = None) -> int:
+    raw_argv = list(sys.argv if argv is None else argv)
+    command_argv = raw_argv[1:] if argv is None else raw_argv
+    if command_argv[:1] == ["headless"]:
+        from pa_agent.cli import main as headless_main
+
+        return headless_main(command_argv[1:])
+
+    return _run_gui(raw_argv)
+
+
+def _run_gui(argv: list[str]) -> int:
+    from PyQt6.QtWidgets import QApplication
+
     # Early diagnostics before Qt / heavy imports: crash dumps + file logging.
     from pa_agent.util.crash_diagnostics import enable_crash_diagnostics, log_startup_diagnostics
     from pa_agent.util.logging import configure_logging

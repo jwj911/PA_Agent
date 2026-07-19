@@ -10,8 +10,10 @@ from types import ModuleType
 
 from pa_agent.app_context import AppContext
 from pa_agent.config.settings import Settings
+from pa_agent.data.snapshot import build_analysis_frame
 from pa_agent.util.event_sink import CollectingEventSink
 from pa_agent.util.events import EVENT_DISK_ERROR
+from tests.fixtures.kline_bars import make_newest_first_bars
 
 
 class _FakeEventBus:
@@ -136,6 +138,40 @@ assert "pa_agent.util.event_bus" not in sys.modules
     )
 
     assert result.returncode == 0, result.stderr
+
+
+def test_headless_and_gui_core_build_same_stage1_prompt(tmp_path: Path) -> None:
+    settings = Settings()
+    frame = build_analysis_frame(
+        make_newest_first_bars(25, with_forming=False),
+        20,
+        "TEST",
+        "5m",
+    )
+    assert frame is not None
+
+    headless = AppContext._build_core(
+        settings=settings,
+        event_sink=CollectingEventSink(),
+        records_pending_dir=tmp_path / "headless",
+        sync_providers=False,
+        configure_logs=False,
+        apply_kline_adjust=False,
+    )
+    gui_core = AppContext._build_core(
+        settings=settings,
+        event_sink=_FakeEventBus(),
+        event_bus=_FakeEventBus(),
+        data_source=_FakeDataSource(),
+        records_pending_dir=tmp_path / "gui",
+        sync_providers=False,
+        configure_logs=False,
+        apply_kline_adjust=False,
+    )
+
+    assert headless.assembler is not None
+    assert gui_core.assembler is not None
+    assert headless.assembler.build_stage1(frame) == gui_core.assembler.build_stage1(frame)
 
 
 def test_bootstrap_preserves_gui_event_bus_data_source_and_event_sink(

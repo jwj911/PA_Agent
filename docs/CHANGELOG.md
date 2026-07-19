@@ -18,6 +18,77 @@
 
 ---
 
+## [Unreleased] — 2026-07-19（第二百二十九轮：L6 Headless CLI 最小切片）
+
+本轮按 `docs/iteration_plan.md` 的下一项优先级继续推进 **L6 Headless/编排**。此前
+`AppContext.bootstrap_headless()` 已能装配无 Qt 核心，但 `pa-agent` 入口仍无条件进入 GUI，
+没有可执行的 snapshot harness。本轮补齐最小 CLI 边界，同时明确不把 dry-run 误标为完整两阶段
+无 GUI 分析。
+
+### 架构升级
+
+- **新增 PyQt-free `pa_agent/cli.py`**：提供 `validate-config`、`snapshot --input` 和
+  `analyze --input` 三个 headless 命令；stdout 只输出结构化 JSON，诊断写 stderr。
+- **扩展 `pa_agent.main` 入口分发**：`pa-agent headless ...` 和
+  `python -m pa_agent.main headless ...` 在进入 Qt 前转到 CLI；无参数时仍保持原 GUI 启动路径。
+- **定义稳定退出码**：配置错误 `2`、输入/输出数据错误 `3`、Provider 装配错误 `4`、
+  dry-run 校验错误 `5`，为后续真实 runner 的错误映射保留边界。
+- **snapshot 输入兼容两种形态**：支持 `{symbol,timeframe,bars}`，也支持分析记录的
+  `meta + kline_data`；输出 `pa-agent.snapshot.v1`，EMA/ATR warm-up 的非有限值序列化为
+  JSON `null`。
+- **`analyze` 明确为 provider-free dry-run**：只校验 snapshot 并构建 Stage 1 prompt 统计，
+  返回 `dry_run=true`、`provider_called=false`，不调用真实 Provider、不写入 `AnalysisRecord`、
+  不执行下单。
+
+### 测试与 CI
+
+- 新增 `tests/unit/test_cli.py`：覆盖配置校验、密钥不回显、JSON 错误码、snapshot 规范化、
+  dry-run prompt 统计和 Qt-free 入口分发。
+- 扩展 `tests/unit/test_app_context_headless.py`：验证同一 snapshot 下 headless 与 GUI core
+  的 Stage 1 prompt 等价。
+- 将 CLI 单测及 `pa_agent/cli.py` 纳入 `.github/workflows/ci.yml` targeted pytest 与 focused Ruff
+  清单；CI 目标清单当前为 147 个 pytest、248 个 Ruff 目标。
+
+### 未收敛项与后续
+
+- 当前 CLI 尚不执行真实两阶段 Provider 分析，也不生成最终/partial `AnalysisRecord`。
+- `CollectingEventSink` 尚无 JSONL sink、correlation id 约束和事件重放协议。
+- GUI/headless 目前只有共享 core 的 Stage 1 prompt 等价证据，Stage 1/2 record、取消、失败和
+  事件序列等价测试仍待补齐。
+- 下一轮主线转入 L2 `TemplateStore` / manifest / golden snapshots；L6 真实 runner 与事件重放
+  作为后续收口项继续保留。
+
+### 验证
+
+- `py -3.12 -m py_compile pa_agent/cli.py pa_agent/main.py tests/unit/test_cli.py tests/unit/test_app_context_headless.py` → 通过。
+- `py -3.12 -m ruff check pa_agent/cli.py pa_agent/main.py tests/unit/test_cli.py tests/unit/test_app_context_headless.py` → **All checks passed**。
+- `py -3.12 -m pytest tests/unit/test_cli.py tests/unit/test_app_context_headless.py --tb=short -q -p no:cacheprovider -p no:qt` → **11 passed**。
+- `py -3.12 scripts/check_ci_workflow_targets.py` → 通过。
+
+---
+
+## [Unreleased] — 2026-07-18（第二百二十八轮：本地启动说明文档）
+
+本轮只做文档补充，不改变运行逻辑。动机是把分散在 README、使用文档、配置说明和代理指南中的
+本地启动信息收敛为一份可直接照做的说明，同时保留 README 的快速入口。
+
+### 文档
+
+- **新增 `docs/local_startup.md`**：覆盖 Windows PowerShell 下创建虚拟环境、安装基础/开发依赖、
+  生成本地配置、启动 GUI、准备数据源、查看日志和常见启动问题处理。
+- **同步 README 快速开始**：将普通用户首选入口调整为 `python run.py`，并链接到完整本地启动说明；
+  同时保留 `python -m pa_agent.main` 与 `pa-agent` 作为等价入口说明。
+- **明确开发者本地验证路径**：文档列出 `check_ci_workflow_targets.py`、非 live/非 e2e pytest、
+  Ruff baseline 和 Qt offscreen 环境变量，避免把真实 API Key、真实网络或真实 MT5 作为文档验收前提。
+
+### 验证
+
+- 文档-only 变更，不运行完整 pytest。
+- `rg -n "local_startup|本地启动|python run.py|pip install -e|pa-agent" README.md docs/local_startup.md docs/CHANGELOG.md` → 通过。
+- `git diff --check README.md docs/local_startup.md docs/CHANGELOG.md` → 通过（仅 Git 提示 LF/CRLF 转换警告）。
+
+---
+
 ## [Unreleased] — 2026-07-18（第二百二十七轮：L2 prompt engineering 合同化与文本优化）
 
 本轮推进 **L2 Prompt 模板引擎化** 前的合同化基线。目标是在不改变 JSON schema、枚举字段、
@@ -52,6 +123,33 @@ AI Provider 路由或数据源行为的前提下，先把现有 prompt 文件顺
 - `py -3.12 -m py_compile tests/unit/test_prompt_txt_files.py tests/unit/test_prompt_assembler.py` → 通过。
 - `py -3.12 scripts/check_ci_workflow_targets.py` → 通过。
 - `py -3.12 scripts/check_ruff_baseline.py` → 通过。
+
+---
+
+## [Unreleased] — 2026-07-18（第二百二十六轮：短中期迭代计划文档）
+
+本轮只做文档规划同步，不改变业务代码。动机是把已完成的 L1/L5/L6 状态和后续 L6→L2→L3→L5→L4
+主线拆成短中期可执行计划，避免下一轮代理在长期路线图之外重新推断优先级。
+
+### 文档
+
+- **新增 `docs/iteration_plan.md`**：定位为短中期执行计划，长期边界仍以
+  `docs/architecture_roadmap.md` 为准；文档覆盖当前完成情况、后续迭代顺序、每轮建议交付物、
+  验收标准、依赖关系和风险边界。
+- **明确下一轮优先级**：下一轮先推进 L6 headless runner / CLI 最小入口与 GUI/headless 同 snapshot
+  等价测试，再推进 L2 TemplateStore/manifest/golden snapshots、L3 Pipeline state/step 化、L5 脱敏
+  数据集与离线评估、L4 性能预算与持续基准。
+- **同步文档索引**：`AGENTS.md` 加入 `docs/iteration_plan.md` 入口，并说明其与
+  `docs/architecture_roadmap.md` 的关系；`docs/architecture_roadmap.md` 轻量加入短中期计划交叉引用。
+- **同步 spec 任务状态**：`.trae/specs/plan-next-architecture-iterations/tasks.md` 勾选 Task 2、Task 3
+  及其子任务，Task 4 验证保持未执行状态。
+
+### 验证占位/建议
+
+- 本轮按要求不执行 Task 4 的正式系统验证，不运行全量 pytest。
+- 建议验证代理后续执行 `git diff --check`，并复核 `docs/iteration_plan.md` 中 L6 当前状态和下一轮建议
+  与 `AGENTS.md`、`docs/architecture_roadmap.md` 一致。
+- 本轮为 Markdown/spec 任务勾选改动，若验证范围仍保持文档层，通常不需要运行 pytest。
 
 ---
 

@@ -33,18 +33,34 @@
 
 ## 快速开始
 
-直接在系统中安装（推荐部署在本机）：
+完整本地启动步骤见 [`docs/local_startup.md`](docs/local_startup.md)。普通 GUI 使用路径如下：
 
-```cmd
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -e .
-python -m pa_agent.main
+python run.py
 ```
 
 首次启动后在**设置**中填写 **Base URL**、**模型名** 与 **API Key**。
 
-> 如需隔离环境也可创建虚拟环境：`python -m venv .venv` 后激活再 `pip install -e .`。
+> `run.py` 是推荐入口；也可使用 `python -m pa_agent.main` 或安装后的 `pa-agent`。
 
 **安装内容**：PyQt6（GUI 框架）+ pyqtgraph（K 线图表绘图）+ numpy/pandas（数据处理）+ openai（AI API 客户端）+ **akshare/baostock（A 股数据源）** + json 校验、模型定义等全套依赖。
+
+## 无 GUI 辅助命令
+
+已安装项目后，可使用 PyQt-free 的 headless CLI 做配置和 snapshot 验证：
+
+```powershell
+pa-agent headless validate-config --settings config\settings.json
+pa-agent headless snapshot --input snapshot.json --output normalized.json
+pa-agent headless analyze --input snapshot.json --output dry-run.json
+```
+
+`analyze` 当前是 provider-free dry-run：只校验输入并构建 Stage 1 prompt 统计，不调用真实
+Provider、不写入 `AnalysisRecord`。完整参数和退出码说明见
+[`docs/local_startup.md`](docs/local_startup.md) 与 [`docs/iteration_plan.md`](docs/iteration_plan.md)。
 
 > 若需运行测试（pytest）或代码格式化（ruff/black），额外安装：`pip install -e ".[dev]"`。
 
