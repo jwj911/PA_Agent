@@ -65,6 +65,11 @@ def test_template_store_matches_utf8_golden_snapshots() -> None:
     } == expected
     assert assembler._build_stage2_system_prompt() == system_prompt
 
+    legacy = PromptAssembler(prompt_dir=PROMPT_DIR, use_template_store=False)
+    assert (
+        assembler._build_shared_system_prompt_inner() == legacy._build_shared_system_prompt_inner()
+    )
+
 
 def test_template_store_rejects_unknown_template_and_wrong_stage() -> None:
     store = TemplateStore(PROMPT_DIR)

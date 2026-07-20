@@ -18,6 +18,45 @@
 
 ---
 
+## [Unreleased] — 2026-07-20（第二百三十一轮：L2 共享 system prompt 迁移）
+
+本轮继续推进 **L2 Prompt 模板引擎化**，只迁移共享 system prompt 的静态模板读取边界。
+`PromptAssembler` 的 Stage 1/Stage 2 user prompt、continuation 和中文策略文本保持原路径与
+原内容不变。
+
+### Prompt engineering
+
+- **`PromptAssembler` 接入 `TemplateStore`**：构造器新增可选 `template_store` 注入和
+  `use_template_store` 回滚开关；默认使用 manifest-backed `TemplateStore` 读取共享
+  `PERSONA`/`BINARY_DECISION` 两个 system 模板。
+- **严格失败时兼容回退**：TemplateStore 遇到未知/缺失/空文件、编码错误或阶段不匹配时，
+  记录 warning 并回退既有 `_load()`；关闭 `use_template_store` 时直接走旧路径。
+- **保持 system prefix 字节等价**：真实 prompt golden snapshot 验证新路径与旧 `_load()` 的
+  system prompt 完全相等，Stage 1/Stage 2 继续共享同一 cached system blob 和 KV prefix。
+
+### 测试与 CI
+
+- 扩展 `tests/unit/test_prompt_assembler.py`：覆盖 TemplateStore 注入、严格错误回退和显式
+  关闭新路径。
+- 扩展 `tests/unit/test_template_store.py`：真实 prompt 目录新旧 system prompt 直接字节等价。
+- 本轮不改变 Stage 1/Stage 2 user prompt 的读取路径，后续迁移仍按单边界执行。
+
+### 未收敛项与后续
+
+- Stage 1 user prompt 仍由 `PromptAssembler._load()` / `Stage1PromptBuilder` 读取，尚未切换
+  TemplateStore。
+- Stage 2 user prompt、continuation、TemplateContext 和严格变量渲染仍未实现。
+- 下一轮继续迁移 Stage 1 user prompt，并固定新旧 user message 的 UTF-8 字节快照。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_prompt_assembler.py tests/unit/test_template_store.py tests/unit/test_prompt_txt_files.py tests/unit/test_strategy_files.py --tb=short -q -p no:cacheprovider -p no:qt` → **54 passed**。
+- `py -3.12 -m py_compile pa_agent/ai/prompt_assembler.py tests/unit/test_prompt_assembler.py tests/unit/test_template_store.py` → 通过。
+- `py -3.12 -m ruff check pa_agent/ai/prompting tests/unit/test_template_store.py` → **All checks passed**；`prompt_assembler.py` 仅保留既有 Ruff 基线。
+- `py -3.12 scripts/check_ruff_baseline.py` 和 `py -3.12 scripts/check_ci_workflow_targets.py` → 通过。
+
+---
+
 ## [Unreleased] — 2026-07-19（第二百三十轮：L2 TemplateStore / manifest / golden snapshot 基线）
 
 本轮按既定顺序进入 **L2 Prompt 模板引擎化**，先完成低风险的存储与合同基线，不切换

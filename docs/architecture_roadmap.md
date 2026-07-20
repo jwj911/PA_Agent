@@ -1,7 +1,7 @@
 # L1-L6 架构升级路线图
 
 > 状态：规划基线
-> 更新时间：2026-07-19
+> 更新时间：2026-07-20
 > 适用分支：`main`
 > 关联路线：[`docs/backend_review_report.md`](./backend_review_report.md)
 > 短中期执行计划：[`docs/iteration_plan.md`](./iteration_plan.md)
@@ -20,7 +20,7 @@
 | 路线 | 当前状态 | 已有基础 | 主要剩余工作 |
 |---|---|---|---|
 | L1 Provider/数据源注册表 | 第二阶段完成 | `data/registry.py`、`ai/provider_registry.py` 已支持规格、优先级、延迟 builder 和运行时注册 | 插件发现、配置持久化和扩展契约仍需在后续治理中固化 |
-| L2 Prompt 模板引擎 | 存储/合同基线完成，默认 assembler 尚未迁移 | `Stage1PromptBuilder`、`Stage2PromptBuilder`、多个 PyQt-free renderer、29 个模板 manifest、`TemplateStore` 和 UTF-8 golden digest；prompt 文件顺序、阶段边界、硬禁令和 Spike/Climax 约束已有合同测试 | 引入 TemplateContext/严格变量渲染，按 system → Stage 1 → Stage 2 → continuation 迁移并保留兼容 adapter |
+| L2 Prompt 模板引擎 | 共享 system prompt 已迁移，Stage 1/2 user prompt 尚未迁移 | `Stage1PromptBuilder`、`Stage2PromptBuilder`、多个 PyQt-free renderer、29 个模板 manifest、`TemplateStore`、UTF-8 golden digest；共享 system prompt 新旧路径字节等价 | 迁移 Stage 1 user prompt，再迁移 Stage 2/continuation；随后引入 TemplateContext/严格变量渲染并保留兼容 adapter |
 | L3 Pipeline Builder | 部分准备 | `TwoStageOrchestrator.submit()` 已拆出 `_run_stage1`、`_run_stage2`、路由和持久化方法 | 用显式状态和步骤协议替代方法内隐式局部状态与 early return |
 | L4 性能优化 | 主要目标完成 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁 | 增加基准、预算和回归监控，不再无证据地继续优化 |
 | L5 经验库升级 | 第二阶段完成 | 全量相关性排序 + K 线几何相似度 | 等待真实经验样本后做离线评估、特征版本化和权重校准 |
@@ -169,8 +169,9 @@ Client/DataSource:
 边界、Stage 2 关键输出契约、禁止逆势三价、禁止 SCS/追高潮、禁止仓位管理、不依赖成交量以及
 Spike/Climax 文本约束。第 230 轮新增 `ai/prompting/template_manifest.py`、
 `ai/prompting/template_store.py` 和 `tests/fixtures/prompt_golden.json`：覆盖 29 个模板的
-阶段/角色/版本/依赖元数据、严格 UTF-8 加载、缓存失效和 SHA-256 字节快照；旧
-`PromptAssembler._load()` 仍是默认路径，TemplateStore 只作为兼容旁路和合同层。
+阶段/角色/版本/依赖元数据、严格 UTF-8 加载、缓存失效和 SHA-256 字节快照。第 231 轮将
+共享 system prompt 的 `PERSONA`/`BINARY_DECISION` 读取切换到 TemplateStore，并以 golden
+digest 和旧 `_load()` 直接对照证明字节相等；Stage 1/Stage 2 user prompt 仍走旧路径。
 
 ### 5.2 目标模块
 
@@ -184,9 +185,10 @@ ai/prompting/
 └── compatibility.py        # 旧 PromptAssembler API adapter
 ```
 
-第 230 轮已先引入结构化 `TemplateStore` 和 manifest，不替换任何中文策略文本，也不改变
-`PromptAssembler` 默认路径。下一步只迁移一个边界（优先共享 system prompt 或 Stage 1 user
-prompt），完成旧/新字节等价后再继续。
+第 230 轮先引入结构化 `TemplateStore` 和 manifest；第 231 轮已迁移共享 system prompt，
+不替换任何中文策略文本。TemplateStore 失败时可 warning 回退旧 `_load()`，也可通过
+`use_template_store=False` 显式回滚。下一步只迁移 Stage 1 user prompt，完成旧/新字节等价后
+再继续。
 模板引擎可选 Jinja2，但必须满足：
 
 - `StrictUndefined` 或等价的缺变量失败策略；
@@ -213,7 +215,7 @@ prompt），完成旧/新字节等价后再继续。
 
 1. 已为 29 个 `.txt` 和共享 system prompt 建立 UTF-8 golden digest。
 2. 已引入 `TemplateStore`，先只读取现有 `.txt`，旧 builder 继续作为默认 adapter。
-3. 迁移公共 system prompt，比较 Stage 1/Stage 2 字节前缀和 KV cache key。
+3. 已迁移公共 system prompt，比较 Stage 1/Stage 2 字节前缀和 KV cache key，并保留旧路径回退。
 4. 迁移 Stage 1 user prompt。
 5. 迁移 Stage 2 user prompt 和 continuation prompt。
 6. 最后删除重复的 `PromptAssembler` 静态 helper，保留兼容重导出。
@@ -223,7 +225,7 @@ prompt），完成旧/新字节等价后再继续。
 - 同一 fixture 下旧/新 prompt 完全相等，或差异被显式列入 snapshot 更新；
 - 所有 JSON schema、normalizer、retry 和 continuation 测试通过；
 - KV prefix 测试确认 system 前缀不漂移；
-- 任一迁移阶段出现差异时，关闭新路径即可回退旧 assembler；
+- 任一迁移阶段出现差异时，关闭对应的 `use_template_store`/feature flag 即可回退旧 assembler；
 - 模板目录损坏不会影响旧路径启动。
 
 ## 6. L3：Pipeline Builder / State Machine

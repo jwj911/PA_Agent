@@ -1,7 +1,7 @@
 # L1-L6 后续迭代执行计划
 
 > 状态：短中期执行计划
-> 更新时间：2026-07-19
+> 更新时间：2026-07-20
 > 适用范围：后续若干轮原子迭代
 > 长期边界：以 [`docs/architecture_roadmap.md`](./architecture_roadmap.md) 为准
 
@@ -15,7 +15,7 @@
 | 路线 | 当前状态 | 已完成基础 | 主要剩余工作 |
 |---|---|---|---|
 | L1 Provider/数据源注册表 | 第二阶段完成 | 数据源注册表、AI Provider 注册表、优先级 matcher、延迟 builder、运行时注册 API | 插件发现、配置持久化、扩展契约、生命周期和并发测试 |
-| L2 Prompt 模板引擎 | 存储/合同基线完成 | `TemplateStore`、29 个模板 manifest、UTF-8 golden digest、现有 system prompt 快照；旧 builder/assembler 仍为默认路径 | `TemplateContext`、严格变量渲染、兼容 adapter，以及 system/Stage 1/Stage 2/continuation 分步迁移 |
+| L2 Prompt 模板引擎 | 共享 system prompt 已迁移 | `TemplateStore`、29 个模板 manifest、UTF-8 golden digest、共享 system prompt 新旧路径字节等价和可回滚 adapter | Stage 1 user prompt、Stage 2/continuation 分步迁移，随后补 `TemplateContext` 和严格变量渲染 |
 | L3 Pipeline Builder | 部分准备 | `TwoStageOrchestrator.submit()` 已拆出 Stage 1、Stage 2、路由和持久化辅助方法 | 显式 state/step、terminal status、事件序列和旧/新路径等价测试 |
 | L4 性能预算 | 主要优化完成 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁 | 固定基准、预算阈值、p50/p95 报告和持续回归监控 |
 | L5 经验库升级 | 第二阶段完成 | 全量相关性排序和 K 线几何相似度已接入 | 脱敏数据集、离线评估、特征版本化和权重校准 |
@@ -27,13 +27,13 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 
 ## 2. 后续迭代顺序
 
-第 230 轮已完成 **L2 TemplateStore / manifest / golden snapshot 存储合同基线**。下一轮仍留在
-L2，迁移共享 system prompt 或 Stage 1 user prompt；L6 剩余的真实 Provider runner、最终 record
+第 231 轮已完成 **L2 共享 system prompt 迁移**。下一轮仍留在 L2，迁移 Stage 1 user prompt；
+L6 剩余的真实 Provider runner、最终 record
 等价测试和事件重放继续作为后续 L6 收口项，不能把当前 dry-run 误标为完整无 GUI 分析。
 
 推荐顺序如下：
 
-1. **L2：迁移共享 system prompt 或 Stage 1 user prompt，并保持旧/新字节等价**。
+1. **L2：迁移 Stage 1 user prompt，并保持旧/新字节等价**。
 2. **L2：迁移 Stage 2 user prompt 和 continuation，补齐 TemplateContext/严格变量合同**。
 3. **L6：真实 Provider 分析 runner、JSONL 事件 sink 与最终 record 等价测试**。
 4. **L3：Pipeline state/step 化和旧/新路径等价验证**。
@@ -53,8 +53,8 @@ L2，迁移共享 system prompt 或 Stage 1 user prompt；L6 剩余的真实 Pro
    最终 record、partial record、取消和失败事件的全链路等价证据尚未建立。
 4. `AppContext._build_core()` 仍是私有 helper；`build_core` 与 `build_gui_adapters` 是否公开，
    需要等 CLI/GUI adapter 契约稳定后再决定。
-5. L2 已有 TemplateStore、manifest 和 golden digest，但尚未实现 TemplateContext、严格变量渲染，
-   也尚未把默认 `PromptAssembler` 切换到新存储路径。
+5. L2 共享 system prompt 已切换到 TemplateStore，并保留严格失败回退；Stage 1/Stage 2 user
+   prompt、TemplateContext 和严格变量渲染仍未实现。
 6. L1 插件发现/配置回退、L5 脱敏数据集与离线指标、L4 p50/p95 性能预算仍缺少真实数据或固定
    benchmark，不能仅依据合成 fixture 宣称收敛。
 
@@ -112,13 +112,13 @@ L2，迁移共享 system prompt 或 Stage 1 user prompt；L6 剩余的真实 Pro
   `TemplateSnapshot`。
 - 新增 `tests/fixtures/prompt_golden.json`，固定全部模板和 `PromptAssembler` 共享 system prompt
   的 UTF-8 字节长度/摘要。
-- 旧 `PromptAssembler` 默认路径保持不变，后续迁移可通过 feature flag 或兼容 adapter 回退。
+- 共享 system prompt 已通过 `template_store` 注入和 `use_template_store` 开关迁移；严格失败
+  warning 回退旧 `_load()`，后续迁移可沿用同一兼容 adapter。
 
 建议交付物：
 
 - 为 Stage 1/Stage 2 builder、continuation 和关键 renderer 继续补充结构化 golden snapshots。
-- 将 `PromptAssembler._load()` 包装为兼容 adapter，先只切共享 system prompt，不大规模改写中文
-  prompt 文本。
+- 将 Stage 1 user prompt 的 `.txt` 读取切换到同一兼容 adapter，不大规模改写中文 prompt 文本。
 - 定义模板上下文的显式字段，避免模板直接访问 `Settings`、Qt 对象、网络客户端或文件系统。
 - 如引入模板引擎，必须使用严格缺变量失败策略，并保留旧 `PromptAssembler` 兼容 adapter。
 

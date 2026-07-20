@@ -7,6 +7,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
+from pa_agent.ai import prompting
 from pa_agent.ai import strategy_files as sf
 from pa_agent.ai.chain_context import (
     compact_stage1_for_stage2,
@@ -33,7 +34,6 @@ from pa_agent.data.base import KlineFrame
 from pa_agent.records.schema import AnalysisRecord
 
 logger = logging.getLogger(__name__)
-
 # ── Language (both stages, thinking + final output) ───────────────────────────
 
 _LANGUAGE_ZH_RULE = """
@@ -895,12 +895,12 @@ class PromptAssembler:
         prompt_dir: Path,
         experience_reader: Any = None,
         *,
-        prompt_settings: Any = None,
+        prompt_settings: Any = None, template_store: Any = None, use_template_store: bool = True,
     ) -> None:
         self._prompt_dir = prompt_dir
         self._experience_reader = experience_reader
         self._prompt_settings = prompt_settings
-        self._txt_cache: dict[str, str] = {}
+        self._txt_cache, self._template_store, self._use_template_store = prompting.prepare_template_store(prompt_dir, template_store, use_template_store)
 
     def _load_full_strategy_library(self) -> bool:
         cfg = self._prompt_settings
@@ -951,7 +951,7 @@ class PromptAssembler:
             _OPENCLAW_AGENT_NO_TOOLS_RULE,
             _THINKING_CONTENT_OUTPUT_RULE,
         ]
-        system_parts.extend(self._load(name) for name in COMMON_SYSTEM_PROMPT_TXT_FILES)
+        system_parts.extend(prompting.load_shared_system_templates(self._template_store, self._use_template_store, self._load, COMMON_SYSTEM_PROMPT_TXT_FILES, warning_logger=logger))
         return "\n\n---\n\n".join(p for p in system_parts if p)
 
     # ── File loading ──────────────────────────────────────────────────────────

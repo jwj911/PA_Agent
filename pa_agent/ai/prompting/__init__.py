@@ -1,5 +1,9 @@
 """Structured prompt template storage and manifest contracts."""
 
+from pa_agent.ai.prompting.compatibility import (
+    load_shared_system_templates,
+    prepare_template_store,
+)
 from pa_agent.ai.prompting.template_manifest import (
     MANIFEST_VERSION,
     TEMPLATE_MANIFEST,
@@ -19,5 +23,7 @@ __all__ = [
     "TemplateSpec",
     "TemplateStore",
     "TemplateStoreError",
+    "load_shared_system_templates",
+    "prepare_template_store",
     "template_files_for_stage",
 ]

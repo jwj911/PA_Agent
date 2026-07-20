@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from pa_agent.ai.prompt_assembler import PromptAssembler
+from pa_agent.ai.prompting import TemplateStoreError
 from pa_agent.data.base import IndicatorBundle, KlineBar, KlineFrame
 
 
@@ -140,6 +141,82 @@ def test_stage1_system_prompt_order(assembler: PromptAssembler):
     assert "逐棒分析检查单" not in user, "Bar-by-bar checklist is Stage 2 only"
     assert "文件18-突破失败与突破测试" not in user
     assert "文件13-窄通道与宽通道策略" not in user
+
+
+def test_shared_system_prompt_uses_template_store(tmp_path: Path) -> None:
+    files = {
+        "提示词大纲_人设与思维方式.txt": "[STORE PERSONA]",
+        "二元决策.txt": "[STORE BINARY]",
+    }
+    for name, content in files.items():
+        (tmp_path / name).write_text(content, encoding="utf-8")
+
+    class _RecordingStore:
+        def __init__(self) -> None:
+            self.calls: list[tuple[tuple[str, ...], str | None]] = []
+
+        def load_many(self, names, *, stage=None):
+            self.calls.append((tuple(names), stage))
+            return tuple(files[name] for name in names)
+
+    store = _RecordingStore()
+    assembler = PromptAssembler(prompt_dir=tmp_path, template_store=store)
+
+    system = assembler._build_stage1_system_prompt()
+
+    assert store.calls == [
+        (("提示词大纲_人设与思维方式.txt", "二元决策.txt"), "stage1")
+    ]
+    assert "[STORE PERSONA]" in system
+    assert "[STORE BINARY]" in system
+
+
+def test_shared_system_prompt_falls_back_to_legacy_loader(
+    tmp_path: Path,
+    caplog,
+) -> None:
+    files = {
+        "提示词大纲_人设与思维方式.txt": "[LEGACY PERSONA]",
+        "二元决策.txt": "[LEGACY BINARY]",
+    }
+    for name, content in files.items():
+        (tmp_path / name).write_text(content, encoding="utf-8")
+
+    class _FailingStore:
+        def load_many(self, names, *, stage=None):
+            raise TemplateStoreError("fixture failure")
+
+    assembler = PromptAssembler(prompt_dir=tmp_path, template_store=_FailingStore())
+
+    with caplog.at_level("WARNING", logger="pa_agent.ai.prompt_assembler"):
+        system = assembler._build_stage1_system_prompt()
+
+    assert "[LEGACY PERSONA]" in system
+    assert "[LEGACY BINARY]" in system
+    assert "falling back to legacy loader" in caplog.text
+
+
+def test_shared_system_prompt_can_disable_template_store(tmp_path: Path) -> None:
+    for name, content in {
+        "提示词大纲_人设与思维方式.txt": "[LEGACY PERSONA]",
+        "二元决策.txt": "[LEGACY BINARY]",
+    }.items():
+        (tmp_path / name).write_text(content, encoding="utf-8")
+
+    class _UnexpectedStoreCall:
+        def load_many(self, names, *, stage=None):
+            raise AssertionError("TemplateStore should be disabled")
+
+    assembler = PromptAssembler(
+        prompt_dir=tmp_path,
+        template_store=_UnexpectedStoreCall(),
+        use_template_store=False,
+    )
+
+    system = assembler._build_stage1_system_prompt()
+
+    assert "[LEGACY PERSONA]" in system
+    assert "[LEGACY BINARY]" in system
 
 
 def test_stage1_user_prompt_contains_required_fields(assembler: PromptAssembler):
