@@ -33,8 +33,8 @@ PA Agent 的后端已经具备一个生产级桌面应用的核心骨架：
 
 - L1 数据源/Provider 注册表已完成第二阶段基础，仍待插件发现、配置持久化和扩展契约治理。
 - L2 已完成 prompt 文件顺序、阶段边界和 Spike/Climax 硬约束的合同化基线；第 230 轮新增
-  29 个模板的 manifest、`TemplateStore` 和 UTF-8 golden digest，第 231 轮已迁移共享 system
-  prompt 并保留严格失败回退；Stage 1/Stage 2 user prompt 尚未迁移。
+  29 个模板的 manifest、`TemplateStore` 和 UTF-8 golden digest，第 231 轮迁移共享 system
+  prompt，第 232 轮迁移 Stage 1 user prompt，并保留严格失败回退；Stage 2/continuation 尚未迁移。
 - L5 已接入 K 线几何相似度，但真实脱敏数据集和离线指标尚未具备，不应调整线上权重。
 - L6 已完成 `AppEvent`/`EventSink`、`bootstrap_headless()`、共享 core/GUI bootstrap 边界，
   并在第 229 轮新增 PyQt-free CLI 最小切片。CLI 的 `analyze` 仍是 provider-free dry-run，

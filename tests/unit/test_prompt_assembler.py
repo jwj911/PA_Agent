@@ -171,6 +171,34 @@ def test_shared_system_prompt_uses_template_store(tmp_path: Path) -> None:
     assert "[STORE BINARY]" in system
 
 
+def test_stage1_user_prompt_uses_template_store(tmp_path: Path) -> None:
+    files = {
+        "市场诊断框架.txt": "[STORE DIAGNOSIS]",
+        "文件16-K线信号识别.txt": "[STORE SIGNAL]",
+    }
+    for name, content in files.items():
+        (tmp_path / name).write_text(content, encoding="utf-8")
+
+    class _RecordingStore:
+        def __init__(self) -> None:
+            self.calls: list[tuple[tuple[str, ...], str | None]] = []
+
+        def load_many(self, names, *, stage=None):
+            self.calls.append((tuple(names), stage))
+            return tuple(files[name] for name in names)
+
+    store = _RecordingStore()
+    assembler = PromptAssembler(prompt_dir=tmp_path, template_store=store)
+
+    user = assembler._build_stage1_user_prompt(_make_frame())
+
+    assert store.calls == [
+        (("市场诊断框架.txt", "文件16-K线信号识别.txt"), "stage1")
+    ]
+    assert "[STORE DIAGNOSIS]" in user
+    assert "[STORE SIGNAL]" in user
+
+
 def test_shared_system_prompt_falls_back_to_legacy_loader(
     tmp_path: Path,
     caplog,
@@ -193,6 +221,31 @@ def test_shared_system_prompt_falls_back_to_legacy_loader(
 
     assert "[LEGACY PERSONA]" in system
     assert "[LEGACY BINARY]" in system
+    assert "falling back to legacy loader" in caplog.text
+
+
+def test_stage1_user_prompt_falls_back_as_a_group(
+    tmp_path: Path,
+    caplog,
+) -> None:
+    files = {
+        "市场诊断框架.txt": "[LEGACY DIAGNOSIS]",
+        "文件16-K线信号识别.txt": "[LEGACY SIGNAL]",
+    }
+    for name, content in files.items():
+        (tmp_path / name).write_text(content, encoding="utf-8")
+
+    class _FailingStore:
+        def load_many(self, names, *, stage=None):
+            raise TemplateStoreError("fixture failure")
+
+    assembler = PromptAssembler(prompt_dir=tmp_path, template_store=_FailingStore())
+
+    with caplog.at_level("WARNING", logger="pa_agent.ai.prompt_assembler"):
+        user = assembler._build_stage1_user_prompt(_make_frame())
+
+    assert "[LEGACY DIAGNOSIS]" in user
+    assert "[LEGACY SIGNAL]" in user
     assert "falling back to legacy loader" in caplog.text
 
 

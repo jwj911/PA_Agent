@@ -978,7 +978,7 @@ class PromptAssembler:
 
     def _stage1_prompt_builder(self) -> Stage1PromptBuilder:
         return Stage1PromptBuilder(
-            load=self._load,
+            load=prompting.make_stage1_template_loader(self._template_store, self._use_template_store, self._load, STAGE1_TASK_PROMPT_TXT_FILES, warning_logger=logger),
             prompt_settings=self._prompt_settings,
             stage1_task_prompt_txt_files=STAGE1_TASK_PROMPT_TXT_FILES,
             stage1_output_reminder_for_mode=_stage1_output_reminder_for_mode,

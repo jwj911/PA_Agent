@@ -2,6 +2,7 @@
 
 from pa_agent.ai.prompting.compatibility import (
     load_shared_system_templates,
+    make_stage1_template_loader,
     prepare_template_store,
 )
 from pa_agent.ai.prompting.template_manifest import (
@@ -24,6 +25,7 @@ __all__ = [
     "TemplateStore",
     "TemplateStoreError",
     "load_shared_system_templates",
+    "make_stage1_template_loader",
     "prepare_template_store",
     "template_files_for_stage",
 ]

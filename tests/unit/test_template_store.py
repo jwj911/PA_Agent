@@ -20,6 +20,8 @@ from pa_agent.ai.prompting import (
     TemplateStoreError,
     template_files_for_stage,
 )
+from pa_agent.data.snapshot import build_analysis_frame
+from tests.fixtures.kline_bars import make_newest_first_bars
 
 PROMPT_DIR = Path(__file__).resolve().parents[2] / "prompt_engineering"
 GOLDEN_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "prompt_golden.json"
@@ -69,6 +71,15 @@ def test_template_store_matches_utf8_golden_snapshots() -> None:
     assert (
         assembler._build_shared_system_prompt_inner() == legacy._build_shared_system_prompt_inner()
     )
+
+    frame = build_analysis_frame(
+        make_newest_first_bars(25, with_forming=False),
+        20,
+        "TEST",
+        "5m",
+    )
+    assert frame is not None
+    assert assembler.build_stage1(frame) == legacy.build_stage1(frame)
 
 
 def test_template_store_rejects_unknown_template_and_wrong_stage() -> None:

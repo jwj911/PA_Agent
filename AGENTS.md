@@ -127,8 +127,8 @@ price_action_agent/
   - `workbuddy_connector.py`：WorkBuddy / CodeBuddy 环境检测与 DPAPI 解密取 token。
   - `prompt_assembler.py`：阶段一/阶段二 prompt 组装总入口。
   - `prompting/template_manifest.py` / `prompting/template_store.py` / `prompting/compatibility.py`：PyQt-free 模板元数据、
-    严格 UTF-8 加载、缓存和 golden snapshot 契约；共享 system prompt 已迁移，Stage 1/Stage 2
-    user prompt 仍保留旧路径。
+    严格 UTF-8 加载、缓存和 golden snapshot 契约；共享 system prompt 和 Stage 1 user prompt
+    已迁移，Stage 2/continuation 仍保留旧路径。
   - `stage1_prompt_builder.py` / `stage2_prompt_builder.py`：阶段一/阶段二 user prompt 构建器。
   - `kline_table_renderer.py` / `experience_renderer.py` / `stage2_guidance.py` / `chain_context.py` / `program_prefill_hint.py`：prompt 渲染子模块（PyQt6-free 叶子模块）。
   - `json_validator.py` / `json_repair.py` / `business_rules.py` / `schema_validator.py`：阶段一/阶段二 JSON 校验、修复、业务规则与 schema 校验。
@@ -411,6 +411,6 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     [`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md) 为准；短中期优先级、每轮建议
     交付物、验收标准和依赖顺序见 [`docs/iteration_plan.md`](./docs/iteration_plan.md)。
 15. **L2 当前进度**：第 230 轮建立 `TemplateStore`、29 个模板 manifest 和 UTF-8 golden
-    digest；第 231 轮已迁移共享 system prompt，并保留 `use_template_store=False` 与严格失败
-    warning 回退。Stage 1/Stage 2 user prompt 仍走旧路径；后续每次迁移只能切一个边界，并提供
-    旧/新 prompt 字节等价证据，不能顺手重写中文策略文本。
+    digest；第 231 轮迁移共享 system prompt，第 232 轮迁移 Stage 1 user prompt，并保留
+    `use_template_store=False` 与严格失败 warning 回退。Stage 2/continuation 仍走旧路径；
+    后续每次迁移只能切一个边界，并提供旧/新 prompt 字节等价证据，不能顺手重写中文策略文本。

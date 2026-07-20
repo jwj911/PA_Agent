@@ -18,6 +18,45 @@
 
 ---
 
+## [Unreleased] — 2026-07-20（第二百三十二轮：L2 Stage 1 user prompt 迁移）
+
+本轮继续推进 **L2 Prompt 模板引擎化**，将 Stage 1 user prompt 使用的两个静态任务模板
+（`市场诊断框架.txt`、`文件16-K线信号识别.txt`）切换到已有 TemplateStore；Stage 2、
+continuation 和中文策略文本保持不变。
+
+### Prompt engineering
+
+- **Stage1PromptBuilder 接入 TemplateStore adapter**：`PromptAssembler._stage1_prompt_builder()`
+  现在为 Stage 1 任务模板创建批量 loader，覆盖全量 Stage 1、增量 Stage 1 和 continuation
+  三条 user prompt 路径。
+- **整组加载与回退**：两个 Stage 1 模板先由 TemplateStore 严格批量读取；任一模板缺失、
+  空文件、编码错误或阶段不匹配时，整组 warning 回退旧 `_load()`，避免新旧模板部分混用。
+- **保持字节等价**：新路径与 `use_template_store=False` 旧路径的 Stage 1 system/user message
+  使用固定 K 线 fixture 做深度相等验证，未改变 prompt 文本、文件顺序或输出契约。
+
+### 测试与 CI
+
+- 扩展 `tests/unit/test_prompt_assembler.py`：覆盖 Stage 1 TemplateStore 注入、整组回退和
+  system prompt 迁移后的兼容行为。
+- 扩展 `tests/unit/test_template_store.py`：覆盖真实 Stage 1 prompt 的新旧路径字节等价。
+- 复用已有 `pa_agent/ai/prompting/compatibility.py`，不新增 Qt 或网络依赖。
+
+### 未收敛项与后续
+
+- Stage 2 user prompt、continuation、TemplateContext 和严格变量渲染仍未实现。
+- 下一轮迁移 Stage 2 user prompt/continuation，并继续保留 `use_template_store=False` 回滚路径。
+
+### 验证
+
+- L2 聚焦回归（`test_prompt_assembler.py`、`test_template_store.py`、`test_prompt_txt_files.py`、
+  `test_strategy_files.py`）→ **56 passed**。
+- 扩展后跨层回归加入 `test_cli.py`、`test_app_context_headless.py` → 全部通过。
+- `py -3.12 -m ruff check pa_agent/ai/prompting tests/unit/test_template_store.py` → **All checks passed**。
+- `py -3.12 scripts/check_ruff_baseline.py` → 3725 条基线通过。
+- `py -3.12 scripts/check_ci_workflow_targets.py` → 148 个 pytest、250 个 Ruff 目标通过。
+
+---
+
 ## [Unreleased] — 2026-07-20（第二百三十一轮：L2 共享 system prompt 迁移）
 
 本轮继续推进 **L2 Prompt 模板引擎化**，只迁移共享 system prompt 的静态模板读取边界。
