@@ -68,7 +68,7 @@ price_action_agent/
 │   ├── gui/             # PyQt6 主窗口、对话框、widgets、主题
 │   ├── indicators/      # EMA、ATR 等技术指标
 │   ├── notify/          # 飞书、PushPlus 通知
-│   ├── orchestrator/    # 两阶段分析流水线、自由追问、校验重试
+│   ├── orchestrator/    # 两阶段分析流水线、Pipeline state/step、自由追问、校验重试
 │   ├── records/         # 分析记录持久化、经验库读取、交易日志
 │   ├── security/        # API Key 至静态加密（Windows DPAPI）
 │   └── util/            # 日志脱敏、事件总线、崩溃诊断、线程、时间格式化等
@@ -163,6 +163,8 @@ price_action_agent/
 
 - **`pa_agent/orchestrator/`**：业务编排。
   - `two_stage.py`：两阶段分析主流程。
+  - `pipeline/`：PyQt-free `PipelineState`、`TerminalStatus`、`PipelineStep`、`StepResult`、
+    `PipelineBuilder` 和 legacy compatibility step；默认 `submit()` 路径保持兼容。
   - `free_chat.py`：分析后自由追问与会话管理。
   - `validation_retry.py`：校验失败后的重试策略。
 
@@ -422,3 +424,8 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     digest；第 231 轮迁移共享 system prompt，第 232 轮迁移 Stage 1 user prompt，第 233 轮迁移
     Stage 2/continuation 并新增 `TemplateContext`。所有迁移均保留 `use_template_store=False`、
     严格失败 warning 回退和固定 fixture 字节等价证据；后续不得顺手重写中文策略文本。
+16. **L3 当前进度**：第 238 轮新增 PyQt-free `orchestrator/pipeline/`，定义
+    `PipelineState`、`TerminalStatus`、`PipelineStep`、`StepResult` 和 `PipelineBuilder`，
+    并通过 `TwoStageOrchestrator.run_pipeline()` / `submit_pipeline()` 提供 opt-in
+    compatibility adapter。默认 `submit()` 和 GUI/headless 调用路径保持不变；下一步才拆分
+    Stage 1、route、Stage 2、persist 真实步骤，并补全网络错误、校验失败、gate、增量和跨入口等价证据。

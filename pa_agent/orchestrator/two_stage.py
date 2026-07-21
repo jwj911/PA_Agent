@@ -1184,6 +1184,81 @@ class TwoStageOrchestrator:
             s1_usage_calls=s1_usage_calls,
         )
 
+    def run_pipeline(
+        self,
+        frame: KlineFrame,
+        cancel_token: CancelToken,
+        on_event: Callable[[OrchestratorEvent], None],
+        *,
+        on_stage1_reasoning: Callable[[str], None] | None = None,
+        on_stage1_content: Callable[[str], None] | None = None,
+        on_stage2_reasoning: Callable[[str], None] | None = None,
+        on_stage2_content: Callable[[str], None] | None = None,
+        on_stage_prompt: Callable[[str, str, str], None] | None = None,
+        on_stage2_files: Callable[[list[str]], None] | None = None,
+        previous_record: AnalysisRecord | None = None,
+        incremental_new_bar_count: int | None = None,
+    ) -> Any:
+        """Run the opt-in pipeline adapter and return explicit execution state.
+
+        The first migration slice wraps the unchanged ``submit()`` method as
+        one compatibility step. The default GUI/headless callers continue to
+        use ``submit()`` directly until stage-specific steps have equivalent
+        evidence.
+        """
+        from pa_agent.orchestrator.pipeline import PipelineBuilder, PipelineState
+        from pa_agent.orchestrator.pipeline.steps import LegacySubmitStep
+
+        state = PipelineState(
+            frame=frame,
+            cancel_token=cancel_token,
+            on_event=on_event,
+            on_stage1_reasoning=on_stage1_reasoning,
+            on_stage1_content=on_stage1_content,
+            on_stage2_reasoning=on_stage2_reasoning,
+            on_stage2_content=on_stage2_content,
+            on_stage_prompt=on_stage_prompt,
+            on_stage2_files=on_stage2_files,
+            previous_record=previous_record,
+            incremental_new_bar_count=incremental_new_bar_count,
+        )
+        return PipelineBuilder((LegacySubmitStep(),)).run(state, self)
+
+    def submit_pipeline(
+        self,
+        frame: KlineFrame,
+        cancel_token: CancelToken,
+        on_event: Callable[[OrchestratorEvent], None],
+        *,
+        on_stage1_reasoning: Callable[[str], None] | None = None,
+        on_stage1_content: Callable[[str], None] | None = None,
+        on_stage2_reasoning: Callable[[str], None] | None = None,
+        on_stage2_content: Callable[[str], None] | None = None,
+        on_stage_prompt: Callable[[str, str, str], None] | None = None,
+        on_stage2_files: Callable[[list[str]], None] | None = None,
+        previous_record: AnalysisRecord | None = None,
+        incremental_new_bar_count: int | None = None,
+    ) -> AnalysisRecord:
+        """Return a record from the opt-in stateful pipeline adapter."""
+        from pa_agent.orchestrator.pipeline import PipelineExecutionError
+
+        state = self.run_pipeline(
+            frame=frame,
+            cancel_token=cancel_token,
+            on_event=on_event,
+            on_stage1_reasoning=on_stage1_reasoning,
+            on_stage1_content=on_stage1_content,
+            on_stage2_reasoning=on_stage2_reasoning,
+            on_stage2_content=on_stage2_content,
+            on_stage_prompt=on_stage_prompt,
+            on_stage2_files=on_stage2_files,
+            previous_record=previous_record,
+            incremental_new_bar_count=incremental_new_bar_count,
+        )
+        if state.record is None:
+            raise PipelineExecutionError("Pipeline completed without an analysis record")
+        return state.record
+
     # ── Internal helpers ──────────────────────────────────────────────────────
 
     def _thinking_params(self) -> tuple[bool, str]:

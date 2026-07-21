@@ -38,6 +38,9 @@ PA Agent 的后端已经具备一个生产级桌面应用的核心骨架：
   29 个模板的 manifest、`TemplateStore` 和 UTF-8 golden digest，第 231-233 轮完成共享 system、
   Stage 1、Stage 2/continuation、`TemplateContext` 和严格变量渲染迁移，并保留严格失败回退；
   当前进入旧 loader/helper 的兼容观察期。
+- L3 第 238 轮已新增 PyQt-free `orchestrator/pipeline/` 状态/步骤协议、显式终态和
+  `LegacySubmitStep` compatibility adapter；`TwoStageOrchestrator.submit()` 默认行为保持不变，
+  真实 Stage 1/route/Stage 2/persist 步骤化和完整终态等价仍待完成。
 - L5 已接入 K 线几何相似度，但真实脱敏数据集和离线指标尚未具备，不应调整线上权重。
 - L6 已完成 `AppEvent`/`EventSink`、`bootstrap_headless()`、共享 core/GUI bootstrap 边界，
   第 229 轮新增 PyQt-free CLI 最小切片，第 234 轮新增 JSONL event sink/replay，第 237 轮又
@@ -296,7 +299,7 @@ PA Agent 的后端已经具备一个生产级桌面应用的核心骨架：
 |---|---|---|---|
 | L1 | 引入 Provider/数据源注册表（第二阶段治理切片完成） | `ai/client_factory.py`、`ai/provider_registry.py`、`data/factory.py`、`data/registry.py`、`tests/unit/test_registry.py` | AI client 与数据源支持规格注册、优先级/延迟 builder、运行时扩展及第一批生命周期/并发/lazy-import 证据；插件发现和正式扩展契约仍待完成，Provider 同步仍由现有 service 负责 |
 | L2 | Prompt 模板引擎化 | `prompt_engineering/`、`ai/prompt_assembler.py` | 使用 Jinja2 或结构化模板，支持热更新 |
-| L3 | 引入 Pipeline Builder | `orchestrator/two_stage.py` | 用 Pipeline/StateMachine 替代巨型 `submit()` |
+| L3 | 引入 Pipeline Builder（第一切片完成） | `orchestrator/pipeline/`、`orchestrator/two_stage.py` | 已有 state/step/terminal status 协议和 legacy wrapper；后续用真实阶段步骤逐步替代巨型 `submit()`，并验证旧/新事件与记录等价 |
 | L4 | 性能优化 | `data/snapshot.py`、`ai/kline_features.py`、`records/analysis_history.py`、`records/pending_writer.py`、`ai/deepseek_client.py` | 增量指标、索引、追加写、复用 HTTP client |
 | L5 | 经验库升级（第二阶段完成） | `records/experience_reader.py`、`records/experience_similarity.py` | Stage 2 先按全量案例的 pattern + direction 排序，再以最近 K 线几何相似度打破同分并列；无 K 线字段的旧案例保持兼容 |
 | L6 | 无 GUI 运行支持（headless runner 第一切片完成） | `util/events.py`、`util/event_sink.py`、`util/event_bus.py`、`app_context.py`、`cli.py`、`records/pending_writer.py` | 默认 dry-run 保持无网络；显式 `--run/--execute` 已复用 `TwoStageOrchestrator` 写入 final/partial record，并输出 correlation JSONL 事件；后续 GUI/headless 等价、真实 Provider 验证和公开 adapter 契约 |

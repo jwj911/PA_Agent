@@ -18,6 +18,35 @@
 
 ---
 
+## [Unreleased] — 2026-07-21（第二百三十八轮：L3 Pipeline state/step 第一切片）
+
+本轮推进 L3 Pipeline Builder，先建立显式状态/步骤协议和兼容适配器，不切换默认编排路径。
+
+### 已交付
+
+- 新增 PyQt-free `pa_agent/orchestrator/pipeline/`，包含 `PipelineState`、`TerminalStatus`、
+  `PipelineStep`、`StepOutcome`、`StepResult`、`PipelineBuilder` 和 `LegacySubmitStep`。
+- `terminal_status_for()` 将 legacy orchestrator events 与 `AnalysisRecord.exception` 映射为明确
+  的 completed/cancelled/insufficient-data/stage1-failed/stage2-failed/failed 终态。
+- `TwoStageOrchestrator.run_pipeline()` 返回显式状态；`submit_pipeline()` 返回兼容
+  `AnalysisRecord`。默认 `submit()`、GUI 和 headless 调用路径保持不变。
+- 新增 builder 协议单测、legacy/opt-in final record 与事件序列等价测试、取消终态测试，并纳入
+  CI targeted pytest/focused Ruff。
+
+### 收尾边界
+
+- 本轮仍以完整 `submit()` 作为单个 compatibility step，尚未拆分 Stage 1、route、Stage 2 和
+  persist 内部实现。
+- 网络错误、校验失败、gate short-circuit、增量分析及 GUI/headless 全链路等价留待后续切片；
+  Pipeline 模块不导入 PyQt6。
+
+### 验证
+
+- L3 协议、等价和既有终态测试 → **15 passed**。
+- Pipeline focused Ruff、py_compile、CI workflow target、Ruff baseline 和 `git diff --check` → **通过**。
+
+---
+
 ## [Unreleased] — 2026-07-21（第二百三十六轮：L1 注册表治理）
 
 本轮推进 L1 注册表治理，补齐运行时扩展入口的最小生命周期和并发证据，不引入动态插件扫描。
