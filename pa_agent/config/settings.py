@@ -1,5 +1,6 @@
 """Pydantic settings models for PA Agent."""
 from __future__ import annotations
+
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -172,6 +173,7 @@ class Settings(BaseModel):
     general: GeneralSettings = Field(default_factory=GeneralSettings)
     prompt: PromptSettings = Field(default_factory=PromptSettings)
     validation: ValidationSettings = Field(default_factory=ValidationSettings)
+    orchestrator: OrchestratorSettings = Field(default_factory=lambda: OrchestratorSettings())
     feishu: FeishuSettings = Field(default_factory=FeishuSettings)
     pushplus: PushPlusSettings = Field(default_factory=PushPlusSettings)
     tushare: TushareSettings = Field(default_factory=TushareSettings)
@@ -182,7 +184,6 @@ def provider_api_key_configured(settings: Settings | None) -> bool:
     if settings is None:
         return False
     return bool((settings.provider.api_key or "").strip())
-
 
 # ── Persistence ───────────────────────────────────────────────────────────────
 import json
@@ -338,3 +339,8 @@ def save_settings(settings: "Settings", path: Path | None = None) -> None:
     _encrypt_provider_key_for_disk(data)
 
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+from pa_agent.config.orchestrator import OrchestratorSettings  # noqa: E402
+
+Settings.model_rebuild()

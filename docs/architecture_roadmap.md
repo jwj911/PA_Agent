@@ -21,7 +21,7 @@
 |---|---|---|---|
 | L1 Provider/数据源注册表 | 基础完成，治理切片已交付 | `data/registry.py`、`ai/provider_registry.py` 已支持规格、优先级、延迟 builder 和运行时注册；未知数据源配置已安全回退；第 236 轮补齐规范化、replace/unregister、并发和 lazy-import 证据 | 插件发现方案、正式扩展契约文档、builder 锁外执行证据 |
 | L2 Prompt 模板引擎 | 实现完成，兼容观察期 | `Stage1PromptBuilder`、`Stage2PromptBuilder`、29 个模板 manifest、`TemplateStore`、`TemplateContext`、严格变量渲染、system/Stage 1/Stage 2/continuation golden snapshots | 稳定周期后评估旧 helper、旧 loader 和兼容开关的下线 |
-| L3 Pipeline Builder | 四个真实步骤已交付，默认旧路径，等价观察未收口 | 新增 PyQt-free `orchestrator/pipeline/`、`PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step` 和 `PersistStep`；opt-in `run_pipeline()` 顺序为 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep`；state 显式承载阶段 payload、usage、route 输出、Stage 2 flags、partial reason、持久化意图和 `persistence_pending`；PersistStep 负责 full/partial record assembly/write、磁盘失败映射及 `RecordSaved` ordering；`PendingWriter.last_write_succeeded` 提供底层写入结果；默认路径仍为旧 `submit()` | Pipeline feature flag、至少一个完整观察周期、GUI/headless final/partial/cancel/failure 全链路等价；四个真实步骤已齐但 L3 尚未收口 |
+| L3 Pipeline Builder | Task 10 已完成 rollout 观察与切换准备，默认 legacy，观察周期未收口 | 新增 PyQt-free `orchestrator/pipeline/`、`PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step` 和 `PersistStep`；新增 `orchestrator.pipeline_builder_enabled`（默认 `false`）及 `pa_agent/config/orchestrator.py`；flag-off 的 `submit()` 走 legacy，flag-on 委托 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep`；Task 10 已补齐完整终态矩阵和 Qt-free headless/GUI adapter equivalence 测试；默认路径仍为 legacy | 真实稳定观察周期、GUI/headless final/partial/cancel/failure 全链路 evidence；满足后才评估启用默认 flag，L3 尚未收口 |
 | L4 性能优化 | 代码优化完成，预算未收口 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁 | 固定 benchmark、预算阈值、p50/p95 报告和持续回归监控 |
 | L5 经验库升级 | 排序实现完成，数据评估未收口 | 全量相关性排序 + K 线几何相似度 | 脱敏数据集、固定离线指标、特征版本化和权重校准 |
 | L6 无 GUI 运行 | headless runner 第一切片已交付，等价契约未收口 | `AppEvent`、`EventSink`、`CollectingEventSink`、`JsonlEventSink`、`replay_jsonl`、共享 `_build_core()`、`bootstrap_gui()`/`bootstrap_headless()`、兼容 `bootstrap()`，以及 PyQt-free `pa-agent headless`；显式 `analyze --run/--execute` 已接入两阶段 orchestrator、record 和 JSONL 事件 | GUI/headless 最终/partial/cancel/failure record 等价、公开 adapter 契约和真实 Provider 环境验证 |
@@ -108,8 +108,9 @@ L5/L4 在真实数据或固定 benchmark 建立前，不得宣称收敛或直接
 - `orchestrator.pipeline_builder_enabled`
 - `runtime.headless_mode`
 
-默认值在迁移完成前保持关闭或兼容模式。开关必须记录在诊断日志和分析记录元数据中，
-便于比较新旧路径。
+默认值在迁移完成前保持关闭或兼容模式；当前 `orchestrator.pipeline_builder_enabled` 的默认值
+为 `false`，旧配置缺少 `orchestrator` section 时也回退到 legacy 默认。开关必须记录在诊断
+日志和分析记录元数据中，便于比较新旧路径。
 
 ### 3.3 等价性证据
 
@@ -264,10 +265,11 @@ Stage 1、Stage 2 和 continuation，不替换任何中文策略文本。Templat
 
 `TwoStageOrchestrator.submit()` 已拆出部分方法，但仍有大量跨阶段局部变量、流式闭包、取消检查、校验重试和 partial record early return。当前状态隐含在方法栈中，
 不利于 headless、重放、插桩和恢复。第 238 轮已建立显式 state/step 契约和 legacy wrapper，
-本轮 Task 5 又补齐了阶段 payload、route 输出、持久化意图、route/persist 终态映射和安全摘要；
+Task 5 又补齐了阶段 payload、route 输出、持久化意图、route/persist 终态映射和安全摘要；
 Task 6 已将 Stage 1 拆为真实 `Stage1Step`，Task 7 又将路由和经验加载拆为真实 `RouteStep`；
 Task 8 已将 Stage 2 准备/执行拆为真实 `Stage2Step`，Task 9 已将 record 组装与写入拆为真实
-`PersistStep`；四个步骤均只在 opt-in pipeline 使用，默认 `submit()` 路径保持不变。
+`PersistStep`；Task 10 已接入默认关闭的 rollout flag、完整终态矩阵和 Qt-free adapter
+equivalence 测试。四个步骤仍只在 flag-on/opt-in pipeline 使用，默认 `submit()` 路径保持 legacy。
 
 ### 6.2 目标对象
 
@@ -333,10 +335,16 @@ step.run(state, services) -> Continue(state) | Complete(record) | Fail(record)
    reason、保留 `PendingWriter` 脱敏、磁盘错误和 `RecordSaved` 契约；前置终态通过
    `persistence_pending` 交给 PersistStep，Builder 不会重复执行写入。full 写入成功后先清除
    pending，再发 `RecordSaved`，最后标记 completed；partial 写入和磁盘失败均不发出成功事件。
-8. 保留 `submit()` 作为 compatibility facade，默认调用旧路径。
-9. 开启 Pipeline feature flag，观察至少一个完整发布周期。
-10. 完成 GUI/headless final/partial/cancel/failure 全链路等价验证后，再评估删除旧 submit 内部
-    实现，只保留 facade。
+8. 保留 `submit()` 作为 compatibility facade，flag-off 默认调用旧路径，flag-on 委托完整四步
+   Pipeline。
+9. **已完成 Task 10 rollout 准备**：新增
+   `orchestrator.pipeline_builder_enabled`（默认 `false`），为 Settings round-trip 和缺少
+   `orchestrator` section 的旧配置补充 legacy 默认，接入 flag 路由，建立完整终态矩阵及
+   Qt-free headless/GUI adapter equivalence 测试，并将测试/config module 纳入 CI targets。
+10. 在默认 flag 仍关闭的前提下，进行受控 flag-on rollout，积累真实稳定观察周期，并完成
+    GUI/headless final/partial/cancel/failure 全链路 evidence。
+11. 只有上述观察和 evidence 无未解释偏差后，才评估启用默认 flag；随后再评估删除旧
+    `submit()` 内部实现，只保留 facade。
 
 ### 6.4 事件与取消契约
 
@@ -360,7 +368,9 @@ Qt signal、CLI stdout 和日志分别由入口 adapter 映射。取消令牌必
   experience limit、empty library、`current_bars`、取消和 `route_failed` 测试；`Stage2Step` 已有
   continuation/flags、流式、gate short-circuit、retry、network、validation、cancel 和 partial
   record 等价测试；`PersistStep` 已有 full/partial/insufficient-data、`RecordSaved` ordering、
-  磁盘失败和 `persistence_pending` 防重复保存测试；
+  磁盘失败和 `persistence_pending` 防重复保存测试；Task 10 另有完整终态矩阵、
+  `submit()` flag-off/flag-on 路由、Settings round-trip/旧配置 legacy 默认以及 Qt-free
+  headless/GUI adapter equivalence 测试；
 - route failure 已产生稳定的 `route_failed`；Stage2 failure 已有显式终态；PersistStep 已收口
   full/partial assembly/write、partial reason、`PendingWriter.last_write_succeeded` 和
   persist failure；
@@ -369,8 +379,8 @@ Qt signal、CLI stdout 和日志分别由入口 adapter 映射。取消令牌必
 - 事件顺序和事件 payload 可快照比较；
 - Pipeline 不导入 PyQt6；
 - feature flag 关闭时旧 `submit()` 行为不变；
-- 四个真实步骤已齐，但 Pipeline feature flag、至少一个完整观察周期和 GUI/headless
-  final/partial/cancel/failure 全链路等价仍待完成；
+- 四个真实步骤与 Pipeline feature flag 接线已齐，但默认 flag 仍为 `false`；至少一个真实稳定
+  观察周期和 GUI/headless final/partial/cancel/failure 全链路等价仍待完成；
 - 任一阶段出现差异可按 symbol/timeframe 或配置开关回退。
 
 ## 7. L4：性能预算与持续验证
@@ -564,15 +574,16 @@ pa-agent headless analyze --input snapshot.json --run --records-dir records/ --e
   协议和 legacy wrapper；
 - 已完成 Task 5 的阶段 payload、route/persistence intent、route/persist 终态映射和安全摘要；
 - 已完成 Task 6 的 `Stage1Step`、Task 7 的 `RouteStep`、Task 8 的 `Stage2Step` 和 Task 9
-  的 `PersistStep` 真实步骤；opt-in sequence 为
+  的 `PersistStep` 真实步骤；Task 10 已完成默认关闭的 flag 接线、完整终态矩阵和 Qt-free
+  adapter equivalence 测试；flag-on sequence 为
   `Stage1Step -> RouteStep -> Stage2Step -> PersistStep`；
 - `PersistStep` 集中 full/partial record assembly/write，前置终态通过
   `persistence_pending` 防止重复保存，`PendingWriter.last_write_succeeded` 反馈磁盘写入结果；
   full 写入成功后才发 `RecordSaved`，partial 或 disk failure 不发成功事件；
 - 继续用 headless harness 做新旧事件和记录等价性验证，补齐 GUI/headless final/partial/cancel/
-  failure 全链路等价；
-- 四个真实步骤已齐后，再开启 Pipeline feature flag 并观察至少一个完整发布周期，最后评估默认路径
-  切换和旧路径下线。
+  failure 全链路 evidence；
+- 默认 flag 仍关闭；后续先进行受控 flag-on rollout 并观察至少一个真实稳定周期，待 GUI/headless
+  全链路 evidence 无未解释偏差后，再评估默认路径切换和旧路径下线。
 
 ### Phase 5：L5 数据评估
 
@@ -612,8 +623,9 @@ L1、L4、L5 的收口工作可以并行，但 L6 应先于 L3；L2 可以与 L6
 Stage 1 集成测试 `tests/integration/test_stage1_pipeline_step.py`、Route 集成测试
 `tests/integration/test_route_pipeline_step.py`、Stage 2 集成测试
 `tests/integration/test_stage2_pipeline_step.py` 和 Persist 集成测试
-`tests/integration/test_persist_pipeline_step.py` 同时纳入 CI targeted pytest 与 focused
-Ruff/Black 目标清单；GUI/headless 全链路等价仍待补齐。
+`tests/integration/test_persist_pipeline_step.py`，以及 Task 10 集成测试
+`tests/integration/test_task10_pipeline_rollout.py` 同时纳入 CI targeted pytest；其中
+`pa_agent/config/orchestrator.py` 纳入 focused Ruff/config target。GUI/headless 全链路等价仍待补齐。
 
 ### 每轮最低门禁
 
@@ -659,5 +671,6 @@ L1-L6 只有同时满足以下条件，才标记为完成：
 基线、共享 system、Stage 1、Stage 2、continuation、`TemplateContext` 和严格变量渲染。
 第 238 轮已完成 L3 state/step compatibility adapter，Task 5 完成 PipelineState foundation，
 Task 6 完成 `Stage1Step`，Task 7 完成 `RouteStep`，Task 8 完成 `Stage2Step`，Task 9 完成
-`PersistStep`；当前主线转入 Pipeline feature flag、稳定观察周期、GUI/headless 全链路最终
-record 等价和事件重放；L2 只保留兼容观察期。
+`PersistStep`，Task 10 完成 rollout flag 接线、终态矩阵和 Qt-free adapter equivalence；
+当前只进行受控 rollout 观察与切换准备，默认 flag 仍关闭，后续需真实稳定周期和 GUI/headless
+全链路最终 record 等价 evidence；L2 只保留兼容观察期。

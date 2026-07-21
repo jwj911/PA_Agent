@@ -39,8 +39,8 @@ if TYPE_CHECKING:
     from pa_agent.records.experience_reader import ExperienceReader
     from pa_agent.records.pending_writer import PendingWriter
 
-from pa_agent.data.base import KlineFrame
 from pa_agent.ai.json_validator import Ok, ValidationError
+from pa_agent.data.base import KlineFrame
 from pa_agent.orchestrator.validation_retry import validate_with_retry
 from pa_agent.records.schema import AnalysisRecord, RecordMeta
 from pa_agent.util.threading import CancelToken, OrchestratorEvent
@@ -1473,3 +1473,51 @@ class TwoStageOrchestrator:
         if cause is not None and cause is not exc:
             return TwoStageOrchestrator._is_network_error(cause)
         return False
+
+
+def _pipeline_builder_enabled(settings: Any) -> bool:
+    """Return the explicit opt-in flag without changing legacy defaults."""
+    orchestrator_settings = getattr(settings, "orchestrator", None)
+    if hasattr(orchestrator_settings, "get"):
+        return bool(orchestrator_settings.get("pipeline_builder_enabled", False))
+    return bool(getattr(orchestrator_settings, "pipeline_builder_enabled", False))
+
+
+_LEGACY_SUBMIT = TwoStageOrchestrator.submit
+
+
+def _submit_with_pipeline_flag(
+    self: TwoStageOrchestrator,
+    frame: KlineFrame,
+    cancel_token: CancelToken,
+    on_event: Callable[[OrchestratorEvent], None],
+    *,
+    on_stage1_reasoning: Callable[[str], None] | None = None,
+    on_stage1_content: Callable[[str], None] | None = None,
+    on_stage2_reasoning: Callable[[str], None] | None = None,
+    on_stage2_content: Callable[[str], None] | None = None,
+    on_stage_prompt: Callable[[str, str, str], None] | None = None,
+    on_stage2_files: Callable[[list[str]], None] | None = None,
+    previous_record: AnalysisRecord | None = None,
+    incremental_new_bar_count: int | None = None,
+) -> AnalysisRecord:
+    """Select the opt-in pipeline while retaining the original submit facade."""
+    kwargs = {
+        "frame": frame,
+        "cancel_token": cancel_token,
+        "on_event": on_event,
+        "on_stage1_reasoning": on_stage1_reasoning,
+        "on_stage1_content": on_stage1_content,
+        "on_stage2_reasoning": on_stage2_reasoning,
+        "on_stage2_content": on_stage2_content,
+        "on_stage_prompt": on_stage_prompt,
+        "on_stage2_files": on_stage2_files,
+        "previous_record": previous_record,
+        "incremental_new_bar_count": incremental_new_bar_count,
+    }
+    if _pipeline_builder_enabled(self._settings):
+        return self.submit_pipeline(**kwargs)
+    return _LEGACY_SUBMIT(self, **kwargs)
+
+
+TwoStageOrchestrator.submit = _submit_with_pipeline_flag

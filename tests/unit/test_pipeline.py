@@ -15,6 +15,7 @@ from pa_agent.orchestrator.pipeline import (
     terminal_status_for,
 )
 from pa_agent.orchestrator.pipeline.steps import LegacySubmitStep
+from pa_agent.orchestrator.two_stage import TwoStageOrchestrator
 from pa_agent.records.schema import AnalysisRecord, RecordMeta
 from pa_agent.util.threading import CancelToken, OrchestratorEvent
 
@@ -257,3 +258,45 @@ def test_legacy_submit_step_recovers_final_usage_call_snapshots() -> None:
     assert state.stage1_usage_calls == [{"prompt_tokens": 10, "total_tokens": 12}]
     assert state.stage2_usage_calls == [{"prompt_tokens": 20, "total_tokens": 23}]
     assert state.usage_total == {"prompt_tokens": 30, "total_tokens": 35}
+
+
+def test_legacy_submit_step_bypasses_rollout_facade_for_orchestrator(monkeypatch) -> None:
+    """The compatibility step must not re-enter the flag wrapper."""
+    record = AnalysisRecord(
+        meta=RecordMeta(
+            timestamp_local_iso="2026-07-22T00:00:00.000",
+            timestamp_local_ms=1,
+            symbol="TEST",
+            timeframe="1m",
+            bar_count=1,
+            ai_provider={},
+        ),
+        kline_data=[],
+        htf_text="",
+        stage1_messages=[],
+        stage1_response=None,
+        stage1_diagnosis={},
+        stage2_messages=[],
+        stage2_response=None,
+        stage2_decision={},
+        strategy_files_used=[],
+        experience_loaded=[],
+        exception=None,
+        usage_total={},
+    )
+    calls: list[object] = []
+
+    def legacy_submit(_services, **_kwargs):
+        calls.append(_services)
+        return record
+
+    monkeypatch.setattr(
+        "pa_agent.orchestrator.pipeline.steps._LEGACY_SUBMIT",
+        legacy_submit,
+    )
+    services = TwoStageOrchestrator.__new__(TwoStageOrchestrator)
+
+    result = LegacySubmitStep().run(_state(), services)
+
+    assert result.state.record is record
+    assert calls == [services]

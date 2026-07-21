@@ -62,7 +62,7 @@ price_action_agent/
 │   ├── main.py          # 应用入口
 │   ├── app_context.py   # 依赖容器与启动装配
 │   ├── ai/              # LLM 客户端、prompt 组装、JSON 校验、归一化、策略路由
-│   ├── config/          # 路径常量、Pydantic 配置模型
+│   ├── config/          # 路径常量、Pydantic 配置模型和 rollout 开关
 │   ├── data/            # 数据源抽象与实现
 │   ├── demo/            # 记录加载器与回放器
 │   ├── gui/             # PyQt6 主窗口、对话框、widgets、主题
@@ -143,6 +143,8 @@ price_action_agent/
 
 - **`pa_agent/config/`**：配置与路径。
   - `settings.py`：Pydantic v2 配置模型与读写；支持旧字段迁移。
+  - `orchestrator.py`：PyQt-free Pipeline rollout 配置；`orchestrator.pipeline_builder_enabled`
+    默认 `false`，旧配置缺少该 section 时保持 legacy 默认。
   - `paths.py`：集中管理项目根目录、配置、日志、记录、prompt 目录等路径常量。
 
 - **`pa_agent/data/`**：市场数据层。
@@ -442,16 +444,15 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     partial reason 和 `persistence_pending`，补充 `route_failed`/`persist_failed` 映射，以及
     callbacks、Provider client、prompt/reply 正文、行情数据、密钥和 URL path/query/fragment
     不进入的安全摘要。Task 6 已交付真实 `Stage1Step`，Task 7 已交付真实 `RouteStep`，Task 8
-    已交付真实 `Stage2Step`，Task 9 已交付真实 `PersistStep`；opt-in sequence 固定为
-    `Stage1Step -> RouteStep -> Stage2Step -> PersistStep`。PersistStep 集中 full/partial
-    record assembly/write，前置终态通过 `persistence_pending` 防止重复保存，使用
+    已交付真实 `Stage2Step`，Task 9 已交付真实 `PersistStep`；Task 10 新增
+    `orchestrator.pipeline_builder_enabled`（默认 `false`）和 Settings round-trip/旧配置
+    legacy 默认测试。`submit()` flag-off 走 legacy，flag-on 委托完整
+    `Stage1Step -> RouteStep -> Stage2Step -> PersistStep` Pipeline。Task 10 还补充完整终态
+    矩阵、Qt-free headless/GUI adapter equivalence 测试，并将
+    `tests/integration/test_task10_pipeline_rollout.py` 纳入 CI targeted pytest、
+    `pa_agent/config/orchestrator.py` 纳入 focused Ruff/config target。PersistStep 集中
+    full/partial record assembly/write，前置终态通过 `persistence_pending` 防止重复保存，使用
     `PendingWriter.last_write_succeeded` 识别磁盘失败，full 写入成功后才发出 `RecordSaved`，
-    partial 或磁盘失败不发成功事件。RouteStep 必须保持 callable/object router、策略文件顺序、
-    经验数量/字符限制、空经验库、`current_bars` 和 Stage 2 前取消边界；route 异常映射为
-    `route_failed` partial terminal。Stage2Step 必须保持 continuation、settings flags、
-    gate short-circuit、流式、retry、network、validation 和 cancel 语义。该摘要支持从
-    mapping/object 提取 usage counters，且不改变 `AnalysisRecord` schema。默认 `submit()` 和
-    GUI/headless 调用路径保持不变；已补充 Stage 1、RouteStep、Stage2Step 和 PersistStep
-    集成/等价测试，并将四个集成测试纳入 CI targeted pytest 与 focused Ruff/Black 清单。
-    四个真实步骤已齐，但 Pipeline feature flag、稳定观察周期和 GUI/headless final/partial/
-    cancel/failure 全链路等价仍未收口。
+    partial 或磁盘失败不发成功事件。默认 `submit()` 和 GUI/headless 调用路径仍保持 legacy；
+    本轮只完成 rollout 观察与切换准备，后续需真实稳定观察周期和 GUI/headless final/partial/
+    cancel/failure 全链路 evidence 后才评估启用默认 flag。

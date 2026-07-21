@@ -187,6 +187,7 @@ jobs:
           tests/integration/test_next_bar_prediction.py
           tests/integration/test_two_stage_no_order_with_prices.py
           tests/integration/test_two_stage_pipeline_equivalence.py
+          tests/integration/test_task10_pipeline_rollout.py
           tests/integration/test_stage1_pipeline_step.py
           tests/integration/test_route_pipeline_step.py
           tests/integration/test_stage2_pipeline_step.py
@@ -312,6 +313,7 @@ jobs:
           pa_agent/indicators
           pa_agent/gui/theme
           scripts/check_ci_workflow_targets.py
+          pa_agent/config/orchestrator.py
           tests/__init__.py
           tests/e2e/__init__.py
           tests/fixtures/__init__.py

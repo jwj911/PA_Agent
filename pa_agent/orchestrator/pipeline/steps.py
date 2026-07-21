@@ -13,6 +13,8 @@ from pa_agent.orchestrator.pipeline.state import (
 )
 from pa_agent.orchestrator.pipeline.step import StepOutcome, StepResult
 from pa_agent.orchestrator.two_stage import (
+    _LEGACY_SUBMIT,
+    TwoStageOrchestrator,
     _accumulate_usage_calls,
     _build_empty_record,
 )
@@ -246,7 +248,14 @@ class LegacySubmitStep:
 
     def run(self, state: PipelineState, services: Any) -> StepResult:
         """Execute the legacy method and translate its terminal state."""
-        record = services.submit(
+        if isinstance(services, TwoStageOrchestrator):
+            submit = _LEGACY_SUBMIT
+            submit_args = (services,)
+        else:
+            submit = services.submit
+            submit_args = ()
+        record = submit(
+            *submit_args,
             frame=state.frame,
             cancel_token=state.cancel_token,
             on_event=state.emit,

@@ -18,6 +18,44 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L3 Task 10：rollout 观察与切换准备）
+
+本轮同步规格 Task 10 的实际工作区状态。四个真实 Pipeline 步骤已经可以通过显式开关选择，
+但本轮只完成 rollout 观察与默认切换准备；默认仍保持 legacy 路径。
+
+### 已交付
+
+- **新增 Pipeline rollout 配置**：新增 PyQt-free `pa_agent/config/orchestrator.py`，
+  定义 `orchestrator.pipeline_builder_enabled`，默认值为 `false`；`Settings` round-trip
+  覆盖开关持久化，缺少 `orchestrator` section 的旧配置自动使用 legacy 默认。
+- **保留 submit facade 并接入开关**：`submit()` flag-off 委托原 legacy 实现；flag-on 委托
+  `submit_pipeline()`，执行完整
+  `Stage1Step -> RouteStep -> Stage2Step -> PersistStep` Pipeline。
+- **完整终态矩阵**：新增 Task 10 集成测试，覆盖 completed、insufficient-data、cancelled、
+  Stage 1/Route/Stage 2 failure、full/partial persistence failure，并断言终态、reason、
+  step history、事件序列和 PersistStep 单次写入边界。
+- **Qt-free adapter equivalence**：比较 headless/GUI adapter 边界的 legacy、flag-on 与
+  direct Pipeline 规范化 record、events、stage prompts 和流式 content，确认四步顺序且不导入 Qt。
+- **CI target**：将 `tests/integration/test_task10_pipeline_rollout.py` 加入 targeted pytest，
+  将 `pa_agent/config/orchestrator.py` 加入 focused Ruff/config target。
+
+### 明确边界
+
+- 本轮不启用默认 Pipeline flag，不宣称默认路径已切换；`pipeline_builder_enabled` 默认仍为
+  `false`。
+- 后续必须完成真实稳定观察周期，以及 GUI/headless final、partial、cancel、failure 全链路
+  evidence，确认无未解释偏差后才评估启用默认 flag。
+- 不修改 prompt 文本、JSON schema、normalizer、retry 语义、`AnalysisRecord` schema 或
+  `.trae/specs` 状态；不提交、不推送。
+
+### 文档同步与验证
+
+- 同步 `docs/iteration_plan.md`、`docs/architecture_roadmap.md`、`docs/backend_review_report.md`
+  和 `AGENTS.md` 的 L3 状态、开关、终态矩阵、adapter evidence、CI target 和后续 rollout 边界。
+- 本次代理操作只更新项目文档，仅运行 `git diff --check`，未运行 pytest。
+
+---
+
 ## [Unreleased] — 2026-07-22（L3 Task 9：PersistStep 真实步骤）
 
 本轮同步规格 Task 9 的实际工作区状态。L3 opt-in Pipeline 已完成四个真实步骤的装配；

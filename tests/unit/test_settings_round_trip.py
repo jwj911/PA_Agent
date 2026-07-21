@@ -23,6 +23,7 @@ def test_defaults(tmp_path):
     assert s.general.decision_stance == "balanced"
     assert s.general.decision_flow_auto_play is True
     assert s.general.auto_resume_chart_after_analysis is False
+    assert s.orchestrator.pipeline_builder_enabled is False
     assert p.exists(), "defaults should be written to disk"
 
 
@@ -161,6 +162,31 @@ def test_tushare_round_trip(tmp_path):
     save_settings(original, p)
     loaded = load_settings(p)
     assert loaded.tushare.token == "ts-test-token"
+
+
+def test_orchestrator_pipeline_flag_round_trip(tmp_path):
+    """The explicit pipeline rollout flag persists without changing defaults."""
+    p = tmp_path / "settings.json"
+    original = Settings(orchestrator={"pipeline_builder_enabled": True})
+
+    save_settings(original, p)
+    loaded = load_settings(p)
+
+    assert loaded.orchestrator.pipeline_builder_enabled is True
+    assert json.loads(p.read_text(encoding="utf-8"))["orchestrator"] == {
+        "pipeline_builder_enabled": True
+    }
+
+
+def test_old_settings_without_orchestrator_section_use_legacy_default(tmp_path):
+    """Settings written before the rollout section remain on the legacy path."""
+    p = tmp_path / "settings.json"
+    p.write_text(json.dumps({"provider": {"model": "old-model"}}), encoding="utf-8")
+
+    loaded = load_settings(p)
+
+    assert loaded.provider.model == "old-model"
+    assert loaded.orchestrator.pipeline_builder_enabled is False
 
 
 def test_pushplus_auto_disabled_when_enabled_without_token(tmp_path):
