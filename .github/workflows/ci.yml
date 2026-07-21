@@ -1,4 +1,4 @@
-﻿name: CI
+name: CI
 
 on:
   push:
@@ -159,6 +159,7 @@ jobs:
           tests/unit/test_strategy_files.py
           tests/unit/test_prompt_txt_files.py
           tests/unit/test_template_store.py
+          tests/unit/test_template_context.py
           tests/unit/test_prompt_assembler.py
           tests/unit/test_token_indicator_thresholds.py
           tests/unit/test_free_chat_resend_drops_reasoning.py
@@ -431,6 +432,7 @@ jobs:
           tests/unit/test_strategy_files.py
           tests/unit/test_prompt_txt_files.py
           tests/unit/test_template_store.py
+          tests/unit/test_template_context.py
           tests/unit/test_prompt_assembler.py
           tests/unit/test_token_indicator_thresholds.py
           tests/unit/test_free_chat_resend_drops_reasoning.py

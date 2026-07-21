@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import hashlib
 import threading
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from string import Template
+from typing import Any
 
 from pa_agent.ai.prompting.template_manifest import (
     TEMPLATE_MANIFEST,
@@ -103,6 +105,42 @@ class TemplateStore:
     ) -> tuple[str, ...]:
         """Load templates in exactly the caller-provided order."""
         return tuple(self.load(name, stage=stage) for name in names)
+
+    def render(
+        self,
+        name: str,
+        context: Mapping[str, Any] | Any,
+        *,
+        stage: StageName | None = None,
+    ) -> str:
+        """Render a template with strict, non-executable variable substitution.
+
+        Templates use standard-library ``$name`` / ``${name}`` placeholders.
+        Missing variables and malformed placeholders fail explicitly instead of
+        producing a partial prompt.
+        """
+        text = self.load(name, stage=stage)
+        values = context.to_dict() if hasattr(context, "to_dict") else context
+        if not isinstance(values, Mapping):
+            raise TemplateStoreError("Template render context must be a mapping")
+        try:
+            return Template(text).substitute({str(key): value for key, value in values.items()})
+        except KeyError as exc:
+            raise TemplateStoreError(
+                f"Missing template variable {exc.args[0]!r} for {name}"
+            ) from exc
+        except ValueError as exc:
+            raise TemplateStoreError(f"Invalid template syntax for {name}: {exc}") from exc
+
+    def render_many(
+        self,
+        names: Sequence[str],
+        context: Mapping[str, Any] | Any,
+        *,
+        stage: StageName | None = None,
+    ) -> tuple[str, ...]:
+        """Render templates in caller order using one explicit context."""
+        return tuple(self.render(name, context, stage=stage) for name in names)
 
     def snapshot(self, name: str, *, stage: StageName | None = None) -> TemplateSnapshot:
         """Return the UTF-8 byte digest of one loaded template."""

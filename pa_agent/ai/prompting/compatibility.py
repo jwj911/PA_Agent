@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pa_agent.ai.prompting.template_store import TemplateStore, TemplateStoreError
 
@@ -41,23 +41,26 @@ def load_shared_system_templates(
     return tuple(legacy_load(name) for name in names)
 
 
-def make_stage1_template_loader(
+def _make_template_loader(
     store: Any,
     enabled: bool,
     legacy_load: Callable[[str], str],
     names: Sequence[str],
     *,
+    stage: Literal["stage1", "stage2"],
+    stage_label: str,
     warning_logger: logging.Logger | None = None,
 ) -> Callable[[str], str]:
-    """Build a Stage 1 loader that switches atomically or falls back as a group."""
+    """Build an atomic stage loader with a legacy fallback."""
     templates: dict[str, str] | None = None
     if enabled:
         try:
-            loaded = store.load_many(names, stage="stage1")
+            loaded = store.load_many(names, stage=stage)
             templates = dict(zip(names, loaded, strict=True))
         except TemplateStoreError as exc:
             (warning_logger or logger).warning(
-                "TemplateStore Stage 1 prompt load failed; falling back to legacy loader: %s",
+                "TemplateStore %s prompt load failed; falling back to legacy loader: %s",
+                stage_label,
                 exc,
             )
 
@@ -70,3 +73,43 @@ def make_stage1_template_loader(
         return legacy_load(name)
 
     return _load
+
+
+def make_stage1_template_loader(
+    store: Any,
+    enabled: bool,
+    legacy_load: Callable[[str], str],
+    names: Sequence[str],
+    *,
+    warning_logger: logging.Logger | None = None,
+) -> Callable[[str], str]:
+    """Build a Stage 1 loader that switches atomically or falls back as a group."""
+    return _make_template_loader(
+        store,
+        enabled,
+        legacy_load,
+        names,
+        stage="stage1",
+        stage_label="Stage 1",
+        warning_logger=warning_logger,
+    )
+
+
+def make_stage2_template_loader(
+    store: Any,
+    enabled: bool,
+    legacy_load: Callable[[str], str],
+    names: Sequence[str],
+    *,
+    warning_logger: logging.Logger | None = None,
+) -> Callable[[str], str]:
+    """Build a Stage 2 loader that switches atomically or falls back as a group."""
+    return _make_template_loader(
+        store,
+        enabled,
+        legacy_load,
+        names,
+        stage="stage2",
+        stage_label="Stage 2",
+        warning_logger=warning_logger,
+    )

@@ -8,7 +8,11 @@ from pathlib import Path
 
 import pytest
 
-from pa_agent.ai.prompt_assembler import PromptAssembler
+from pa_agent.ai.prompt_assembler import (
+    COMMON_SYSTEM_STAGE2_TXT_FILES,
+    STAGE2_TEMPLATE_TXT_FILES,
+    PromptAssembler,
+)
 from pa_agent.ai.prompting import TemplateStoreError
 from pa_agent.data.base import IndicatorBundle, KlineBar, KlineFrame
 
@@ -164,9 +168,7 @@ def test_shared_system_prompt_uses_template_store(tmp_path: Path) -> None:
 
     system = assembler._build_stage1_system_prompt()
 
-    assert store.calls == [
-        (("提示词大纲_人设与思维方式.txt", "二元决策.txt"), "stage1")
-    ]
+    assert store.calls == [(("提示词大纲_人设与思维方式.txt", "二元决策.txt"), "stage1")]
     assert "[STORE PERSONA]" in system
     assert "[STORE BINARY]" in system
 
@@ -192,9 +194,7 @@ def test_stage1_user_prompt_uses_template_store(tmp_path: Path) -> None:
 
     user = assembler._build_stage1_user_prompt(_make_frame())
 
-    assert store.calls == [
-        (("市场诊断框架.txt", "文件16-K线信号识别.txt"), "stage1")
-    ]
+    assert store.calls == [(("市场诊断框架.txt", "文件16-K线信号识别.txt"), "stage1")]
     assert "[STORE DIAGNOSIS]" in user
     assert "[STORE SIGNAL]" in user
 
@@ -247,6 +247,66 @@ def test_stage1_user_prompt_falls_back_as_a_group(
     assert "[LEGACY DIAGNOSIS]" in user
     assert "[LEGACY SIGNAL]" in user
     assert "falling back to legacy loader" in caplog.text
+
+
+def test_stage2_user_prompt_uses_template_store_as_an_atomic_group(
+    tmp_path: Path,
+) -> None:
+    files = {
+        name: f"[STORE {name}]"
+        for name in (*COMMON_SYSTEM_STAGE2_TXT_FILES, *STAGE2_TEMPLATE_TXT_FILES)
+    }
+
+    class _RecordingStore:
+        def __init__(self) -> None:
+            self.calls: list[tuple[tuple[str, ...], str | None]] = []
+
+        def load_many(self, names, *, stage=None):
+            names = tuple(names)
+            self.calls.append((names, stage))
+            return tuple(files[name] for name in names)
+
+    store = _RecordingStore()
+    assembler = PromptAssembler(prompt_dir=tmp_path, template_store=store)
+
+    user = assembler.build_stage2(
+        _make_frame(),
+        {"cycle_position": "normal_channel", "direction": "bullish"},
+        ["上涨通道分析识别.txt"],
+        [],
+    )[1]["content"]
+
+    assert (STAGE2_TEMPLATE_TXT_FILES, "stage2") in store.calls
+    assert "[STORE 上涨通道分析识别.txt]" in user
+    assert "[STORE 文件17-止损和止盈与仓位管理.txt]" in user
+
+
+def test_stage2_user_prompt_falls_back_as_an_atomic_group(
+    tmp_path: Path,
+    caplog,
+) -> None:
+    for name in (*COMMON_SYSTEM_STAGE2_TXT_FILES, *STAGE2_TEMPLATE_TXT_FILES):
+        (tmp_path / name).write_text(f"[LEGACY {name}]", encoding="utf-8")
+
+    class _FailingStore:
+        def load_many(self, names, *, stage=None):
+            if stage == "stage2":
+                raise TemplateStoreError("stage2 fixture failure")
+            return tuple(f"[STORE {name}]" for name in names)
+
+    assembler = PromptAssembler(prompt_dir=tmp_path, template_store=_FailingStore())
+
+    with caplog.at_level("WARNING", logger="pa_agent.ai.prompt_assembler"):
+        user = assembler.build_stage2(
+            _make_frame(),
+            {"cycle_position": "normal_channel", "direction": "bullish"},
+            ["上涨通道分析识别.txt"],
+            [],
+        )[1]["content"]
+
+    assert "[LEGACY 上涨通道分析识别.txt]" in user
+    assert "[LEGACY 文件17-止损和止盈与仓位管理.txt]" in user
+    assert "TemplateStore Stage 2 prompt load failed" in caplog.text
 
 
 def test_shared_system_prompt_can_disable_template_store(tmp_path: Path) -> None:
@@ -321,9 +381,9 @@ def test_stage2_system_prompt_order(assembler: PromptAssembler):
     assert pos_persona >= 0
     assert 0 <= pos_persona < pos_binary_sys
 
-    assert (
-        "[CONTENT OF 二元决策.txt]" not in user
-    ), "Full binary tree file is not duplicated in stage 2 user turn"
+    assert "[CONTENT OF 二元决策.txt]" not in user, (
+        "Full binary tree file is not duplicated in stage 2 user turn"
+    )
     assert "[CONTENT OF 二元决策.txt]" in system
     pos_strategy = user.find("上涨通道分析识别")
     pos_bar_by_bar = user.find("逐棒分析检查单")
@@ -435,7 +495,10 @@ def test_real_stage1_stage2_boundary_contracts(real_assembler: PromptAssembler):
     frame = _make_frame(8)
     stage1_user = real_assembler.build_stage1(frame)[1]["content"]
 
-    assert "你现在只执行阶段一：市场诊断与闸门判断。不要评估具体下单、止损、止盈或仓位。" in stage1_user
+    assert (
+        "你现在只执行阶段一：市场诊断与闸门判断。不要评估具体下单、止损、止盈或仓位。"
+        in stage1_user
+    )
     assert "**禁止在阶段一评估：**" in stage1_user
     assert "- **§9–§11**（入场、风险、下单均属阶段二）" in stage1_user
 
@@ -459,7 +522,10 @@ def test_real_stage1_stage2_boundary_contracts(real_assembler: PromptAssembler):
     assert '"decision_trace"' in stage2_user
     assert '"terminal": {' in stage2_user
     assert "当 order_type 为“不下单”时" in stage2_user
-    assert "entry_price、take_profit_price、take_profit_price_2、stop_loss_price、order_direction 必须全部为 null" in stage2_user
+    assert (
+        "entry_price、take_profit_price、take_profit_price_2、stop_loss_price、order_direction 必须全部为 null"
+        in stage2_user
+    )
 
 
 def test_real_stage2_prompt_keeps_spike_climax_contract(real_assembler: PromptAssembler):

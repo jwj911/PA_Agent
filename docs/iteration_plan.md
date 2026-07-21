@@ -1,7 +1,7 @@
 # L1-L6 后续迭代执行计划
 
 > 状态：短中期执行计划
-> 更新时间：2026-07-20
+> 更新时间：2026-07-21
 > 适用范围：后续若干轮原子迭代
 > 长期边界：以 [`docs/architecture_roadmap.md`](./architecture_roadmap.md) 为准
 
@@ -14,31 +14,49 @@
 
 | 路线 | 当前状态 | 已完成基础 | 主要剩余工作 |
 |---|---|---|---|
-| L1 Provider/数据源注册表 | 第二阶段完成 | 数据源注册表、AI Provider 注册表、优先级 matcher、延迟 builder、运行时注册 API | 插件发现、配置持久化、扩展契约、生命周期和并发测试 |
-| L2 Prompt 模板引擎 | Stage 1 user prompt 已迁移 | `TemplateStore`、29 个模板 manifest、UTF-8 golden digest、system/Stage 1 user prompt 新旧路径字节等价和可回滚 adapter | Stage 2/continuation 分步迁移，随后补 `TemplateContext` 和严格变量渲染 |
-| L3 Pipeline Builder | 部分准备 | `TwoStageOrchestrator.submit()` 已拆出 Stage 1、Stage 2、路由和持久化辅助方法 | 显式 state/step、terminal status、事件序列和旧/新路径等价测试 |
-| L4 性能预算 | 主要优化完成 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁 | 固定基准、预算阈值、p50/p95 报告和持续回归监控 |
-| L5 经验库升级 | 第二阶段完成 | 全量相关性排序和 K 线几何相似度已接入 | 脱敏数据集、离线评估、特征版本化和权重校准 |
-| L6 Headless/编排 | CLI 最小切片完成 | `AppEvent`、`EventSink`、`bootstrap_headless()`、共享 `_build_core()`、`bootstrap_gui()`、兼容 `bootstrap()`、PyQt-free `pa-agent headless` | 真实 Provider 分析 runner、最终 record 等价测试、JSONL 事件 sink/replay、公开 adapter 契约 |
+| L1 Provider/数据源注册表 | 基础完成，治理未收口 | 数据源注册表、AI Provider 注册表、优先级 matcher、延迟 builder、运行时注册 API | 插件发现方案、配置字符串校验/回退、扩展契约、生命周期和并发测试 |
+| L2 Prompt 模板引擎 | 实现完成，兼容观察期 | `TemplateStore`、29 个模板 manifest、system/Stage 1/Stage 2/continuation 迁移、`TemplateContext`、严格变量渲染、golden snapshots 和整组回退 | 观察一个稳定周期后评估移除重复 helper、兼容开关和旧 loader |
+| L3 Pipeline Builder | 部分准备 | `TwoStageOrchestrator.submit()` 已拆出 Stage 1、Stage 2、路由和持久化辅助方法 | PyQt-free state/step 协议、terminal status、事件序列和旧/新路径等价测试 |
+| L4 性能预算 | 代码优化完成，预算未收口 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁 | 固定 synthetic benchmark、预算阈值、p50/p95 报告和持续回归监控 |
+| L5 经验库升级 | 排序实现完成，数据评估未收口 | 全量相关性排序和 K 线几何相似度已接入 | 脱敏数据集、固定评估集、离线指标、特征版本化和权重校准 |
+| L6 Headless/编排 | CLI 最小切片完成，runner 未收口 | `AppEvent`、`EventSink`、`bootstrap_headless()`、共享 `_build_core()`、`bootstrap_gui()`、兼容 `bootstrap()`、PyQt-free `pa-agent headless` | 真实 Provider 分析 runner、最终/partial record 等价测试、JSONL 事件 sink/replay、公开 adapter 契约 |
 
 L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、数据源连接和订阅；
 `bootstrap_headless()` 复用 core helper，但不导入或创建 Qt `EventBus`，不连接数据源，默认使用
 `NullEventSink`。
 
+## 1.1 当前未收尾清单
+
+以下条目是基于当前代码目录、测试入口和路线图的收尾审计；“基础完成”不等于路线已完成。
+
+| 优先级 | 路线 | 当前阻塞项 | 收尾证据 |
+|---|---|---|---|
+| P0 | L6 | `headless analyze` 仍是 provider-free dry-run，无真实两阶段 runner、JSONL sink/replay | mock Provider 下的最终/partial record、取消/失败事件和可重放 JSONL 快照 |
+| P1 | L3 | 没有 `orchestrator/pipeline/`、`PipelineState`、`PipelineStep`、`TerminalStatus` 实现 | 新旧 `submit()` 路径的状态、事件和记录等价测试 |
+| P1 | L5 | 没有脱敏经验数据集和固定离线评估基线 | 可重复的 `Recall@K`、`NDCG@K`、fallback rate、稳定性报告 |
+| P1 | L4 | 没有固定 benchmark、预算阈值和 p50/p95 报告 | 固定 fixture 基线、回归阈值和 CI/夜间任务报告 |
+| P2 | L1 | registry 基础已具备，但插件发现、配置回退、扩展契约及生命周期/并发证据不足 | 不改核心条件分支的扩展样例、未知配置安全回退和 registry 并发/lazy import 测试 |
+| P2 | L2 | 实现已完成，但 `use_template_store` 与旧 loader 尚处兼容观察期 | 稳定周期内新旧路径持续等价，并形成兼容入口下线计划 |
+
+当前主链路为 **L6 → L3 → L5/L4**；L2 已完成实现并进入兼容观察期，L1 可独立并行治理，
+但不得成为 L6/L3 主线的隐式前置条件。
+
 ## 2. 后续迭代顺序
 
-第 232 轮已完成 **L2 Stage 1 user prompt 迁移**。下一轮仍留在 L2，迁移 Stage 2 user prompt；
-L6 剩余的真实 Provider runner、最终 record
-等价测试和事件重放继续作为后续 L6 收口项，不能把当前 dry-run 误标为完整无 GUI 分析。
+第 232 轮已完成 **L2 Stage 1 user prompt 迁移**，第 233 轮已完成 Stage 2/continuation
+和 `TemplateContext` 收尾实现。当前主线转入 L6，真实 Provider runner、最终 record 等价测试
+和事件重放继续不能被当前 dry-run 取代。
 
 推荐顺序如下：
 
-1. **L2：迁移 Stage 2 user prompt 和 continuation，保持旧/新字节等价并补齐 TemplateContext/严格变量合同**。
-2. **L6：真实 Provider 分析 runner、JSONL 事件 sink 与最终 record 等价测试**。
-3. **L3：Pipeline state/step 化和旧/新路径等价验证**。
-4. **L5：脱敏经验数据集与离线评估基线**。
-5. **L4：性能预算和持续基准**。
-6. **L1 收口治理** 可以在主线空档穿插推进，但不得绕过 L6 的 headless 边界和 L2/L3 等价证据。
+1. **L6：真实 Provider 分析 runner、JSONL 事件 sink 与最终 record 等价测试**。
+2. **L3：Pipeline state/step 化和旧/新路径等价验证**。
+3. **L5：脱敏经验数据集与离线评估基线**。
+4. **L4：性能预算和持续基准**。
+5. **L1 收口治理** 可以在主线空档穿插推进，但不得绕过 L6/L3 的等价证据。
+6. **L2 兼容观察**：记录新旧路径运行结果，稳定一个周期后再单独评估旧 loader/helper 的下线。
+
+第 233 轮已经完成；当前不再重复改写 L2 prompt 文本，后续只保留兼容观察和回滚能力。
 
 ## 2.1 当前未收敛问题
 
@@ -52,10 +70,58 @@ L6 剩余的真实 Provider runner、最终 record
    最终 record、partial record、取消和失败事件的全链路等价证据尚未建立。
 4. `AppContext._build_core()` 仍是私有 helper；`build_core` 与 `build_gui_adapters` 是否公开，
    需要等 CLI/GUI adapter 契约稳定后再决定。
-5. L2 共享 system prompt 和 Stage 1 user prompt 已切换到 TemplateStore，并保留严格失败回退；
-   Stage 2/continuation、TemplateContext 和严格变量渲染仍未实现。
+5. L2 system、Stage 1、Stage 2/continuation、TemplateContext 和严格变量渲染已实现并保留严格
+   失败回退；当前只剩旧 loader/helper 的兼容观察期。
 6. L1 插件发现/配置回退、L5 脱敏数据集与离线指标、L4 p50/p95 性能预算仍缺少真实数据或固定
-   benchmark，不能仅依据合成 fixture 宣称收敛。
+   benchmark，不能仅依据合成 fixture 宣称收敛；L2 只剩兼容观察期。
+
+## 2.2 第 233 轮完成结果（L2 Stage 2/continuation 与 TemplateContext）
+
+### 目标与结果
+
+在不重写中文策略文本、不改变路由和 JSON 输出契约的前提下，Stage 2 user prompt 和
+continuation 的静态 `.txt` 模板读取已切换到现有 `TemplateStore` compatibility adapter；
+L1 已完成第二阶段基础，未作为本轮前置条件。
+
+### 已交付
+
+1. 扩展 `pa_agent/ai/prompting/compatibility.py`，为 Stage 2 模板提供按组严格加载、
+   `stage="stage2"` 校验和整组 legacy fallback，禁止新旧模板部分混用。
+2. 将 loader 注入 `Stage2PromptBuilder` / `PromptAssembler`，覆盖 standalone Stage 2
+   和 prefix-chain continuation 两条路径。
+3. 为 system、Stage 2 user prompt 和 continuation 建立固定 fixture 的旧/新字节等价快照；
+   保留 `use_template_store=False` 显式回滚。
+4. 补齐缺失文件、空文件、非法 UTF-8、错误阶段和加载异常的 warning/fallback 测试，
+   并复核 Stage 1 已有路径不回退。
+5. 新增 `TemplateContext` 和严格 `$name`/`${name}` 变量渲染；缺变量、语法错误和非 mapping
+   context 均显式失败，不执行任意 Python。
+6. 同步 `docs/CHANGELOG.md`、`AGENTS.md`、CI 目标清单和本执行计划，完成目标 pytest、
+   focused Ruff、py_compile 和 golden snapshot 检查。
+
+### 明确不做
+
+- 本轮不引入 Jinja2；使用标准库严格替换已满足当前静态 prompt 的变量合同，未来如需更复杂
+  模板语法必须另开迁移切片。
+- 不修改 prompt 中文内容、策略文件顺序、Provider 路由、JSON schema、normalizer 或
+  `TwoStageOrchestrator`。
+- 不在同一提交实现 L1 插件发现、动态代码扫描或 Provider token 同步迁移。
+
+### 验收标准
+
+- 固定 fixture 下 `use_template_store=True/False` 的 Stage 2 system/user/continuation
+  messages 字节完全一致；任何差异必须有可审查的 snapshot diff。
+- 任一 Stage 2 模板组加载失败时，整组回退旧 `_load()`，并留下明确 warning；显式关闭
+  feature flag 时完全走旧路径。
+- Stage 1、KV prefix、策略路由和输出契约回归测试通过；模板模块保持 PyQt-free。
+- 本轮完成后，下一主线转入 L6 真实 Provider runner、JSONL event sink/replay 和最终
+  record 等价测试。
+
+### L2 收尾状态
+
+L2 的实现切片已完成，`use_template_store=False` 和旧 loader 继续保留作为兼容回滚路径。
+在稳定周期结束前，不删除重复 helper、不改变 prompt 中文文本，也不关闭 feature flag。
+L1 的 matcher/builder/settings 注入/线程安全/注销时机契约和 registry 生命周期测试可在独立
+提交中并行推进。
 
 ## 3. 每轮建议交付物
 
@@ -110,17 +176,19 @@ L6 剩余的真实 Provider runner、最终 record
 - 新增 `TemplateStore`，提供 manifest 限制的 UTF-8 读取、显式缓存失效、错误诊断和 SHA-256
   `TemplateSnapshot`。
 - 新增 `tests/fixtures/prompt_golden.json`，固定全部模板和 `PromptAssembler` 共享 system prompt
-  的 UTF-8 字节长度/摘要。
-- 共享 system prompt 和 Stage 1 user prompt 已通过同一 compatibility adapter 迁移；Stage 1
-  两个任务模板整组严格加载，失败时 warning 回退旧 `_load()`，后续可沿用同一 adapter。
+  的 UTF-8 字节长度/摘要，以及 Stage 2 standalone/prefix-chain continuation 的消息快照。
+- 共享 system prompt、Stage 1 user prompt、Stage 2 user prompt 和 continuation 已通过同一
+  compatibility adapter 迁移；Stage 1/Stage 2 模板组整组严格加载，失败时 warning 回退旧 `_load()`。
+- 新增 `pa_agent/ai/prompting/template_context.py`：上下文不可变、显式且 JSON 可序列化，
+  不携带 `Settings`、Qt 对象或网络客户端。
+- `TemplateStore.render()` / `render_many()` 使用标准库严格变量替换；缺变量、语法错误和
+  非 mapping context 均明确失败，不执行任意 Python。
 
-建议交付物：
+兼容观察项：
 
-- 为 Stage 1/Stage 2 builder、continuation 和关键 renderer 继续补充结构化 golden snapshots。
-- 将 Stage 2 user prompt 和 continuation 的 `.txt` 读取切换到同一兼容 adapter，不大规模改写
-  中文 prompt 文本。
-- 定义模板上下文的显式字段，避免模板直接访问 `Settings`、Qt 对象、网络客户端或文件系统。
-- 如引入模板引擎，必须使用严格缺变量失败策略，并保留旧 `PromptAssembler` 兼容 adapter。
+- 稳定一个完整周期后，再评估删除重复的 `PromptAssembler` loader/helper。
+- 在兼容观察期内继续保留 `use_template_store=False`、旧 `_load()` 和 prompt golden snapshots。
+- 不把 Jinja2 或其他可执行模板引擎作为本轮隐含依赖。
 
 验收标准：
 
@@ -128,6 +196,7 @@ L6 剩余的真实 Provider runner、最终 record
 - system prompt 前缀和 KV cache key 不漂移。
 - 模板缺变量、编码错误和文件缺失都能给出明确诊断，不静默生成不完整 prompt。
 - feature flag 关闭时旧路径行为不变。
+- 旧 loader 与 TemplateStore 路径在兼容观察期内保持可按 fixture 重放和回滚。
 
 依赖关系：
 
@@ -138,7 +207,7 @@ L6 剩余的真实 Provider runner、最终 record
 
 - 不在第一轮模板化中重写全部策略文本。
 - 不允许模板执行任意 Python。
-- 不用一次提交同时迁移 system、Stage 1、Stage 2 和 continuation。
+- 不在后续观察期顺手重写中文策略文本或改变文件顺序。
 
 ### 3.3 L3 Pipeline state/step 化
 
@@ -254,18 +323,20 @@ L6 剩余的真实 Provider runner、最终 record
 
 ```text
 L6 headless runner / 等价测试
-  -> L2 golden snapshots / TemplateStore
   -> L3 Pipeline state / steps
   -> L5 离线评估和 L4 性能预算
 
+L2 TemplateStore / Context
+  -> 已完成实现，进入兼容观察期
+
 L1 插件契约治理
-  -> 可穿插推进，但不得阻塞 L6 -> L2 -> L3 主链路
+  -> 可穿插推进，但不得阻塞 L6 -> L3 主链路
 ```
 
 关键依赖说明：
 
 - L6 先行，是因为后续 prompt、pipeline、经验评估和性能预算都需要无 GUI harness 产生可重复证据。
-- L2 早于 L3，是为了在 Pipeline 改造前固定 prompt 字节和 JSON 校验输入。
+- L2 已通过 golden snapshot 固定 prompt 字节和 JSON 校验输入，L3 可直接复用其稳定合同。
 - L3 早于 L5/L4，是为了让批量评估和性能基准能复用显式状态和事件模型。
 - L5 的线上权重调整必须等待脱敏数据集和离线指标，不作为近期第一优先级。
 

@@ -126,9 +126,10 @@ price_action_agent/
   - `qclaw_connector.py` / `qclaw_relay.py` / `qclaw_relay_manager.py`：QClaw 本地网关。
   - `workbuddy_connector.py`：WorkBuddy / CodeBuddy 环境检测与 DPAPI 解密取 token。
   - `prompt_assembler.py`：阶段一/阶段二 prompt 组装总入口。
-  - `prompting/template_manifest.py` / `prompting/template_store.py` / `prompting/compatibility.py`：PyQt-free 模板元数据、
-    严格 UTF-8 加载、缓存和 golden snapshot 契约；共享 system prompt 和 Stage 1 user prompt
-    已迁移，Stage 2/continuation 仍保留旧路径。
+  - `prompting/template_manifest.py` / `prompting/template_store.py` / `prompting/template_context.py` /
+    `prompting/compatibility.py`：PyQt-free 模板元数据、显式 JSON 可序列化上下文、严格 UTF-8 加载、
+    缓存和 golden snapshot 契约；共享 system、Stage 1 user prompt、Stage 2/continuation 均支持
+    TemplateStore 整组加载、旧路径回退和 `use_template_store=False` 回滚。
   - `stage1_prompt_builder.py` / `stage2_prompt_builder.py`：阶段一/阶段二 user prompt 构建器。
   - `kline_table_renderer.py` / `experience_renderer.py` / `stage2_guidance.py` / `chain_context.py` / `program_prefill_hint.py`：prompt 渲染子模块（PyQt6-free 叶子模块）。
   - `json_validator.py` / `json_repair.py` / `business_rules.py` / `schema_validator.py`：阶段一/阶段二 JSON 校验、修复、业务规则与 schema 校验。
@@ -398,9 +399,11 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
 9. **新增文件/字段时注意更新本文件**：如果你新增了模块、数据源、AI 提供商、安全机制、构建流程等，请同步更新本 `AGENTS.md` 中的对应章节。
 10. **热路径注意性能**：`data/snapshot.py`、`ai/kline_features.py`、`records/analysis_history.py`、`ai/deepseek_client.py` 等属于高频路径，改动时避免重复计算与无条件构造大字符串。
 11. **进程级缓存/全局状态需线程安全**：后台 QThread 会并发访问模块级缓存。新增全局可变状态时，应配套加锁（耗时构建/IO 放锁外，用双检锁），保持输出与语义不变。
-12. **L1 当前进度**：数据源侧注册表已完成第一阶段；下一轮 Provider 侧注册表必须保留
-    `openclaw_cs` → Cursor SDK 的专用路由，以及其余模型 → OpenAI-compatible client 的兼容行为，
-    不把 QClaw / WorkBuddy / Cursor 的启动同步逻辑重复搬入 client factory。
+12. **L1 当前进度**：数据源注册表和 AI Provider 注册表已完成第二阶段基础，支持规格、
+    优先级 matcher、延迟 builder 和运行时注册；必须保留 `openclaw_cs` → Cursor SDK 的专用路由，
+    以及其余模型 → OpenAI-compatible client 的兼容行为。Provider 同步仍由
+    `ProviderSyncService` 负责，不得重复搬入 registry 或 client factory。插件发现、配置持久化与
+    未知值安全回退、扩展契约文档，以及生命周期/并发测试仍待后续收口。
 13. **L6 当前进度**：`AppContext` 已拆出共享 core helper 和 `bootstrap_gui()`；`bootstrap()`
     委托 GUI 路径。headless 复用 core helper，必须继续保持无 Qt `EventBus` import、无数据源连接；
     GUI adapter 继续负责 `EventBus`、数据源连接/订阅，且 `event_sink` 指向 `EventBus`。第 229 轮已
@@ -411,6 +414,6 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     [`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md) 为准；短中期优先级、每轮建议
     交付物、验收标准和依赖顺序见 [`docs/iteration_plan.md`](./docs/iteration_plan.md)。
 15. **L2 当前进度**：第 230 轮建立 `TemplateStore`、29 个模板 manifest 和 UTF-8 golden
-    digest；第 231 轮迁移共享 system prompt，第 232 轮迁移 Stage 1 user prompt，并保留
-    `use_template_store=False` 与严格失败 warning 回退。Stage 2/continuation 仍走旧路径；
-    后续每次迁移只能切一个边界，并提供旧/新 prompt 字节等价证据，不能顺手重写中文策略文本。
+    digest；第 231 轮迁移共享 system prompt，第 232 轮迁移 Stage 1 user prompt，第 233 轮迁移
+    Stage 2/continuation 并新增 `TemplateContext`。所有迁移均保留 `use_template_store=False`、
+    严格失败 warning 回退和固定 fixture 字节等价证据；后续不得顺手重写中文策略文本。

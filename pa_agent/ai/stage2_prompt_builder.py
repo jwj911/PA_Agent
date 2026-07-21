@@ -4,12 +4,14 @@ This module owns Stage 2 message construction and Stage 2 user-turn rendering.
 ``PromptAssembler`` keeps the public facade, system prompt cache, and legacy
 private wrapper names.
 """
+
 from __future__ import annotations
 
 import json
 from typing import TYPE_CHECKING, Any
 
 from pa_agent.ai.decision_stance import build_decision_stance_guidance, normalize_stance
+from pa_agent.ai.prompting.template_context import TemplateContext
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -79,6 +81,13 @@ class Stage2PromptBuilder:
         decision_stance: str = "conservative",
     ) -> list[dict]:
         """Build a standalone Stage 2 request (kept for tests/tools)."""
+        template_context = TemplateContext.from_stage2_inputs(
+            frame,
+            stage1_json,
+            strategy_files,
+            experience_entries,
+            decision_stance=decision_stance,
+        )
         system_content = self._build_stage2_system_prompt()
         user_content = self.build_stage2_user_prompt(
             frame=frame,
@@ -87,6 +96,7 @@ class Stage2PromptBuilder:
             experience_entries=experience_entries,
             decision_stance=decision_stance,
             enable_next_bar_prediction=False,
+            template_context=template_context,
         )
         return [
             {"role": "system", "content": system_content},
@@ -123,6 +133,18 @@ class Stage2PromptBuilder:
             use_prefix_chain = supports_kv_prefix_chain(provider_settings)
 
         chain_after_s1 = bool(use_prefix_chain and stage1_messages)
+        template_context = TemplateContext.from_stage2_inputs(
+            frame,
+            stage1_json,
+            strategy_files,
+            experience_entries,
+            decision_stance=decision_stance,
+            previous_record=previous_record,
+            feature_flags={
+                "enable_next_bar_prediction": enable_next_bar_prediction,
+                "prefix_chain": chain_after_s1,
+            },
+        )
         stage2_user_content = self.build_stage2_user_prompt(
             frame=frame,
             stage1_json=stage1_json,
@@ -133,6 +155,7 @@ class Stage2PromptBuilder:
             enable_next_bar_prediction=enable_next_bar_prediction,
             omit_kline_block=chain_after_s1,
             structure_flip_cooldown_bars=structure_flip_cooldown_bars,
+            template_context=template_context,
         )
 
         if chain_after_s1:
@@ -163,12 +186,29 @@ class Stage2PromptBuilder:
         enable_next_bar_prediction: bool = False,
         omit_kline_block: bool = False,
         structure_flip_cooldown_bars: int = 3,
+        template_context: TemplateContext | None = None,
     ) -> str:
         """Build the Stage 2 task turn for standalone or prefix-chain mode."""
         from pa_agent.ai.decision_continuity import (
             build_continuity_context,
             render_continuity_prompt_block,
         )
+
+        context = template_context or TemplateContext.from_stage2_inputs(
+            frame,
+            stage1_json,
+            strategy_files,
+            experience_entries,
+            decision_stance=decision_stance,
+            previous_record=previous_record,
+            feature_flags={
+                "enable_next_bar_prediction": enable_next_bar_prediction,
+                "prefix_chain": omit_kline_block,
+            },
+        )
+        stage1_json = context.stage1_diagnosis
+        strategy_files = list(context.strategy_files)
+        decision_stance = context.decision_stance
 
         stance_block = build_decision_stance_guidance(normalize_stance(decision_stance))
         continuity_ctx = build_continuity_context(
@@ -245,11 +285,7 @@ class Stage2PromptBuilder:
             )
             simple_features_block = self._render_simple_market_features_block(frame)
             if simple_features_block:
-                kline_block += (
-                    self._market_features_authority_note
-                    + simple_features_block
-                    + "\n\n"
-                )
+                kline_block += self._market_features_authority_note + simple_features_block + "\n\n"
             if breakout_tick_hint:
                 kline_block += f"{breakout_tick_hint}\n\n"
         else:

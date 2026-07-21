@@ -818,6 +818,14 @@ STAGE2_FULL_STRATEGY_PROMPT_TXT_FILES: tuple[str, ...] = (
     sf.TRIANGLE,
     sf.DOUBLE_TOP_BOTTOM,
 )
+STAGE2_TEMPLATE_TXT_FILES: tuple[str, ...] = tuple(
+    dict.fromkeys(
+        (
+            *STAGE2_BASE_PROMPT_TXT_FILES,
+            *STAGE2_FULL_STRATEGY_PROMPT_TXT_FILES,
+        )
+    )
+)
 
 
 def stage1_prompt_txt_files() -> list[str]:
@@ -1150,7 +1158,13 @@ class PromptAssembler:
     def _stage2_prompt_builder(self) -> Stage2PromptBuilder:
         return Stage2PromptBuilder(
             build_stage2_system_prompt=self._build_stage2_system_prompt,
-            load=self._load,
+            load=prompting.make_stage2_template_loader(
+                self._template_store,
+                self._use_template_store,
+                self._load,
+                STAGE2_TEMPLATE_TXT_FILES,
+                warning_logger=logger,
+            ),
             load_full_strategy_library=self._load_full_strategy_library,
             prompt_settings=self._prompt_settings,
             stage2_user_task_txt_files=stage2_user_task_txt_files,

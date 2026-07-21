@@ -15,6 +15,7 @@ from pa_agent.ai import strategy_files as sf
 from pa_agent.ai.prompt_assembler import PromptAssembler
 from pa_agent.ai.prompting import (
     TEMPLATE_MANIFEST,
+    TemplateContext,
     TemplateSpec,
     TemplateStore,
     TemplateStoreError,
@@ -82,6 +83,71 @@ def test_template_store_matches_utf8_golden_snapshots() -> None:
     assert assembler.build_stage1(frame) == legacy.build_stage1(frame)
 
 
+def test_stage2_and_continuation_match_legacy_template_loading() -> None:
+    golden = json.loads(GOLDEN_PATH.read_text(encoding="utf-8"))["stage2_fixture"]
+    frame = build_analysis_frame(
+        make_newest_first_bars(golden["bar_count"], with_forming=False),
+        20,
+        golden["symbol"],
+        golden["timeframe"],
+    )
+    assert frame is not None
+
+    stage1_json = golden["stage1_json"]
+    strategy_files = golden["strategy_files"]
+    assembler = PromptAssembler(prompt_dir=PROMPT_DIR)
+    legacy = PromptAssembler(prompt_dir=PROMPT_DIR, use_template_store=False)
+
+    standalone = assembler.build_stage2(frame, stage1_json, strategy_files, [])
+    assert standalone == legacy.build_stage2(
+        frame,
+        stage1_json,
+        strategy_files,
+        [],
+    )
+
+    stage1_messages = assembler.build_stage1(frame)
+    continuation_kwargs = {
+        "frame": frame,
+        "stage1_messages": stage1_messages,
+        "stage1_reply_content": golden["reply"],
+        "stage1_json": stage1_json,
+        "strategy_files": strategy_files,
+        "experience_entries": [],
+    }
+    continuation_standalone = assembler.build_stage2_continuation(
+        **continuation_kwargs,
+        use_prefix_chain=False,
+    )
+    continuation_prefix = assembler.build_stage2_continuation(
+        **continuation_kwargs,
+        use_prefix_chain=True,
+    )
+
+    def snapshots(messages: list[dict]) -> list[dict[str, str | int]]:
+        return [
+            {
+                "role": message["role"],
+                "byte_length": len(message["content"].encode("utf-8")),
+                "sha256": hashlib.sha256(message["content"].encode("utf-8")).hexdigest(),
+            }
+            for message in messages
+        ]
+
+    assert snapshots(standalone) == golden["snapshots"]["standalone"]
+    assert snapshots(continuation_standalone) == golden["snapshots"]["continuation_standalone"]
+    assert snapshots(continuation_prefix) == golden["snapshots"]["continuation_prefix"]
+
+    for use_prefix_chain in (False, True):
+        assert assembler.build_stage2_continuation(
+            **continuation_kwargs,
+            use_prefix_chain=use_prefix_chain,
+        ) == legacy.build_stage2_continuation(
+            **continuation_kwargs,
+            use_prefix_chain=use_prefix_chain,
+        )
+
+
 def test_template_store_rejects_unknown_template_and_wrong_stage() -> None:
     store = TemplateStore(PROMPT_DIR)
 
@@ -122,6 +188,29 @@ def test_template_store_cache_is_explicitly_invalidated(tmp_path: Path) -> None:
     assert store.load(template_name) == "one"
     store.clear_cache(template_name)
     assert store.load(template_name) == "two"
+
+
+def test_template_store_render_is_strict_and_non_executable(tmp_path: Path) -> None:
+    template_name = "fixture.txt"
+    (tmp_path / template_name).write_text(
+        "symbol=$symbol stage=${stage}",
+        encoding="utf-8",
+    )
+    store = TemplateStore(
+        tmp_path,
+        manifest=(TemplateSpec(name=template_name, stages=("stage2",), role="task"),),
+    )
+    context = TemplateContext(stage="stage2", symbol="TEST", timeframe="5m", bar_count=1)
+
+    assert store.render(template_name, context, stage="stage2") == "symbol=TEST stage=stage2"
+
+    with pytest.raises(TemplateStoreError, match="Missing template variable"):
+        store.render(template_name, {"symbol": "TEST"}, stage="stage2")
+
+    (tmp_path / template_name).write_text("broken ${", encoding="utf-8")
+    store.clear_cache(template_name)
+    with pytest.raises(TemplateStoreError, match="Invalid template syntax"):
+        store.render(template_name, context, stage="stage2")
 
 
 def test_template_store_reports_missing_and_invalid_utf8(tmp_path: Path) -> None:

@@ -180,5 +180,70 @@
     "byte_length": 52298,
     "char_length": 24820,
     "sha256": "214f59d1027c3eae6eca646d374cea426a6fdff8596d348d837aad8d2948269f"
+  },
+  "stage2_fixture": {
+    "symbol": "TEST",
+    "timeframe": "5m",
+    "bar_count": 25,
+    "stage1_json": {
+      "cycle_position": "normal_channel",
+      "direction": "bullish",
+      "gate_result": "proceed",
+      "detected_patterns": [
+        "h2"
+      ]
+    },
+    "strategy_files": [
+      "上涨通道分析识别.txt"
+    ],
+    "reply": "{\"cycle_position\":\"normal_channel\",\"direction\":\"bullish\"}",
+    "snapshots": {
+      "standalone": [
+        {
+          "role": "system",
+          "byte_length": 52298,
+          "sha256": "214f59d1027c3eae6eca646d374cea426a6fdff8596d348d837aad8d2948269f"
+        },
+        {
+          "role": "user",
+          "byte_length": 95059,
+          "sha256": "8358244af4f906e632656f271db2a079f269418e76c47f7133fef08b08e2ab75"
+        }
+      ],
+      "continuation_standalone": [
+        {
+          "role": "system",
+          "byte_length": 52298,
+          "sha256": "214f59d1027c3eae6eca646d374cea426a6fdff8596d348d837aad8d2948269f"
+        },
+        {
+          "role": "user",
+          "byte_length": 95059,
+          "sha256": "8358244af4f906e632656f271db2a079f269418e76c47f7133fef08b08e2ab75"
+        }
+      ],
+      "continuation_prefix": [
+        {
+          "role": "system",
+          "byte_length": 52298,
+          "sha256": "214f59d1027c3eae6eca646d374cea426a6fdff8596d348d837aad8d2948269f"
+        },
+        {
+          "role": "user",
+          "byte_length": 137456,
+          "sha256": "eb95029dd24b2f4428f69d6e5b689b133d41f55cbbefb4b1c5aafe95cd4e51b3"
+        },
+        {
+          "role": "assistant",
+          "byte_length": 133,
+          "sha256": "52c15dcb547d6b3216d56a3b59bdaadbcd300924b9d4caad193fb4937841d8d6"
+        },
+        {
+          "role": "user",
+          "byte_length": 88587,
+          "sha256": "af62f74a3f6c6ee07fcf52954856fb352700e352ecf13c2c422769103552c11a"
+        }
+      ]
+    }
   }
 }

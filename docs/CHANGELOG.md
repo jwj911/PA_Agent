@@ -18,6 +18,83 @@
 
 ---
 
+## [Unreleased] — 2026-07-21（L1-L6 当前迭代状态审计与计划同步）
+
+本轮重新核对当前分支的路线图、执行计划、最近迭代记录及代码入口，修正文档中“已完成”
+与“基础完成但未收口”的边界，避免把 dry-run、合成 fixture 或局部方法拆分误标为完整架构能力。
+
+### 当前未收尾项
+
+- **L2**：Stage 2/continuation 尚未迁移到 `TemplateStore`，`TemplateContext` 和严格变量渲染尚未实现。
+- **L6**：headless `analyze` 仍是 provider-free dry-run，真实 Provider runner、最终/partial record
+  等价测试、JSONL 事件 sink/replay 和公开 adapter 契约尚未收口。
+- **L3**：尚无 `PipelineState`、`PipelineStep`、`TerminalStatus` 及新旧编排路径的事件/记录等价验证。
+- **L5**：缺少脱敏经验数据集、固定评估集和 `Recall@K`/`NDCG@K` 等离线评估基线。
+- **L4**：缺少固定 synthetic benchmark、预算阈值及 p50/p95 持续回归报告。
+- **L1**：注册表基础已完成，但插件发现、配置校验/回退、扩展契约和生命周期/并发测试仍待治理收口。
+
+### 文档同步
+
+- 更新 `docs/iteration_plan.md`：新增当前收尾审计、优先级和主链路 **L2 → L6 → L3**。
+- 更新 `docs/architecture_roadmap.md`：同步六条路线的真实状态、收尾判定和 Phase 3/L2 当前计划。
+- 更新 `docs/backend_review_report.md`：移除 Stage 2/continuation 尚未迁移的过时状态，后续优先级转入 L6/L3。
+- 保留 `AGENTS.md` 已修正的 L1 表述，不把 Provider registry 重新列为 L2 前置条件。
+
+### 验证
+
+- `git diff --check -- docs/iteration_plan.md docs/architecture_roadmap.md docs/CHANGELOG.md` 通过。
+- 本轮为文档状态审计与计划同步，未运行 pytest。
+
+---
+
+## [Unreleased] — 2026-07-21（第二百三十三轮：L2 Stage 2/continuation 与 TemplateContext 收尾）
+
+本轮完成 L2 Prompt 模板引擎迁移的 Stage 2/continuation 切片，并把当前实现状态从“待执行”
+更新为“实现完成、兼容观察期”。
+
+### Prompt engineering
+
+- **Stage 2 原子 TemplateStore loader**：`PromptAssembler` 现在对全部 Stage 2 user 模板做
+  manifest-backed `stage="stage2"` 严格批量加载；任一缺失、空文件、非法 UTF-8、错误阶段或
+  读取异常都会整组 warning 回退旧 `_load()`，覆盖 standalone 和 prefix-chain continuation。
+- **新增 `TemplateContext`**：`pa_agent/ai/prompting/template_context.py` 提供不可变、显式、
+  JSON 可序列化的 Stage 2 上下文快照，不携带 Settings、Qt 对象或网络客户端。
+- **严格变量渲染**：`TemplateStore.render()` / `render_many()` 使用标准库
+  `string.Template.substitute`，缺变量、非法语法和非 mapping context 明确失败，不执行任意 Python。
+- **保留回滚边界**：`use_template_store=False`、旧 loader 和 PromptAssembler facade 保持可用；
+  不修改中文 prompt 文本、策略文件顺序、Provider 路由或 JSON schema。
+
+### 测试与快照
+
+- `tests/fixtures/prompt_golden.json` 新增 Stage 2 standalone、continuation standalone 和
+  prefix-chain 的消息角色、UTF-8 字节长度与 SHA-256 快照。
+- 新增 Stage 2 整组加载/回退测试和 `TemplateContext` 序列化/失败路径测试。
+- 旧/新 Stage 2 与 continuation 固定 fixture 深度等价；Stage 1 与 system prompt 回归保持通过。
+
+### 验证
+
+- `py -3.12 -m pytest tests/unit/test_prompt_assembler.py tests/unit/test_template_store.py tests/unit/test_template_context.py --tb=short -q -p no:cacheprovider -p no:qt` → **通过**。
+- `py -3.12 -m ruff check pa_agent/ai/prompting tests/unit/test_template_store.py tests/unit/test_template_context.py --select E,F,I,UP,B,SIM,RUF` → **All checks passed**。
+- `py_compile` 受影响模块 → **通过**。
+- L2 完成后主线转入 L6 真实 Provider runner、JSONL event sink/replay 和最终 record 等价测试；L2 进入兼容观察期。
+
+---
+
+## [Unreleased] — 2026-07-20（L1 状态文档同步）
+
+- **同步 `AGENTS.md` 的 L1 进度说明**：将注册表状态修正为数据源与 AI Provider 注册表的第二阶段基础已完成，并明确插件发现、配置回退、扩展契约和生命周期/并发测试仍待收口；Provider 同步继续由 `ProviderSyncService` 负责。
+- **验证**：`git diff --check -- AGENTS.md docs/CHANGELOG.md` 通过；未运行 pytest（仅文档变更）。
+
+---
+
+## [Unreleased] — 2026-07-20（第 233 轮下一步迭代计划）
+
+- **更新 `docs/iteration_plan.md`**：基于修正后的 L1 状态，将第 233 轮主线明确为 L2 Stage 2/continuation 的 TemplateStore 迁移，要求旧/新 prompt 字节等价、整组 fallback 和显式回滚。
+- **明确并行边界**：L1 仅可独立补充扩展契约与 registry 生命周期/并发测试设计，不与本轮 L2 prompt 迁移混提交；下一主线再转入 L6 真实 Provider runner、JSONL 事件重放和最终 record 等价测试。
+- **验证**：本轮为文档计划更新，不运行 pytest；完成 `git diff --check` 和文档交叉核对。
+
+---
+
 ## [Unreleased] — 2026-07-20（第二百三十二轮：L2 Stage 1 user prompt 迁移）
 
 本轮继续推进 **L2 Prompt 模板引擎化**，将 Stage 1 user prompt 使用的两个静态任务模板
