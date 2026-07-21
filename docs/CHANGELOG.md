@@ -18,6 +18,32 @@
 
 ---
 
+## [Unreleased] — 2026-07-21（第二百三十四轮：L6 JSONL event sink/replay）
+
+本轮推进 L6 Headless 主线，先建立独立于 Provider 网络的事件持久化与重放端口，为真实 runner
+和 GUI/headless record 等价测试提供可复现证据。
+
+### 已交付
+
+- 新增 PyQt-free `JsonlEventSink`，支持线程安全追加、逐事件 flush、关闭状态和可选的
+  `require_correlation_id=True` 严格模式。
+- 新增 `event_serialization.py` 和 `event_replay.py`，提供 JSON event envelope 校验、
+  JSONL 逐行 replay、坏行定位和 payload 的 JSON 安全转换。
+- 更新 `pa_agent.util` 导出和 CI focused Ruff 目标，不引入 Qt 依赖或真实 Provider 调用。
+- 补充写入、重放、correlation id、关闭 sink 和坏 JSONL 测试。
+
+### 验收边界
+
+- 本轮只完成事件端口，不改变 `headless analyze` 仍为 provider-free Stage 1 dry-run 的事实。
+- 下一轮继续真实 Provider runner、最终/partial record 等价和公开 adapter 契约。
+
+### 验证
+
+- L6 目标测试（`test_event_sink.py`、`test_app_context_headless.py`、`test_cli.py`）→ **通过**。
+- 受影响模块 Ruff、格式检查、py_compile 和 CI workflow target 检查 → **通过**。
+
+---
+
 ## [Unreleased] — 2026-07-21（TemplateStore 渲染路径可观测性）
 
 - **新增安全诊断日志**：`TemplateStore.render()` / `render_many()` 现在记录开始、成功、批量完成、

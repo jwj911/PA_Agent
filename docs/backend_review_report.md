@@ -39,7 +39,8 @@ PA Agent 的后端已经具备一个生产级桌面应用的核心骨架：
 - L5 已接入 K 线几何相似度，但真实脱敏数据集和离线指标尚未具备，不应调整线上权重。
 - L6 已完成 `AppEvent`/`EventSink`、`bootstrap_headless()`、共享 core/GUI bootstrap 边界，
   并在第 229 轮新增 PyQt-free CLI 最小切片。CLI 的 `analyze` 仍是 provider-free dry-run，
-  真实两阶段 runner、最终 record 等价测试和 JSONL 事件重放未收敛。
+  第 234 轮已新增 PyQt-free JSONL event sink/replay；真实两阶段 runner、最终 record 等价
+  测试和公开 adapter 契约仍未收敛。
 - L7 已具备 Python 矩阵、targeted pytest、Ruff baseline、focused Ruff/Black 和覆盖率门槛；
   全仓历史诊断仍通过基线治理，不能把 focused 门禁等同于全仓零告警。
 

@@ -408,9 +408,9 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
 13. **L6 当前进度**：`AppContext` 已拆出共享 core helper 和 `bootstrap_gui()`；`bootstrap()`
     委托 GUI 路径。headless 复用 core helper，必须继续保持无 Qt `EventBus` import、无数据源连接；
     GUI adapter 继续负责 `EventBus`、数据源连接/订阅，且 `event_sink` 指向 `EventBus`。第 229 轮已
-    新增 `pa_agent.cli` 和 `pa-agent headless` 最小入口，并验证同 snapshot 的 Stage 1 prompt 等价；
-    当前 `analyze` 仍是 provider-free dry-run，真实两阶段 record 等价、JSONL 事件重放和公开 adapter
-    契约仍未收敛。
+    新增 `pa_agent.cli` 和 `pa-agent headless` 最小入口，第 234 轮已新增 PyQt-free JSONL
+    `JsonlEventSink`/`replay_jsonl`。当前 `analyze` 仍是 provider-free dry-run，真实两阶段
+    runner、最终 record 等价和公开 adapter 契约仍未收敛。
 14. **架构任务先读两份计划**：长期模块边界、迁移原则和完成定义以
     [`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md) 为准；短中期优先级、每轮建议
     交付物、验收标准和依赖顺序见 [`docs/iteration_plan.md`](./docs/iteration_plan.md)。

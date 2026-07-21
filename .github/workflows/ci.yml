@@ -289,6 +289,8 @@ jobs:
           pa_agent/util/crash_diagnostics.py
           pa_agent/util/event_bus.py
           pa_agent/util/event_sink.py
+          pa_agent/util/event_serialization.py
+          pa_agent/util/event_replay.py
           pa_agent/util/events.py
           pa_agent/util/logging.py
           pa_agent/util/safe_filename.py

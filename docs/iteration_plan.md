@@ -19,7 +19,7 @@
 | L3 Pipeline Builder | 部分准备 | `TwoStageOrchestrator.submit()` 已拆出 Stage 1、Stage 2、路由和持久化辅助方法 | PyQt-free state/step 协议、terminal status、事件序列和旧/新路径等价测试 |
 | L4 性能预算 | 代码优化完成，预算未收口 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁 | 固定 synthetic benchmark、预算阈值、p50/p95 报告和持续回归监控 |
 | L5 经验库升级 | 排序实现完成，数据评估未收口 | 全量相关性排序和 K 线几何相似度已接入 | 脱敏数据集、固定评估集、离线指标、特征版本化和权重校准 |
-| L6 Headless/编排 | CLI 最小切片完成，runner 未收口 | `AppEvent`、`EventSink`、`bootstrap_headless()`、共享 `_build_core()`、`bootstrap_gui()`、兼容 `bootstrap()`、PyQt-free `pa-agent headless` | 真实 Provider 分析 runner、最终/partial record 等价测试、JSONL 事件 sink/replay、公开 adapter 契约 |
+| L6 Headless/编排 | CLI/JSONL 事件切片完成，runner 未收口 | `AppEvent`、`EventSink`、`JsonlEventSink`、`replay_jsonl`、`bootstrap_headless()`、共享 `_build_core()`、`bootstrap_gui()`、兼容 `bootstrap()`、PyQt-free `pa-agent headless` | 真实 Provider 分析 runner、最终/partial record 等价测试、公开 adapter 契约 |
 
 L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、数据源连接和订阅；
 `bootstrap_headless()` 复用 core helper，但不导入或创建 Qt `EventBus`，不连接数据源，默认使用
@@ -31,7 +31,7 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 
 | 优先级 | 路线 | 当前阻塞项 | 收尾证据 |
 |---|---|---|---|
-| P0 | L6 | `headless analyze` 仍是 provider-free dry-run，无真实两阶段 runner、JSONL sink/replay | mock Provider 下的最终/partial record、取消/失败事件和可重放 JSONL 快照 |
+| P0 | L6 | `headless analyze` 仍是 provider-free dry-run，无真实两阶段 runner和最终 record 等价 | mock Provider 下的最终/partial record、取消/失败事件和 JSONL 事件快照 |
 | P1 | L3 | 没有 `orchestrator/pipeline/`、`PipelineState`、`PipelineStep`、`TerminalStatus` 实现 | 新旧 `submit()` 路径的状态、事件和记录等价测试 |
 | P1 | L5 | 没有脱敏经验数据集和固定离线评估基线 | 可重复的 `Recall@K`、`NDCG@K`、fallback rate、稳定性报告 |
 | P1 | L4 | 没有固定 benchmark、预算阈值和 p50/p95 报告 | 固定 fixture 基线、回归阈值和 CI/夜间任务报告 |
@@ -44,8 +44,8 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 ## 2. 后续迭代顺序
 
 第 232 轮已完成 **L2 Stage 1 user prompt 迁移**，第 233 轮已完成 Stage 2/continuation
-和 `TemplateContext` 收尾实现。当前主线转入 L6，真实 Provider runner、最终 record 等价测试
-和事件重放继续不能被当前 dry-run 取代。
+和 `TemplateContext` 收尾实现。第 234 轮已完成 L6 JSONL event sink/replay 切片；当前主线
+继续推进真实 Provider runner 和最终 record 等价测试，不能被当前 dry-run 取代。
 
 推荐顺序如下：
 
@@ -64,8 +64,8 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 
 1. `pa-agent headless analyze` 当前只做 snapshot 校验和 Stage 1 prompt dry-run，不调用真实
    Provider，也不写入 `AnalysisRecord`；真实两阶段分析仍由 GUI/`TwoStageOrchestrator` 执行。
-2. `CollectingEventSink` 已可收集应用事件，但尚未提供稳定的 JSONL sink、事件重放协议和跨进程
-   correlation id 约束。
+2. `JsonlEventSink` / `replay_jsonl` 已提供本地 JSONL 事件写入和重放；跨进程 correlation id
+   约束和与真实 Provider record 的完整等价协议仍待建立。
 3. headless 与 GUI 当前已验证共享 core 的 Stage 1 prompt 对同一 snapshot 字节等价；Stage 1/2
    最终 record、partial record、取消和失败事件的全链路等价证据尚未建立。
 4. `AppContext._build_core()` 仍是私有 helper；`build_core` 与 `build_gui_adapters` 是否公开，
@@ -122,6 +122,23 @@ L2 的实现切片已完成，`use_template_store=False` 和旧 loader 继续保
 在稳定周期结束前，不删除重复 helper、不改变 prompt 中文文本，也不关闭 feature flag。
 L1 的 matcher/builder/settings 注入/线程安全/注销时机契约和 registry 生命周期测试可在独立
 提交中并行推进。
+
+## 2.3 第 234 轮完成结果（L6 JSONL event sink/replay）
+
+### 已交付
+
+1. 新增 PyQt-free `JsonlEventSink`，按一行一个 JSON event 写入并在每次 publish 后 flush。
+2. 新增 `event_to_dict` / `event_from_dict` 和 `replay_jsonl`，对事件 envelope、时间戳、
+   correlation id、payload 类型和坏行提供明确校验错误。
+3. 支持 `require_correlation_id=True`，为后续跨进程 runner 契约保留严格模式；默认不改变
+   既有 `AppEvent` 可选 correlation id 行为。
+4. 补充写入、重放、关闭 sink、缺失 correlation id 和损坏 JSONL 行测试，并保持 PyQt-free。
+
+### 收尾边界
+
+本轮只建立事件持久化/重放端口，不调用 Provider、不改变 GUI signal 语义，也不宣称 headless
+两阶段分析已完成。下一轮继续实现真实 Provider runner，并使用本轮 JSONL 端口验证最终/partial
+record、取消和失败事件等价。
 
 ## 3. 每轮建议交付物
 

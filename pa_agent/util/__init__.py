@@ -1,6 +1,12 @@
 """PA Agent utility package."""
 
-from pa_agent.util.event_sink import CollectingEventSink, EventSink, NullEventSink
+from pa_agent.util.event_replay import EventReplayError, replay_jsonl
+from pa_agent.util.event_sink import (
+    CollectingEventSink,
+    EventSink,
+    JsonlEventSink,
+    NullEventSink,
+)
 from pa_agent.util.events import AppEvent
 from pa_agent.util.logging import configure_logging, update_api_key
 from pa_agent.util.threading import CancelToken, OrchestratorEvent
@@ -10,10 +16,13 @@ __all__ = [
     "CancelToken",
     "CollectingEventSink",
     "EventBus",
+    "EventReplayError",
     "EventSink",
+    "JsonlEventSink",
     "NullEventSink",
     "OrchestratorEvent",
     "configure_logging",
+    "replay_jsonl",
     "update_api_key",
 ]
 
