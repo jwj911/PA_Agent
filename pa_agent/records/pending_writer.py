@@ -74,6 +74,11 @@ class PendingWriter:
                 exc,
             )
 
+    @property
+    def pending_dir(self) -> Path:
+        """Return the directory used for analysis records."""
+        return self._pending_dir
+
     def set_api_key(self, api_key: str) -> None:
         """Update the plaintext API key used for record sanitization.
 

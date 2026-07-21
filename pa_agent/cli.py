@@ -6,6 +6,7 @@ import argparse
 import json
 import math
 import sys
+import uuid
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -15,6 +16,9 @@ from pydantic import ValidationError as PydanticValidationError
 from pa_agent.config.settings import Settings
 from pa_agent.data.base import KlineBar, KlineFrame, normalize_kline_bar
 from pa_agent.data.snapshot import compute_indicators
+from pa_agent.util.event_sink import JsonlEventSink, NullEventSink
+from pa_agent.util.events import AppEvent
+from pa_agent.util.threading import CancelToken, OrchestratorEvent
 from pa_agent.util.timefmt import now_local_ms
 
 EXIT_OK = 0
@@ -58,12 +62,33 @@ def _parser() -> argparse.ArgumentParser:
 
     analyze = commands.add_parser(
         "analyze",
-        help="validate a snapshot and build a provider-free Stage 1 dry-run envelope",
+        help="validate a snapshot and optionally run the two-stage provider workflow",
     )
     analyze.add_argument("--input", required=True, type=Path, help="input snapshot JSON path")
     analyze.add_argument("--output", type=Path, help="write JSON result to this path")
     analyze.add_argument("--settings", type=Path, help="optional settings JSON path")
     analyze.add_argument("--prompt-dir", type=Path, help="optional prompt directory")
+    analyze.add_argument(
+        "--records-dir",
+        type=Path,
+        help="optional analysis record directory for --run",
+    )
+    analyze.add_argument(
+        "--events",
+        type=Path,
+        help="write --run orchestrator events to a JSONL file",
+    )
+    analyze.add_argument(
+        "--correlation-id",
+        help="correlation id for --run events (generated when omitted)",
+    )
+    analyze.add_argument(
+        "--run",
+        "--execute",
+        dest="run",
+        action="store_true",
+        help="opt in to provider calls and execute both analysis stages",
+    )
     analyze.add_argument("--symbol", help="override the input symbol")
     analyze.add_argument("--timeframe", help="override the input timeframe")
 
@@ -281,7 +306,231 @@ def _prompt_stats(messages: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def _analyze(args: argparse.Namespace) -> None:
+def _record_path(ctx: Any, record: Any) -> Path | None:
+    """Resolve the record path from the existing PendingWriter contract."""
+    pending_writer = getattr(ctx, "pending_writer", None)
+    pending_dir = getattr(pending_writer, "pending_dir", None)
+    if pending_dir is None:
+        pending_dir = getattr(pending_writer, "_pending_dir", None)
+    if pending_dir is None:
+        return None
+    from pa_agent.records.pending_writer import build_record_basename
+
+    try:
+        return Path(pending_dir) / f"{build_record_basename(record)}.json"
+    except (TypeError, ValueError):
+        return None
+
+
+def _public_record_exception(
+    record: Any,
+    settings: Settings | None,
+) -> dict[str, Any] | None:
+    exception = getattr(record, "exception", None)
+    if not isinstance(exception, Mapping):
+        return None
+    # Raw provider text is retained in the persisted record but is not echoed
+    # by the CLI result, keeping stdout suitable for automation and logs.
+    public_exception = {
+        key: value for key, value in exception.items() if key != "raw_text"
+    }
+    if "message" in public_exception:
+        public_exception["message"] = _masked_error_text(
+            public_exception["message"],
+            settings,
+        )
+    return public_exception
+
+
+def _record_exit_code(record: Any, event_names: Sequence[str]) -> int:
+    """Map orchestrator terminal state to the stable headless exit codes."""
+    if "Cancelled" in event_names:
+        return EXIT_CANCELLED
+    exception = getattr(record, "exception", None)
+    error_type = exception.get("type") if isinstance(exception, Mapping) else None
+    if error_type == "user_cancelled":
+        return EXIT_CANCELLED
+    if error_type == "insufficient_data":
+        return EXIT_DATA_ERROR
+    if error_type == "validation_error":
+        return EXIT_VALIDATION_ERROR
+    if error_type in {"network_error", "provider_error", "program_error"}:
+        return EXIT_PROVIDER_ERROR
+    return EXIT_OK if exception is None else EXIT_PROVIDER_ERROR
+
+
+def _runner_exception_type(exc: Exception) -> str:
+    try:
+        from pa_agent.ai.deepseek_client import CancelledError
+
+        if isinstance(exc, CancelledError):
+            return "user_cancelled"
+    except ImportError:
+        pass
+
+    from pa_agent.orchestrator.two_stage import TwoStageOrchestrator
+
+    if TwoStageOrchestrator._is_network_error(exc):
+        return "network_error"
+    if isinstance(exc, PydanticValidationError):
+        return "validation_error"
+    return "program_error"
+
+
+def _masked_error_text(value: object, settings: Settings | None) -> str:
+    text = str(value)
+    api_key = getattr(getattr(settings, "provider", None), "api_key", "") or ""
+    if api_key:
+        from pa_agent.util.mask_secret import mask_secret
+
+        text = text.replace(api_key, mask_secret(api_key))
+    return text
+
+
+def _persist_runner_error(ctx: Any, frame: KlineFrame, exc: Exception) -> Any:
+    """Persist an unexpected runner exception using the existing partial schema."""
+    from pa_agent.orchestrator.two_stage import _build_empty_record
+
+    record = _build_empty_record(frame, getattr(ctx, "settings", None))
+    error_type = _runner_exception_type(exc)
+    record = record.model_copy(
+        update={
+            "exception": {
+                "type": error_type,
+                "stage": "runner",
+                "message": _masked_error_text(exc, getattr(ctx, "settings", None)),
+            }
+        }
+    )
+    pending_writer = getattr(ctx, "pending_writer", None)
+    if pending_writer is not None:
+        pending_writer.save_partial(record, error_type)
+    return record
+
+
+def _run_analyze(
+    *,
+    args: argparse.Namespace,
+    snapshot: dict[str, Any],
+    frame: KlineFrame,
+    settings: Settings,
+) -> int:
+    """Run the existing TwoStageOrchestrator through a headless adapter."""
+    from pa_agent.app_context import AppContext
+    from pa_agent.orchestrator.two_stage import TwoStageOrchestrator
+
+    correlation_id = str(getattr(args, "correlation_id", None) or uuid.uuid4().hex)
+    event_sink = (
+        JsonlEventSink(args.events)
+        if getattr(args, "events", None) is not None
+        else NullEventSink()
+    )
+    event_names: list[str] = []
+
+    try:
+        bootstrap_kwargs: dict[str, Any] = {
+            "settings": settings,
+            "prompt_dir": args.prompt_dir,
+            "event_sink": event_sink,
+            "sync_providers": False,
+            "configure_logs": False,
+        }
+        records_dir = getattr(args, "records_dir", None)
+        if records_dir is not None:
+            bootstrap_kwargs["records_pending_dir"] = records_dir
+        try:
+            ctx = AppContext.bootstrap_headless(**bootstrap_kwargs)
+        except Exception as exc:
+            raise CliError(
+                "headless core 装配失败: "
+                f"{_masked_error_text(exc, settings)}",
+                code=EXIT_PROVIDER_ERROR,
+            ) from exc
+
+        dependencies = (
+            "client",
+            "assembler",
+            "router",
+            "validator",
+            "pending_writer",
+            "exp_reader",
+        )
+        missing = [name for name in dependencies if getattr(ctx, name, None) is None]
+        if missing:
+            raise CliError(
+                f"headless runner 依赖未装配: {', '.join(missing)}",
+                code=EXIT_PROVIDER_ERROR,
+            )
+
+        def on_event(event: OrchestratorEvent) -> None:
+            name = event.name if isinstance(event, OrchestratorEvent) else str(event)
+            event_names.append(name)
+            event_sink.publish(
+                AppEvent.orchestrator(name, correlation_id=correlation_id)
+            )
+
+        orchestrator = TwoStageOrchestrator(
+            client=ctx.client,
+            assembler=ctx.assembler,
+            router=ctx.router,
+            validator=ctx.validator,
+            pending_writer=ctx.pending_writer,
+            exp_reader=ctx.exp_reader,
+            settings=ctx.settings,
+        )
+        try:
+            record = orchestrator.submit(
+                frame=frame,
+                cancel_token=CancelToken(),
+                on_event=on_event,
+            )
+        except Exception as exc:
+            record = _persist_runner_error(ctx, frame, exc)
+            event_names.append("RunnerFailed")
+            event_sink.publish(
+                AppEvent.orchestrator("RunnerFailed", correlation_id=correlation_id)
+            )
+
+        record_path = _record_path(ctx, record)
+        exit_code = _record_exit_code(record, event_names)
+        if exit_code == EXIT_CANCELLED:
+            status = "cancelled"
+        elif getattr(record, "exception", None) is None:
+            status = "completed"
+        else:
+            status = "partial"
+
+        _write_json(
+            {
+                "command": "analyze",
+                "schema": _ANALYSIS_SCHEMA,
+                "dry_run": False,
+                "provider_called": any(
+                    name in event_names for name in ("Stage1Started", "Stage2Started")
+                ),
+                "status": status,
+                "exit_code": exit_code,
+                "correlation_id": correlation_id,
+                "events": event_names,
+                "record_path": str(record_path.resolve()) if record_path else None,
+                "record": {
+                    "symbol": snapshot["symbol"],
+                    "timeframe": snapshot["timeframe"],
+                    "stage1_complete": getattr(record, "stage1_diagnosis", None) is not None,
+                    "stage2_complete": getattr(record, "stage2_decision", None) is not None,
+                    "exception": _public_record_exception(record, settings),
+                },
+            },
+            args.output,
+        )
+        return exit_code
+    finally:
+        close = getattr(event_sink, "close", None)
+        if close is not None:
+            close()
+
+
+def _analyze(args: argparse.Namespace) -> int:
     snapshot = _load_snapshot(args)
     if args.settings is None:
         settings = Settings()
@@ -298,6 +547,15 @@ def _analyze(args: argparse.Namespace) -> None:
         indicators=compute_indicators(list(bars)),
         snapshot_ts_local_ms=int(snapshot["snapshot_ts_local_ms"]),
     )
+    if getattr(args, "run", False):
+        return _run_analyze(
+            args=args,
+            snapshot=snapshot,
+            frame=frame,
+            settings=settings,
+        )
+
+
     try:
         ctx = AppContext.bootstrap_headless(
             settings=settings,
@@ -326,6 +584,7 @@ def _analyze(args: argparse.Namespace) -> None:
         },
         args.output,
     )
+    return EXIT_OK
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -337,7 +596,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif args.command == "snapshot":
             _snapshot(args)
         elif args.command == "analyze":
-            _analyze(args)
+            return _analyze(args)
         else:  # pragma: no cover - argparse enforces the command set.
             raise CliError(f"未知 headless 命令: {args.command}", code=EXIT_CONFIG_ERROR)
     except CliError as exc:

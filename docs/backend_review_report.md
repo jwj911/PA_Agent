@@ -40,9 +40,10 @@ PA Agent 的后端已经具备一个生产级桌面应用的核心骨架：
   当前进入旧 loader/helper 的兼容观察期。
 - L5 已接入 K 线几何相似度，但真实脱敏数据集和离线指标尚未具备，不应调整线上权重。
 - L6 已完成 `AppEvent`/`EventSink`、`bootstrap_headless()`、共享 core/GUI bootstrap 边界，
-  并在第 229 轮新增 PyQt-free CLI 最小切片。CLI 的 `analyze` 仍是 provider-free dry-run，
-  第 234 轮已新增 PyQt-free JSONL event sink/replay；真实两阶段 runner、最终 record 等价
-  测试和公开 adapter 契约仍未收敛。
+  第 229 轮新增 PyQt-free CLI 最小切片，第 234 轮新增 JSONL event sink/replay，第 237 轮又
+  通过显式 `--run/--execute` 接入两阶段 runner、final/partial record 持久化、退出码映射和
+  correlation 事件输出；GUI/headless 全链路 record 等价、真实 Provider 环境验证和公开
+  adapter 契约仍未收敛。
 - L7 已具备 Python 矩阵、targeted pytest、Ruff baseline、focused Ruff/Black 和覆盖率门槛；
   全仓历史诊断仍通过基线治理，不能把 focused 门禁等同于全仓零告警。
 
@@ -298,7 +299,7 @@ PA Agent 的后端已经具备一个生产级桌面应用的核心骨架：
 | L3 | 引入 Pipeline Builder | `orchestrator/two_stage.py` | 用 Pipeline/StateMachine 替代巨型 `submit()` |
 | L4 | 性能优化 | `data/snapshot.py`、`ai/kline_features.py`、`records/analysis_history.py`、`records/pending_writer.py`、`ai/deepseek_client.py` | 增量指标、索引、追加写、复用 HTTP client |
 | L5 | 经验库升级（第二阶段完成） | `records/experience_reader.py`、`records/experience_similarity.py` | Stage 2 先按全量案例的 pattern + direction 排序，再以最近 K 线几何相似度打破同分并列；无 K 线字段的旧案例保持兼容 |
-| L6 | 无 GUI 运行支持（Core/bootstrap 与 CLI 最小切片完成） | `util/events.py`、`util/event_sink.py`、`util/event_bus.py`、`app_context.py`、`cli.py` | 已有 PyQt-free AppEvent/EventSink、共享 GUI/headless core 和 `pa-agent headless` dry-run；后续真实 runner、record 等价和事件重放 |
+| L6 | 无 GUI 运行支持（headless runner 第一切片完成） | `util/events.py`、`util/event_sink.py`、`util/event_bus.py`、`app_context.py`、`cli.py`、`records/pending_writer.py` | 默认 dry-run 保持无网络；显式 `--run/--execute` 已复用 `TwoStageOrchestrator` 写入 final/partial record，并输出 correlation JSONL 事件；后续 GUI/headless 等价、真实 Provider 验证和公开 adapter 契约 |
 | L7 | CI 增强 | `.github/workflows/ci.yml` | 运行 `pytest -m "not e2e"`、ruff、black、覆盖率 |
 
 ---

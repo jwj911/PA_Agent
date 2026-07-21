@@ -186,7 +186,8 @@ price_action_agent/
   - `crash_diagnostics.py`：崩溃诊断与启动信息记录。
   - `threading.py`：取消令牌、worker 事件等并发原语。
 - **`pa_agent/cli.py`**：PyQt-free headless 命令适配器；只接收显式 JSON/settings 输入，
-  stdout 输出结构化 JSON，诊断写 stderr，不能在此层加入真实下单或隐式数据源连接。
+    stdout 输出结构化 JSON，诊断写 stderr；`analyze` 默认 dry-run，只有显式 `--run/--execute`
+    才调用 Provider 并写入 final/partial record，不能在此层加入真实下单或隐式数据源连接。
 
 ---
 
@@ -410,8 +411,10 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     委托 GUI 路径。headless 复用 core helper，必须继续保持无 Qt `EventBus` import、无数据源连接；
     GUI adapter 继续负责 `EventBus`、数据源连接/订阅，且 `event_sink` 指向 `EventBus`。第 229 轮已
     新增 `pa_agent.cli` 和 `pa-agent headless` 最小入口，第 234 轮已新增 PyQt-free JSONL
-    `JsonlEventSink`/`replay_jsonl`。当前 `analyze` 仍是 provider-free dry-run，真实两阶段
-    runner、最终 record 等价和公开 adapter 契约仍未收敛。
+    `JsonlEventSink`/`replay_jsonl`，第 237 轮新增显式 `analyze --run/--execute` 两阶段 runner、
+    final/partial record 持久化、稳定退出码和 correlation 事件输出。默认 `analyze` 仍必须保持
+    provider-free dry-run；GUI/headless 全链路 record 等价、真实 Provider 环境验证和公开 adapter
+    契约仍未收敛。
 14. **架构任务先读两份计划**：长期模块边界、迁移原则和完成定义以
     [`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md) 为准；短中期优先级、每轮建议
     交付物、验收标准和依赖顺序见 [`docs/iteration_plan.md`](./docs/iteration_plan.md)。

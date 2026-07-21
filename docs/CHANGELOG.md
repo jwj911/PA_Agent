@@ -42,6 +42,35 @@
 
 ---
 
+## [Unreleased] — 2026-07-21（第二百三十七轮：L6 headless 两阶段 runner）
+
+本轮推进 L6 Headless 主线，在保留默认无网络 dry-run 的前提下，交付显式执行的两阶段 runner
+第一切片。
+
+### 已交付
+
+- `pa-agent headless analyze` 新增显式 `--run/--execute`；默认路径仍只做 snapshot 校验和
+  Stage 1 prompt dry-run，不会隐式调用 Provider。
+- `AppContext.bootstrap_headless(client=...)` 支持 fake client 注入；runner 复用
+  `TwoStageOrchestrator`、现有校验/重试/gate 语义和 `PendingWriter`，不创建 Qt `EventBus`
+  或连接数据源。
+- 新增 `--records-dir`、`--events`、`--correlation-id`；支持 final/partial record 持久化、
+  network/validation/insufficient-data/cancelled 退出码映射和 correlation JSONL milestone 事件。
+- CLI 结构化摘要排除 `raw_text`，测试使用 fake Provider，不依赖 live network；新增 final/partial
+  record、client 注入和事件输出回归测试。
+
+### 收尾边界
+
+- GUI/headless 最终、partial、取消和失败 record 的全链路等价，以及公开 adapter 契约仍未收口。
+- 真实 Provider 仅在显式 `--run` 下执行，CI 不依赖网络。
+
+### 验证
+
+- L6 聚焦测试 → **21 passed**。
+- 受影响模块 focused Ruff、CI workflow target、Ruff baseline 和 `git diff --check` → **通过**。
+
+---
+
 ## [Unreleased] — 2026-07-21（第二百三十五轮：L1 未知配置安全回退）
 
 本轮推进 L1 注册表治理的最小切片，修复未知或未来数据源配置在 Pydantic 校验阶段阻塞启动的问题。

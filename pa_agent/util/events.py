@@ -12,6 +12,7 @@ EVENT_EXCEPTION = "exception"
 EVENT_DATA_FRAME = "data_frame"
 EVENT_TOKEN_UPDATE = "token_update"
 EVENT_DISK_ERROR = "disk_error"
+EVENT_ORCHESTRATOR = "orchestrator"
 
 
 @dataclass(frozen=True)
@@ -116,6 +117,22 @@ class AppEvent:
         return cls.create(
             EVENT_DISK_ERROR,
             payload={"data": dict(data)},
+            correlation_id=correlation_id,
+            timestamp_ms=timestamp_ms,
+        )
+
+    @classmethod
+    def orchestrator(
+        cls,
+        event: str,
+        *,
+        correlation_id: str | None = None,
+        timestamp_ms: int | None = None,
+    ) -> AppEvent:
+        """Build an event for a TwoStageOrchestrator milestone."""
+        return cls.create(
+            EVENT_ORCHESTRATOR,
+            payload={"event": event},
             correlation_id=correlation_id,
             timestamp_ms=timestamp_ms,
         )

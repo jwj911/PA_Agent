@@ -98,6 +98,7 @@ class AppContext:
         configure_logs: bool = True,
         event_bus: EventBus | None = None,
         data_source: DataSource | None = None,
+        client: Any | None = None,
         apply_kline_adjust: bool = True,
     ) -> AppContext:
         from pa_agent.ai.client_factory import create_ai_client
@@ -130,7 +131,9 @@ class AppContext:
 
             apply_kline_adjust_from_settings(settings)
 
-        client = create_ai_client(settings.provider, logger_=app_logger)
+        resolved_client = (
+            client if client is not None else create_ai_client(settings.provider, logger_=app_logger)
+        )
         exp_reader = ExperienceReader(experience_dir=resolved_experience_dir, logger=app_logger)
         assembler = PromptAssembler(
             prompt_dir=resolved_prompt_dir,
@@ -154,7 +157,7 @@ class AppContext:
             event_bus=event_bus,
             event_sink=sink,
             data_source=data_source,
-            client=client,
+            client=resolved_client,
             assembler=assembler,
             router=route_strategy_files,
             validator=validator,
@@ -243,6 +246,7 @@ class AppContext:
         records_pending_dir: Path | None = None,
         sync_providers: bool | None = None,
         configure_logs: bool = True,
+        client: Any | None = None,
     ) -> AppContext:
         """Build core services without creating Qt objects or connecting data sources.
 
@@ -261,4 +265,5 @@ class AppContext:
             configure_logs=configure_logs,
             event_bus=None,
             data_source=None,
+            client=client,
         )
