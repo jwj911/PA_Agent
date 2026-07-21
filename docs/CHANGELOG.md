@@ -18,6 +18,18 @@
 
 ---
 
+## [Unreleased] — 2026-07-21（TemplateStore 渲染路径可观测性）
+
+- **新增安全诊断日志**：`TemplateStore.render()` / `render_many()` 现在记录开始、成功、批量完成、
+  缺变量、非法语法、非 mapping context 和批量失败等关键节点。
+- **日志脱敏边界**：仅记录模板名、阶段、context 键名、占位符名、键数量、输出字符数和错误类型；
+  不记录变量值、完整 prompt、行情数据或 API Key。
+- **新增测试**：验证缺变量日志包含 `missing`、可用键和占位符信息，同时确认示例敏感值不会进入日志。
+- **验证**：TemplateStore/TemplateContext/PromptAssembler 相关测试、focused Ruff、格式检查和
+  Ruff baseline 均通过。
+
+---
+
 ## [Unreleased] — 2026-07-21（L1-L6 当前迭代状态审计与计划同步）
 
 本轮重新核对当前分支的路线图、执行计划、最近迭代记录及代码入口，修正文档中“已完成”

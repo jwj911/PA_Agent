@@ -183,6 +183,8 @@ L1 的 matcher/builder/settings 注入/线程安全/注销时机契约和 regist
   不携带 `Settings`、Qt 对象或网络客户端。
 - `TemplateStore.render()` / `render_many()` 使用标准库严格变量替换；缺变量、语法错误和
   非 mapping context 均明确失败，不执行任意 Python。
+- 关键渲染路径增加安全诊断日志，只记录模板名、阶段、context 键名、占位符、长度和失败原因，
+  不记录变量值、完整 prompt 或密钥。
 
 兼容观察项：
 

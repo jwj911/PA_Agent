@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import threading
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -16,6 +17,8 @@ from pa_agent.ai.prompting.template_manifest import (
     TemplateSpec,
     validate_template_manifest,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class TemplateStoreError(RuntimeError):
@@ -121,16 +124,63 @@ class TemplateStore:
         """
         text = self.load(name, stage=stage)
         values = context.to_dict() if hasattr(context, "to_dict") else context
+        placeholder_names = _placeholder_names(text)
+        context_type = type(context).__name__
+        context_keys = (
+            tuple(sorted(str(key) for key in values)) if isinstance(values, Mapping) else ()
+        )
+        logger.debug(
+            "Template render started name=%s stage=%s context_type=%s "
+            "context_key_count=%d context_keys=%s placeholder_count=%d "
+            "placeholder_names=%s",
+            name,
+            stage,
+            context_type,
+            len(context_keys),
+            context_keys,
+            len(placeholder_names),
+            placeholder_names,
+        )
         if not isinstance(values, Mapping):
+            logger.warning(
+                "Template render rejected non-mapping context name=%s stage=%s context_type=%s",
+                name,
+                stage,
+                context_type,
+            )
             raise TemplateStoreError("Template render context must be a mapping")
         try:
-            return Template(text).substitute({str(key): value for key, value in values.items()})
+            rendered = Template(text).substitute({str(key): value for key, value in values.items()})
         except KeyError as exc:
+            missing_name = str(exc.args[0]) if exc.args else "<unknown>"
+            logger.warning(
+                "Template render missing variable name=%s stage=%s missing=%s "
+                "required_placeholders=%s available_keys=%s",
+                name,
+                stage,
+                missing_name,
+                placeholder_names,
+                context_keys,
+            )
             raise TemplateStoreError(
-                f"Missing template variable {exc.args[0]!r} for {name}"
+                f"Missing template variable {missing_name!r} for {name}"
             ) from exc
         except ValueError as exc:
+            logger.warning(
+                "Template render invalid syntax name=%s stage=%s error_type=%s error=%s",
+                name,
+                stage,
+                type(exc).__name__,
+                str(exc),
+            )
             raise TemplateStoreError(f"Invalid template syntax for {name}: {exc}") from exc
+        logger.debug(
+            "Template render succeeded name=%s stage=%s output_chars=%d",
+            name,
+            stage,
+            len(rendered),
+        )
+        return rendered
 
     def render_many(
         self,
@@ -140,7 +190,30 @@ class TemplateStore:
         stage: StageName | None = None,
     ) -> tuple[str, ...]:
         """Render templates in caller order using one explicit context."""
-        return tuple(self.render(name, context, stage=stage) for name in names)
+        ordered_names = tuple(names)
+        logger.debug(
+            "Template batch render started stage=%s template_count=%d templates=%s context_type=%s",
+            stage,
+            len(ordered_names),
+            ordered_names,
+            type(context).__name__,
+        )
+        try:
+            rendered = tuple(self.render(name, context, stage=stage) for name in ordered_names)
+        except TemplateStoreError:
+            logger.warning(
+                "Template batch render failed stage=%s template_count=%d templates=%s",
+                stage,
+                len(ordered_names),
+                ordered_names,
+            )
+            raise
+        logger.debug(
+            "Template batch render succeeded stage=%s template_count=%d",
+            stage,
+            len(ordered_names),
+        )
+        return rendered
 
     def snapshot(self, name: str, *, stage: StageName | None = None) -> TemplateSnapshot:
         """Return the UTF-8 byte digest of one loaded template."""
@@ -175,3 +248,13 @@ class TemplateStore:
     def _validate_stage(spec: TemplateSpec, stage: StageName | None) -> None:
         if stage is not None and stage not in spec.stages:
             raise TemplateStoreError(f"Template {spec.name} is not assigned to stage {stage!r}")
+
+
+def _placeholder_names(text: str) -> tuple[str, ...]:
+    """Return safe placeholder names without exposing template contents."""
+    names: list[str] = []
+    for match in Template.pattern.finditer(text):
+        name = match.group("named") or match.group("braced")
+        if name and name not in names:
+            names.append(name)
+    return tuple(names)

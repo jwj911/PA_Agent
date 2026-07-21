@@ -129,7 +129,8 @@ price_action_agent/
   - `prompting/template_manifest.py` / `prompting/template_store.py` / `prompting/template_context.py` /
     `prompting/compatibility.py`：PyQt-free 模板元数据、显式 JSON 可序列化上下文、严格 UTF-8 加载、
     缓存和 golden snapshot 契约；共享 system、Stage 1 user prompt、Stage 2/continuation 均支持
-    TemplateStore 整组加载、旧路径回退和 `use_template_store=False` 回滚。
+    TemplateStore 整组加载、旧路径回退和 `use_template_store=False` 回滚。关键 render 路径只记录
+    模板/阶段/键名/占位符/长度等安全元数据，不记录变量值或完整 prompt。
   - `stage1_prompt_builder.py` / `stage2_prompt_builder.py`：阶段一/阶段二 user prompt 构建器。
   - `kline_table_renderer.py` / `experience_renderer.py` / `stage2_guidance.py` / `chain_context.py` / `program_prefill_hint.py`：prompt 渲染子模块（PyQt6-free 叶子模块）。
   - `json_validator.py` / `json_repair.py` / `business_rules.py` / `schema_validator.py`：阶段一/阶段二 JSON 校验、修复、业务规则与 schema 校验。

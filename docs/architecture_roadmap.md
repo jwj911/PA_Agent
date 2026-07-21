@@ -212,7 +212,9 @@ Stage 1、Stage 2 和 continuation，不替换任何中文策略文本。Templat
 - 禁止模板执行任意 Python；
 - 模板加载失败时返回明确的诊断错误，不静默生成不完整 prompt；
 - 系统 prompt 和 Stage 1→Stage 2 共享前缀继续走进程级缓存；
-- 模板渲染结果支持 UTF-8 字节快照。
+- 模板渲染结果支持 UTF-8 字节快照；
+- render/render_many 记录模板名、阶段、context 键名、占位符、长度和失败原因等安全元数据，
+  不记录变量值、完整 prompt 或密钥。
 
 ### 5.3 Context 设计
 

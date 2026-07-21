@@ -213,6 +213,61 @@ def test_template_store_render_is_strict_and_non_executable(tmp_path: Path) -> N
         store.render(template_name, context, stage="stage2")
 
 
+def test_template_store_render_logs_safe_variable_diagnostics(
+    tmp_path: Path,
+    caplog,
+) -> None:
+    template_name = "fixture.txt"
+    (tmp_path / template_name).write_text(
+        "symbol=$symbol stage=${stage}",
+        encoding="utf-8",
+    )
+    store = TemplateStore(
+        tmp_path,
+        manifest=(TemplateSpec(name=template_name, stages=("stage2",), role="task"),),
+    )
+    secret_value = "SECRET-VALUE"
+
+    with caplog.at_level("DEBUG", logger="pa_agent.ai.prompting.template_store"):
+        assert (
+            store.render(
+                template_name,
+                {"symbol": secret_value, "stage": "stage2"},
+                stage="stage2",
+            )
+            == f"symbol={secret_value} stage=stage2"
+        )
+
+    assert "Template render started" in caplog.text
+    assert "Template render succeeded" in caplog.text
+    assert "placeholder_names=('symbol', 'stage')" in caplog.text
+    assert "context_keys=('stage', 'symbol')" in caplog.text
+    assert secret_value not in caplog.text
+
+    caplog.clear()
+    with caplog.at_level("DEBUG", logger="pa_agent.ai.prompting.template_store"):
+        assert store.render_many(
+            [template_name],
+            {"symbol": secret_value, "stage": "stage2"},
+            stage="stage2",
+        ) == (f"symbol={secret_value} stage=stage2",)
+    assert "Template batch render started" in caplog.text
+    assert "Template batch render succeeded" in caplog.text
+    assert secret_value not in caplog.text
+
+    caplog.clear()
+    with (
+        caplog.at_level("WARNING", logger="pa_agent.ai.prompting.template_store"),
+        pytest.raises(TemplateStoreError, match="Missing template variable"),
+    ):
+        store.render(template_name, {"symbol": secret_value}, stage="stage2")
+
+    assert "Template render missing variable" in caplog.text
+    assert "missing=stage" in caplog.text
+    assert "available_keys=('symbol',)" in caplog.text
+    assert secret_value not in caplog.text
+
+
 def test_template_store_reports_missing_and_invalid_utf8(tmp_path: Path) -> None:
     manifest = (
         TemplateSpec(name="missing.txt", stages=("stage1",), role="task"),
