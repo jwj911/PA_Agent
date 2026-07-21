@@ -18,6 +18,30 @@
 
 ---
 
+## [Unreleased] — 2026-07-21（第二百三十五轮：L1 未知配置安全回退）
+
+本轮推进 L1 注册表治理的最小切片，修复未知或未来数据源配置在 Pydantic 校验阶段阻塞启动的问题。
+
+### 已交付
+
+- `GeneralSettings.last_data_source` 对未知、空值和非字符串输入安全回退到 `mt5`；
+  `yfinance`、`adata`、`a_share` 等既有兼容迁移保持不变。
+- 回退时记录安全 warning，不记录密钥或行情数据；`load_settings()` 会持久化规范化后的值，
+  避免后续启动重复触发同一回退。
+- 新增 settings round-trip 回归测试，覆盖未知值加载、内存回退和磁盘规范化。
+
+### 边界
+
+- 本轮不实现 Python entry points、任意目录扫描、Provider token 同步或 registry 并发策略。
+- L1 下一切片聚焦扩展契约、插件发现方案和 registry 生命周期/并发测试。
+
+### 验证
+
+- `test_settings_round_trip.py`、`test_data_source_factory.py` → **通过**。
+- 受影响模块 py_compile、目标 Ruff 和差异检查 → **通过**。
+
+---
+
 ## [Unreleased] — 2026-07-21（第二百三十四轮：L6 JSONL event sink/replay）
 
 本轮推进 L6 Headless 主线，先建立独立于 Provider 网络的事件持久化与重放端口，为真实 runner

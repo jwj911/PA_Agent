@@ -100,6 +100,22 @@ def test_corrupt_json_returns_defaults(tmp_path):
     assert s.provider.model == "deepseek-v4-flash"
 
 
+def test_unknown_data_source_falls_back_and_persists_normalized_value(tmp_path, caplog):
+    """Unknown future/plugin data sources must not block settings loading."""
+    p = tmp_path / "settings.json"
+    data = Settings().model_dump()
+    data["general"]["last_data_source"] = "future_source"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    with caplog.at_level("WARNING", logger="pa_agent.config.settings"):
+        loaded = load_settings(p)
+
+    assert loaded.general.last_data_source == "mt5"
+    assert "Unknown data source kind future_source" in caplog.text
+    persisted = json.loads(p.read_text(encoding="utf-8"))
+    assert persisted["general"]["last_data_source"] == "mt5"
+
+
 def test_missing_api_key_leaves_api_key_blank(tmp_path):
     """If api_key is absent, api_key stays empty string."""
     p = tmp_path / "settings.json"

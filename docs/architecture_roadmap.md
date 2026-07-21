@@ -19,7 +19,7 @@
 
 | 路线 | 当前状态 | 已有基础 | 主要剩余工作 |
 |---|---|---|---|
-| L1 Provider/数据源注册表 | 基础完成，治理未收口 | `data/registry.py`、`ai/provider_registry.py` 已支持规格、优先级、延迟 builder 和运行时注册 | 插件发现、配置字符串校验/回退、扩展契约以及生命周期/并发证据 |
+| L1 Provider/数据源注册表 | 基础完成，治理进行中 | `data/registry.py`、`ai/provider_registry.py` 已支持规格、优先级、延迟 builder 和运行时注册；未知数据源配置已安全回退 | 插件发现、扩展契约以及生命周期/并发证据 |
 | L2 Prompt 模板引擎 | 实现完成，兼容观察期 | `Stage1PromptBuilder`、`Stage2PromptBuilder`、29 个模板 manifest、`TemplateStore`、`TemplateContext`、严格变量渲染、system/Stage 1/Stage 2/continuation golden snapshots | 稳定周期后评估旧 helper、旧 loader 和兼容开关的下线 |
 | L3 Pipeline Builder | 部分准备 | `TwoStageOrchestrator.submit()` 已拆出 `_run_stage1`、`_run_stage2`、路由和持久化方法 | 新增 PyQt-free state/step 协议，替代方法内隐式局部状态与 early return |
 | L4 性能优化 | 代码优化完成，预算未收口 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁 | 固定 benchmark、预算阈值、p50/p95 报告和持续回归监控 |
@@ -34,13 +34,13 @@
 L2 的第 233 轮实现切片已完成，但仍处于兼容观察期；L1、L3、L4、L5、L6 仍未满足
 “完成定义”的全部条件。按依赖关系，后续收尾顺序应为：
 
-1. **L6**：完成真实 Provider runner、最终/partial record 等价和 JSONL 事件重放；
+1. **L6**：完成真实 Provider runner、最终/partial record 等价和公开 adapter 契约；
 2. **L3**：将现有编排辅助方法适配为显式 Pipeline state/step，并验证事件/记录等价；
 3. **L5/L4**：复用稳定的 headless/pipeline harness，分别建立经验离线评估和性能预算；
-4. **L1**：独立完成插件/配置/扩展契约治理及 registry 生命周期与并发测试；
+4. **L1**：独立完成插件/扩展契约治理及 registry 生命周期与并发测试；
 5. **L2**：完成兼容观察周期后，再决定旧入口和 feature flag 的下线。
 
-其中 L1 已具备第二阶段注册表基础，不再阻塞 L6；JSONL 事件端口已建立，但 L6 仍需真实
+其中 L1 已具备第二阶段注册表基础，未知数据源配置回退已完成，不再阻塞 L6；JSONL 事件端口已建立，但 L6 仍需真实
 Provider runner 和 record 等价证据。L5/L4 在真实数据或固定 benchmark 建立前，不得宣称收敛
 或直接调整线上权重/热路径。当前仍未发现 `orchestrator/pipeline/` 或 JSONL 事件与 Provider
 record 的完整等价实现，这些是明确的未实现项。

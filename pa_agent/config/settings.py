@@ -7,6 +7,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 DecisionStance = Literal["conservative", "balanced", "aggressive", "extreme_aggressive"]
 DataSourceKind = Literal["mt5", "tradingview", "akshare", "eastmoney", "tushare"]
 NormalizationMode = Literal["strict", "lenient"]
+_KNOWN_DATA_SOURCE_KINDS = frozenset(
+    {"mt5", "tradingview", "akshare", "eastmoney", "tushare"}
+)
 
 
 class AIProviderSettings(BaseModel):
@@ -106,7 +109,14 @@ class GeneralSettings(BaseModel):
             return "eastmoney"
         if v == "tushare":
             return "tushare"
-        return v
+        if isinstance(v, str) and v.strip().lower() in _KNOWN_DATA_SOURCE_KINDS:
+            return v.strip().lower()
+        if v not in (None, ""):
+            logger.warning(
+                "Unknown data source kind %s; falling back to mt5",
+                str(v)[:80],
+            )
+        return "mt5"
 
     @field_validator("decision_flow_default_zoom_pct", mode="before")
     @classmethod
@@ -297,9 +307,13 @@ def load_settings(path: Path | None = None) -> "Settings":
     raw.setdefault("provider", {}).setdefault("api_key", "")
 
     migrated_feishu = _migrate_legacy_feishu_json(raw, path)
+    raw_data_source_kind = general.get("last_data_source")
     settings = Settings.model_validate(raw)
     _decrypt_provider_key_in_place(settings)
-    dirty = migrated_feishu
+    dirty = migrated_feishu or (
+        "last_data_source" in general
+        and raw_data_source_kind != settings.general.last_data_source
+    )
     if settings.pushplus.enabled and not settings.pushplus.token.strip():
         if not (os.environ.get("PUSHPLUS_TOKEN") or "").strip():
             settings.pushplus.enabled = False

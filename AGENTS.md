@@ -403,8 +403,9 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
 12. **L1 当前进度**：数据源注册表和 AI Provider 注册表已完成第二阶段基础，支持规格、
     优先级 matcher、延迟 builder 和运行时注册；必须保留 `openclaw_cs` → Cursor SDK 的专用路由，
     以及其余模型 → OpenAI-compatible client 的兼容行为。Provider 同步仍由
-    `ProviderSyncService` 负责，不得重复搬入 registry 或 client factory。插件发现、配置持久化与
-    未知值安全回退、扩展契约文档，以及生命周期/并发测试仍待后续收口。
+    `ProviderSyncService` 负责，不得重复搬入 registry 或 client factory。未知数据源配置已在
+    settings 加载时安全回退到 `mt5` 并持久化规范化值；插件发现、扩展契约文档以及生命周期/
+    并发测试仍待后续收口。
 13. **L6 当前进度**：`AppContext` 已拆出共享 core helper 和 `bootstrap_gui()`；`bootstrap()`
     委托 GUI 路径。headless 复用 core helper，必须继续保持无 Qt `EventBus` import、无数据源连接；
     GUI adapter 继续负责 `EventBus`、数据源连接/订阅，且 `event_sink` 指向 `EventBus`。第 229 轮已
