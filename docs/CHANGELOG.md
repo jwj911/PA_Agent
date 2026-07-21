@@ -18,6 +18,42 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L3 Task 6：Stage1Step 真实步骤）
+
+本轮完成规格中 L3 Task 6 的 Stage 1 步骤化切片。新路径仍为 opt-in，不切换默认编排路径；
+Route、Stage 2、Persist 暂由 `legacy_post_stage1` 兼容尾步骤承接。
+
+### 已交付
+
+- **真实 Stage 1 步骤**：新增 PyQt-free `Stage1Step`，复用现有 Stage 1 构建、Provider 调用、
+  preflight、校验/重试和取消语义，并把 Stage 1 payload、usage、thinking 和 reasoning effort
+  回填到 `PipelineState`。
+- **opt-in pipeline 顺序**：`TwoStageOrchestrator.run_pipeline()` 固定执行
+  `Stage1Step -> legacy_post_stage1`；`legacy_post_stage1` 继续承接 Route/Stage 2/Persist
+  兼容尾步骤。
+- **默认路径兼容**：`TwoStageOrchestrator.submit()`、GUI/headless 默认调用路径和
+  `AnalysisRecord` schema 保持不变，未切换 Pipeline feature flag。
+- **测试覆盖**：新增 `tests/integration/test_stage1_pipeline_step.py`，覆盖 happy/retry/network/
+  validation/cancel/incremental；更新 `test_two_stage_pipeline_equivalence.py`，覆盖最终 record、
+  事件序列和步骤顺序等价。
+- **CI 清单**：将 Stage 1 集成测试加入 targeted pytest 与 focused Ruff 目标清单。
+
+### 收尾边界
+
+- Route、Stage 2、Persist 尚未拆为独立真实 `PipelineStep`，仍由 `legacy_post_stage1` 执行。
+- 完整终态、GUI/headless 全链路 record 等价和 feature flag 观察周期仍待后续切片。
+
+### 涉及文件
+
+- `pa_agent/orchestrator/pipeline/steps.py`
+- `pa_agent/orchestrator/pipeline/state.py`
+- `pa_agent/orchestrator/two_stage.py`
+- `tests/integration/test_stage1_pipeline_step.py`
+- `tests/integration/test_two_stage_pipeline_equivalence.py`
+- `.github/workflows/ci.yml`
+
+---
+
 ## [Unreleased] — 2026-07-22（L3 Task 5：PipelineState foundation）
 
 本轮完成规格中 L3 Task 5 的 PipelineState foundation，扩展显式状态承载和安全摘要边界；

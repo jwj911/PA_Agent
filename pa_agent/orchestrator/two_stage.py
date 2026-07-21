@@ -1201,13 +1201,13 @@ class TwoStageOrchestrator:
     ) -> Any:
         """Run the opt-in pipeline adapter and return explicit execution state.
 
-        The first migration slice wraps the unchanged ``submit()`` method as
-        one compatibility step. The default GUI/headless callers continue to
-        use ``submit()`` directly until stage-specific steps have equivalent
-        evidence.
+        Stage 1 runs as a real PyQt-free step. The remaining route/Stage-2/
+        persistence tail stays behind one compatibility step until those
+        migration slices are implemented. The default GUI/headless callers
+        continue to use ``submit()`` directly.
         """
         from pa_agent.orchestrator.pipeline import PipelineBuilder, PipelineState
-        from pa_agent.orchestrator.pipeline.steps import LegacySubmitStep
+        from pa_agent.orchestrator.pipeline.steps import LegacyPostStage1Step, Stage1Step
 
         state = PipelineState(
             frame=frame,
@@ -1222,7 +1222,7 @@ class TwoStageOrchestrator:
             previous_record=previous_record,
             incremental_new_bar_count=incremental_new_bar_count,
         )
-        return PipelineBuilder((LegacySubmitStep(),)).run(state, self)
+        return PipelineBuilder((Stage1Step(), LegacyPostStage1Step())).run(state, self)
 
     def submit_pipeline(
         self,

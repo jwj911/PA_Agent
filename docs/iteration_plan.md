@@ -16,7 +16,7 @@
 |---|---|---|---|
 | L1 Provider/数据源注册表 | 基础完成，治理切片已交付 | 数据源注册表、AI Provider 注册表、优先级 matcher、延迟 builder、运行时注册 API、未知数据源配置安全回退；本轮补齐规范化、replace/unregister、并发和懒导入证据 | 插件发现方案、正式扩展契约文档、builder 锁外执行证据 |
 | L2 Prompt 模板引擎 | 实现完成，兼容观察期 | `TemplateStore`、29 个模板 manifest、system/Stage 1/Stage 2/continuation 迁移、`TemplateContext`、严格变量渲染、golden snapshots 和整组回退 | 观察一个稳定周期后评估移除重复 helper、兼容开关和旧 loader |
-| L3 Pipeline Builder | PipelineState foundation 已交付，默认旧路径 | 新增 PyQt-free `PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`；state 显式承载 Stage 1/Stage 2 payload、usage、route 输出、partial reason 和持久化意图；补充 route/persist 终态映射与安全摘要/URL 脱敏；`run_pipeline()`/`submit_pipeline()` 仍为 opt-in compatibility adapter，旧 `submit()` 保持不变 | Stage 1/route/Stage 2/persist 真实步骤、全终态与 GUI/headless 等价验证、feature flag 观察周期；不得据此宣称四个真实步骤已实现 |
+| L3 Pipeline Builder | Stage 1 真实步骤已交付，默认旧路径 | 新增 PyQt-free `PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder` 和 `Stage1Step`；opt-in `run_pipeline()` 顺序固定为 `Stage1Step -> legacy_post_stage1`，state 显式承载 Stage 1/Stage 2 payload、usage、route 输出、partial reason 和持久化意图；`legacy_post_stage1` 暂时承接 Route/Stage 2/Persist 兼容尾步骤；旧 `submit()` 保持不变 | Route/Stage 2/Persist 真实步骤、全终态与 GUI/headless 等价验证、feature flag 观察周期；当前不得将兼容尾步骤宣称为三个真实步骤 |
 | L4 性能预算 | 代码优化完成，预算未收口 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁 | 固定 synthetic benchmark、预算阈值、p50/p95 报告和持续回归监控 |
 | L5 经验库升级 | 排序实现完成，数据评估未收口 | 全量相关性排序和 K 线几何相似度已接入 | 脱敏数据集、固定评估集、离线指标、特征版本化和权重校准 |
 | L6 Headless/编排 | runner 第一切片已交付，等价契约未收口 | `AppEvent`、`EventSink`、`JsonlEventSink`、`replay_jsonl`、`bootstrap_headless()`、共享 `_build_core()`、`bootstrap_gui()`、兼容 `bootstrap()`、PyQt-free `pa-agent headless`；`analyze --run/--execute` 已接入两阶段 orchestrator、record 持久化和 JSONL 事件 | GUI/headless 最终/partial/cancel/failure record 等价、公开 adapter 契约和真实 Provider 环境验证 |
@@ -32,7 +32,7 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 | 优先级 | 路线 | 当前阻塞项 | 收尾证据 |
 |---|---|---|---|
 | P0 | L6 | `headless analyze --run` 已接入真实两阶段 runner，但 GUI/headless 全链路等价和公开 adapter 契约仍缺 | mock Provider 下的 final/partial/cancel/failure record、事件重放与 GUI 对照；真实 Provider 只允许显式执行 |
-| P1 | L3 | PipelineState foundation、state/step 协议和 legacy wrapper 已存在，但尚未拆出真实阶段步骤，默认路径仍未切换 | Stage 1/route/Stage 2/persist 步骤化、全终态与 GUI/headless 等价、feature flag 观察周期；Task 5 的安全摘要只覆盖状态摘要边界，不代表 PersistStep 已实现 |
+| P1 | L3 | `Stage1Step` 已拆出并仅由 opt-in pipeline 使用；默认路径仍未切换，Route/Stage 2/Persist 仍由 `legacy_post_stage1` 兼容尾步骤承接 | 已有 happy/retry/network/validation/cancel/incremental 及最终 record/event equivalence 测试；仍需 Route/Stage 2/Persist 真实步骤、全终态与 GUI/headless 等价、feature flag 观察周期 |
 | P1 | L5 | 没有脱敏经验数据集和固定离线评估基线 | 可重复的 `Recall@K`、`NDCG@K`、fallback rate、稳定性报告 |
 | P1 | L4 | 没有固定 benchmark、预算阈值和 p50/p95 报告 | 固定 fixture 基线、回归阈值和 CI/夜间任务报告 |
 | P2 | L1 | registry 基础、未知数据源配置回退和第一批生命周期/并发证据已完成；插件发现与正式扩展契约仍未收口 | 不改核心条件分支的扩展样例、entry points/显式注册方案、matcher/builder/settings 注入契约 |
@@ -46,8 +46,8 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 第 232 轮已完成 **L2 Stage 1 user prompt 迁移**，第 233 轮已完成 Stage 2/continuation
 和 `TemplateContext` 收尾实现。第 234 轮已完成 L6 JSONL event sink/replay 切片，第 237 轮
 已交付显式执行的 headless 两阶段 runner，第 238 轮已交付 L3 state/step compatibility
-adapter，本轮完成 L3 Task 5 PipelineState foundation；当前主线继续推进 L3 真实步骤化和
-GUI/headless 最终 record 等价。
+adapter，Task 5 已完成 PipelineState foundation，本轮完成 Task 6 的 `Stage1Step` 真实步骤；
+当前主线继续推进 Route/Stage 2/Persist 真实步骤化和 GUI/headless 最终 record 等价。
 
 推荐顺序如下：
 
@@ -77,8 +77,9 @@ GUI/headless 最终 record 等价。
    测试注入点，`build_core` 与 `build_gui_adapters` 是否公开，需要等 CLI/GUI adapter 契约稳定后再决定。
 5. L2 system、Stage 1、Stage 2/continuation、TemplateContext 和严格变量渲染已实现并保留严格
    失败回退；当前只剩旧 loader/helper 的兼容观察期。
-6. L3 阶段步骤化与完整终态等价、L1 插件发现方案与正式扩展契约、L5 脱敏数据集与离线指标、L4 p50/p95 性能预算仍缺少
-   固定证据，不能仅依据当前测试宣称收敛；L2 只剩兼容观察期。
+6. L3 的 `Stage1Step` 已有 opt-in 等价与失败路径证据，但 Route/Stage 2/Persist 仍是
+   `legacy_post_stage1` 兼容尾步骤；L1 插件发现方案与正式扩展契约、L5 脱敏数据集与离线指标、
+   L4 p50/p95 性能预算仍缺少固定证据，不能仅依据当前测试宣称收敛；L2 只剩兼容观察期。
 
 ## 2.2 第 233 轮完成结果（L2 Stage 2/continuation 与 TemplateContext）
 
@@ -271,6 +272,38 @@ gate short-circuit、增量分析和 GUI/headless 等价证据。
 - 本轮只扩展状态承载和摘要边界，不改变 prompt 文本、JSON schema、normalizer、retry 语义、
   `AnalysisRecord` schema 或持久化实现。
 
+## 2.9 本轮完成结果（L3 Task 6：Stage1Step 真实步骤）
+
+### 已交付
+
+1. 新增真实 PyQt-free `Stage1Step`，复用现有 Stage 1 构建、Provider 调用、校验/重试和
+   preflight 语义，并把 Stage 1 messages、reply、normalized JSON、usage、usage calls、
+   thinking 和 reasoning effort 回填到 `PipelineState`。
+2. `run_pipeline()` 的 opt-in sequence 固定为
+   `Stage1Step -> legacy_post_stage1`；`legacy_post_stage1` 在迁移完成前继续承接
+   Route、Stage 2 和 Persist 兼容尾步骤。
+3. 保留 `TwoStageOrchestrator.submit()` 及 GUI/headless 默认调用路径；本轮没有切换
+   Pipeline feature flag，也没有改变默认旧 `submit()` 路径。
+4. 新增 `tests/integration/test_stage1_pipeline_step.py`，覆盖 happy、retry、network、
+   validation、cancel 和 incremental 路径；更新 `test_two_stage_pipeline_equivalence.py`
+   验证旧/新最终 record、事件序列和步骤顺序等价。
+5. 将 Stage 1 集成测试加入 CI targeted pytest 与 focused Ruff 目标清单，继续保持
+   Pipeline 模块不导入 PyQt6。
+
+### 明确未实现
+
+- Route、Stage 2、Persist 尚未拆为独立真实 `PipelineStep`，仍由 `legacy_post_stage1`
+  兼容尾步骤执行。
+- Pipeline 默认路径、`submit()` facade、`AnalysisRecord` schema、prompt 文本、normalizer
+  和既有 retry 语义均未切换或改写。
+- L3 的完整终态、GUI/headless 全链路 record 等价和 feature flag 观察周期仍待收口。
+
+### 证据与边界
+
+- Stage 1 集成测试覆盖状态快照、回调、usage、校验重试、网络失败、校验失败、取消、增量
+  prompt context，以及旧/新最终 record 和事件等价。
+- 本轮只推进 Stage 1 步骤化，不将 Route/Stage 2/Persist 兼容尾步骤误标为真实步骤。
+
 ## 3. 每轮建议交付物
 
 ### 3.1 L6 headless runner / CLI 最小入口
@@ -363,15 +396,18 @@ gate short-circuit、增量分析和 GUI/headless 等价证据。
 
 ### 3.3 L3 Pipeline state/step 化
 
-第 238 轮已交付协议和 legacy compatibility adapter，本轮已完成 Task 5 的
-PipelineState foundation；后续交付物：
+第 238 轮已交付协议和 legacy compatibility adapter，Task 5 已完成 PipelineState
+foundation，本轮已完成 Task 6 的 `Stage1Step` 真实步骤；后续交付物：
 
 - 保持 state 对 Stage 1/Stage 2 payload、usage、route 输出、partial reason、persistence intent
   和 terminal status 的显式承载。
-- 将现有 `_run_stage1`、`_route_and_load_experience`、`_run_stage2`、`_persist_result` 等辅助方法
-  逐步适配为真实步骤；当前仍未实现 `Stage1Step`、`RouteStep`、`Stage2Step`、`PersistStep`。
+- 将现有 `_route_and_load_experience`、`_try_gate_short_circuit`、`_run_stage2`、
+  `_persist_result` 等辅助方法逐步适配为真实步骤；当前 `Stage1Step` 已实现，
+  `RouteStep`、`Stage2Step`、`PersistStep` 仍未实现。
+- 在 opt-in pipeline 中保持 `Stage1Step -> legacy_post_stage1` 顺序，直到兼容尾步骤被逐项替换。
 - 保留 `TwoStageOrchestrator.submit()` 作为兼容 facade，通过显式 adapter/feature flag 控制新路径。
-- 增加网络错误、Stage 1/2 校验失败、gate short-circuit、增量分析和 partial record 的旧/新路径等价测试。
+- 继续增加 Route/Stage 2/Persist 的网络错误、校验失败、gate short-circuit、增量分析和
+  partial record 旧/新路径等价测试。
 
 验收标准：
 

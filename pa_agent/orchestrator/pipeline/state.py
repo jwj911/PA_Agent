@@ -340,6 +340,8 @@ class PipelineState:
     stage1_normalized_json: dict[str, Any] | None = field(default=None, repr=False)
     stage1_usage: dict[str, Any] = field(default_factory=dict, repr=False)
     stage1_usage_calls: list[Any] = field(default_factory=list, repr=False)
+    stage1_thinking: bool = field(default=True, repr=False)
+    stage1_reasoning_effort: str = field(default="high", repr=False)
     stage2_messages: list[dict[str, Any]] = field(default_factory=list, repr=False)
     stage2_reply: Any = field(default=None, repr=False)
     stage2_normalized_json: dict[str, Any] | None = field(default=None, repr=False)
