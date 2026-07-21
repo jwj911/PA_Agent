@@ -14,7 +14,7 @@
 
 | 路线 | 当前状态 | 已完成基础 | 主要剩余工作 |
 |---|---|---|---|
-| L1 Provider/数据源注册表 | 基础完成，治理进行中 | 数据源注册表、AI Provider 注册表、优先级 matcher、延迟 builder、运行时注册 API、未知数据源配置安全回退 | 插件发现方案、扩展契约、生命周期和并发测试 |
+| L1 Provider/数据源注册表 | 基础完成，治理切片已交付 | 数据源注册表、AI Provider 注册表、优先级 matcher、延迟 builder、运行时注册 API、未知数据源配置安全回退；本轮补齐规范化、replace/unregister、并发和懒导入证据 | 插件发现方案、正式扩展契约文档、builder 锁外执行证据 |
 | L2 Prompt 模板引擎 | 实现完成，兼容观察期 | `TemplateStore`、29 个模板 manifest、system/Stage 1/Stage 2/continuation 迁移、`TemplateContext`、严格变量渲染、golden snapshots 和整组回退 | 观察一个稳定周期后评估移除重复 helper、兼容开关和旧 loader |
 | L3 Pipeline Builder | 部分准备 | `TwoStageOrchestrator.submit()` 已拆出 Stage 1、Stage 2、路由和持久化辅助方法 | PyQt-free state/step 协议、terminal status、事件序列和旧/新路径等价测试 |
 | L4 性能预算 | 代码优化完成，预算未收口 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁 | 固定 synthetic benchmark、预算阈值、p50/p95 报告和持续回归监控 |
@@ -35,7 +35,7 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 | P1 | L3 | 没有 `orchestrator/pipeline/`、`PipelineState`、`PipelineStep`、`TerminalStatus` 实现 | 新旧 `submit()` 路径的状态、事件和记录等价测试 |
 | P1 | L5 | 没有脱敏经验数据集和固定离线评估基线 | 可重复的 `Recall@K`、`NDCG@K`、fallback rate、稳定性报告 |
 | P1 | L4 | 没有固定 benchmark、预算阈值和 p50/p95 报告 | 固定 fixture 基线、回归阈值和 CI/夜间任务报告 |
-| P2 | L1 | registry 基础和未知数据源配置回退已完成，插件发现、扩展契约及生命周期/并发证据不足 | 不改核心条件分支的扩展样例、registry 并发/lazy import 和扩展契约测试 |
+| P2 | L1 | registry 基础、未知数据源配置回退和第一批生命周期/并发证据已完成；插件发现与正式扩展契约仍未收口 | 不改核心条件分支的扩展样例、entry points/显式注册方案、matcher/builder/settings 注入契约 |
 | P2 | L2 | 实现已完成，但 `use_template_store` 与旧 loader 尚处兼容观察期 | 稳定周期内新旧路径持续等价，并形成兼容入口下线计划 |
 
 当前主链路为 **L6 → L3 → L5/L4**；L2 已完成实现并进入兼容观察期，L1 可独立并行治理，
@@ -55,7 +55,7 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 4. **L4：性能预算和持续基准**。
 5. **L1 收口治理** 可以在主线空档穿插推进，但不得绕过 L6/L3 的等价证据。
 6. **L2 兼容观察**：记录新旧路径运行结果，稳定一个周期后再单独评估旧 loader/helper 的下线。
-7. **L1 治理观察**：未知配置回退已完成，下一切片聚焦插件发现方案、扩展契约和 registry 生命周期/并发证据。
+7. **L1 治理观察**：第 236 轮已完成 registry 生命周期、replace/unregister、并发和 lazy-import 测试；下一切片聚焦插件发现方案与正式扩展契约。
 
 第 233 轮已经完成；当前不再重复改写 L2 prompt 文本，后续只保留兼容观察和回滚能力。
 
@@ -73,8 +73,8 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
    需要等 CLI/GUI adapter 契约稳定后再决定。
 5. L2 system、Stage 1、Stage 2/continuation、TemplateContext 和严格变量渲染已实现并保留严格
    失败回退；当前只剩旧 loader/helper 的兼容观察期。
-6. L1 插件发现、扩展契约和生命周期/并发证据、L5 脱敏数据集与离线指标、L4 p50/p95 性能
-   预算仍缺少真实数据或固定 benchmark，不能仅依据合成 fixture 宣称收敛；L2 只剩兼容观察期。
+6. L1 插件发现方案与正式扩展契约、L5 脱敏数据集与离线指标、L4 p50/p95 性能预算仍缺少
+   固定证据，不能仅依据当前测试宣称收敛；L2 只剩兼容观察期。
 
 ## 2.2 第 233 轮完成结果（L2 Stage 2/continuation 与 TemplateContext）
 
@@ -155,6 +155,30 @@ record、取消和失败事件等价。
 
 本轮不实现 Python entry points、任意目录扫描、Provider token 同步或 registry 并发策略；
 下一 L1 切片再处理扩展契约和生命周期/并发测试。
+
+## 2.5 第 236 轮完成结果（L1 注册表治理）
+
+### 已交付
+
+1. `DataSourceRegistry` 与 `AIClientRegistry` 的 key/name 规范化行为已集中覆盖：注册、查询、
+   注销均按去除首尾空白后的 canonical key 工作，保持大小写和既有路由语义不变。
+2. 补充重复注册拒绝、`replace=True` 替换、注销返回值和幂等行为测试，覆盖数据源工厂与 AI
+   client factory 的运行时扩展入口。
+3. 补充 AI route priority 与同优先级稳定顺序测试、数据源 registry 并发注册/读取/注销测试，
+   以及 concrete client 不因 import registry 而提前加载的 lazy-import 检查。
+
+### 收尾边界
+
+本轮不引入 Python entry points、任意目录扫描、动态代码执行、Provider token 同步或网络探测；
+builder 仍由现有 factory 在 registry 锁外调用。下一 L1 切片聚焦插件发现方案和 matcher、
+builder、settings 注入、线程安全及注销时机的正式开发者契约。
+
+### 验证
+
+- `tests/unit/test_registry.py`、`tests/unit/test_data_source_factory.py`、
+  `tests/unit/test_client_factory.py` → **21 passed**。
+- 受影响模块 focused Ruff、`scripts/check_ci_workflow_targets.py`、
+  `scripts/check_ruff_baseline.py` 和 `git diff --check` → **通过**。
 
 ## 3. 每轮建议交付物
 

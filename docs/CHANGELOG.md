@@ -18,6 +18,30 @@
 
 ---
 
+## [Unreleased] — 2026-07-21（第二百三十六轮：L1 注册表治理）
+
+本轮推进 L1 注册表治理，补齐运行时扩展入口的最小生命周期和并发证据，不引入动态插件扫描。
+
+### 已交付
+
+- `DataSourceRegistry` / `AIClientRegistry` 的注册、查询和注销统一按去除首尾空白后的 canonical
+  key 工作；重复注册默认拒绝，`replace=True` 显式替换。
+- 补充数据源和 AI client factory 的 replace/unregister/priority 稳定性测试，以及数据源 registry
+  并发注册、读取、注销测试。
+- 增加 concrete AI client lazy-import 检查，确保 import registry 不提前加载可选客户端实现。
+
+### 边界
+
+- 不引入 Python entry points、任意目录扫描、动态代码执行、Provider token 同步或网络探测。
+- 插件发现方案、正式 matcher/builder/settings 注入契约和 builder 锁外执行的可观测证据留待后续。
+
+### 验证
+
+- L1 聚焦测试 → **21 passed**。
+- 受影响模块 focused Ruff、CI workflow target、Ruff baseline 和 `git diff --check` → **通过**。
+
+---
+
 ## [Unreleased] — 2026-07-21（第二百三十五轮：L1 未知配置安全回退）
 
 本轮推进 L1 注册表治理的最小切片，修复未知或未来数据源配置在 Pydantic 校验阶段阻塞启动的问题。

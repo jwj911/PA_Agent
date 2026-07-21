@@ -15,6 +15,11 @@ if TYPE_CHECKING:
 DataSourceBuilder = Callable[["Settings | None"], DataSource]
 
 
+def _normalize_kind(kind: str | None) -> str:
+    """Return the canonical registry key without changing its case."""
+    return str(kind or "").strip()
+
+
 @dataclass(frozen=True)
 class DataSourceSpec:
     """Metadata and lazy builder for one data-source kind."""
@@ -35,7 +40,7 @@ class DataSourceRegistry:
 
     def register(self, spec: DataSourceSpec, *, replace: bool = False) -> None:
         """Register *spec*, rejecting accidental kind collisions by default."""
-        kind = str(spec.kind or "").strip()
+        kind = _normalize_kind(spec.kind)
         if not kind:
             raise ValueError("Data source kind must not be empty")
         if kind != spec.kind:
@@ -54,12 +59,12 @@ class DataSourceRegistry:
     def unregister(self, kind: str) -> DataSourceSpec | None:
         """Remove and return a registered spec, or ``None`` when absent."""
         with self._lock:
-            return self._specs.pop(str(kind or "").strip(), None)
+            return self._specs.pop(_normalize_kind(kind), None)
 
     def get(self, kind: str) -> DataSourceSpec | None:
         """Return a spec by canonical kind."""
         with self._lock:
-            return self._specs.get(str(kind or "").strip())
+            return self._specs.get(_normalize_kind(kind))
 
     def specs(self, *, visible_only: bool = False) -> tuple[DataSourceSpec, ...]:
         """Return registered specs in registration order."""

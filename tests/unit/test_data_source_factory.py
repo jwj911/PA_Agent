@@ -99,6 +99,41 @@ def test_runtime_data_source_registration_rejects_duplicate_kind():
         unregister_data_source("test_source")
 
 
+def test_runtime_data_source_registration_normalizes_replaces_and_unregisters():
+    first = MT5Source()
+    replacement = TradingViewSource()
+    register_data_source(
+        "  test_source  ",
+        label="测试数据源",
+        default_symbol="TEST",
+        builder=lambda _settings: first,
+        visible=True,
+    )
+    try:
+        assert normalize_data_source_kind(" test_source ") == "test_source"
+        assert create_data_source(" test_source ") is first
+
+        register_data_source(
+            "test_source",
+            label="替换数据源",
+            default_symbol="TEST2",
+            builder=lambda _settings: replacement,
+            visible=True,
+            replace=True,
+        )
+        assert ("test_source", "替换数据源") in data_source_choices()
+        assert create_data_source("test_source") is replacement
+        assert default_symbol_for_kind("test_source") == "TEST2"
+
+        removed = unregister_data_source(" test_source ")
+        assert removed is not None
+        assert removed.kind == "test_source"
+        assert ("test_source", "替换数据源") not in data_source_choices()
+        assert unregister_data_source("test_source") is None
+    finally:
+        unregister_data_source("test_source")
+
+
 def test_general_settings_last_data_source_default():
     g = GeneralSettings()
     assert g.last_data_source == "mt5"

@@ -15,6 +15,11 @@ AIClientMatcher = Callable[["AIProviderSettings"], bool]
 AIClientBuilder = Callable[["AIProviderSettings", logging.Logger], Any]
 
 
+def _normalize_name(name: str | None) -> str:
+    """Return the canonical registry key without changing its case."""
+    return str(name or "").strip()
+
+
 @dataclass(frozen=True)
 class AIClientSpec:
     """One provider route matcher and its lazy client builder."""
@@ -34,7 +39,7 @@ class AIClientRegistry:
 
     def register(self, spec: AIClientSpec, *, replace: bool = False) -> None:
         """Register a route, rejecting duplicate names unless replacing."""
-        name = str(spec.name or "").strip()
+        name = _normalize_name(spec.name)
         if not name:
             raise ValueError("AI client provider name must not be empty")
         if name != spec.name:
@@ -52,7 +57,7 @@ class AIClientRegistry:
     def unregister(self, name: str) -> AIClientSpec | None:
         """Remove and return a route, or ``None`` when absent."""
         with self._lock:
-            return self._specs.pop(str(name or "").strip(), None)
+            return self._specs.pop(_normalize_name(name), None)
 
     def specs(self) -> tuple[AIClientSpec, ...]:
         """Return routes in descending priority and stable registration order."""

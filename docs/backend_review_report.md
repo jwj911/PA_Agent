@@ -32,7 +32,8 @@ PA Agent 的后端已经具备一个生产级桌面应用的核心骨架：
 ### 1.1 当前进度校正（2026-07-19）
 
 - L1 数据源/Provider 注册表已完成第二阶段基础，未知数据源配置已安全回退并持久化规范化值；
-  仍待插件发现、扩展契约和生命周期/并发治理。
+  第 236 轮又补齐了规范化 key、replace/unregister、priority 稳定性、并发读写和 lazy-import
+  测试；仍待插件发现与正式扩展契约。
 - L2 已完成 prompt 文件顺序、阶段边界和 Spike/Climax 硬约束的合同化基线；第 230 轮新增
   29 个模板的 manifest、`TemplateStore` 和 UTF-8 golden digest，第 231-233 轮完成共享 system、
   Stage 1、Stage 2/continuation、`TemplateContext` 和严格变量渲染迁移，并保留严格失败回退；
@@ -292,7 +293,7 @@ PA Agent 的后端已经具备一个生产级桌面应用的核心骨架：
 
 | 编号 | 任务 | 目标文件 | 预期收益 |
 |---|---|---|---|
-| L1 | 引入 Provider/数据源注册表（第二阶段完成） | `ai/client_factory.py`、`ai/provider_registry.py`、`data/factory.py`、`data/registry.py` | AI client 与数据源均支持规格注册、优先级/延迟 builder 与运行时扩展；Provider 同步仍由现有 service 负责 |
+| L1 | 引入 Provider/数据源注册表（第二阶段治理切片完成） | `ai/client_factory.py`、`ai/provider_registry.py`、`data/factory.py`、`data/registry.py`、`tests/unit/test_registry.py` | AI client 与数据源支持规格注册、优先级/延迟 builder、运行时扩展及第一批生命周期/并发/lazy-import 证据；插件发现和正式扩展契约仍待完成，Provider 同步仍由现有 service 负责 |
 | L2 | Prompt 模板引擎化 | `prompt_engineering/`、`ai/prompt_assembler.py` | 使用 Jinja2 或结构化模板，支持热更新 |
 | L3 | 引入 Pipeline Builder | `orchestrator/two_stage.py` | 用 Pipeline/StateMachine 替代巨型 `submit()` |
 | L4 | 性能优化 | `data/snapshot.py`、`ai/kline_features.py`、`records/analysis_history.py`、`records/pending_writer.py`、`ai/deepseek_client.py` | 增量指标、索引、追加写、复用 HTTP client |

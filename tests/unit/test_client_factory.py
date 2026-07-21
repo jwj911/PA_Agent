@@ -69,3 +69,33 @@ def test_custom_ai_client_provider_rejects_duplicate_name() -> None:
             )
     finally:
         unregister_ai_client_provider("test_provider")
+
+
+def test_custom_ai_client_provider_normalizes_replaces_and_unregisters() -> None:
+    first = object()
+    replacement = object()
+    register_ai_client_provider(
+        "  test_provider  ",
+        matcher=lambda _settings: True,
+        builder=lambda _settings, _logger: first,
+    )
+    try:
+        names = [spec.name for spec in ai_client_provider_specs()]
+        assert "test_provider" in names
+        assert create_ai_client(AIProviderSettings(model="test-provider")) is first
+
+        register_ai_client_provider(
+            "test_provider",
+            matcher=lambda _settings: True,
+            builder=lambda _settings, _logger: replacement,
+            priority=50,
+            replace=True,
+        )
+        assert create_ai_client(AIProviderSettings(model="test-provider")) is replacement
+
+        removed = unregister_ai_client_provider(" test_provider ")
+        assert removed is not None
+        assert removed.name == "test_provider"
+        assert unregister_ai_client_provider("test_provider") is None
+    finally:
+        unregister_ai_client_provider("test_provider")

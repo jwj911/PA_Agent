@@ -400,12 +400,12 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
 9. **新增文件/字段时注意更新本文件**：如果你新增了模块、数据源、AI 提供商、安全机制、构建流程等，请同步更新本 `AGENTS.md` 中的对应章节。
 10. **热路径注意性能**：`data/snapshot.py`、`ai/kline_features.py`、`records/analysis_history.py`、`ai/deepseek_client.py` 等属于高频路径，改动时避免重复计算与无条件构造大字符串。
 11. **进程级缓存/全局状态需线程安全**：后台 QThread 会并发访问模块级缓存。新增全局可变状态时，应配套加锁（耗时构建/IO 放锁外，用双检锁），保持输出与语义不变。
-12. **L1 当前进度**：数据源注册表和 AI Provider 注册表已完成第二阶段基础，支持规格、
-    优先级 matcher、延迟 builder 和运行时注册；必须保留 `openclaw_cs` → Cursor SDK 的专用路由，
-    以及其余模型 → OpenAI-compatible client 的兼容行为。Provider 同步仍由
-    `ProviderSyncService` 负责，不得重复搬入 registry 或 client factory。未知数据源配置已在
-    settings 加载时安全回退到 `mt5` 并持久化规范化值；插件发现、扩展契约文档以及生命周期/
-    并发测试仍待后续收口。
+12. **L1 当前进度**：数据源注册表和 AI Provider 注册表已完成第二阶段基础与第一批治理测试，
+    支持规格、优先级 matcher、延迟 builder、运行时注册，以及规范化 key、replace/unregister、
+    并发读写和 lazy-import 证据；必须保留 `openclaw_cs` → Cursor SDK 的专用路由，以及其余
+    模型 → OpenAI-compatible client 的兼容行为。Provider 同步仍由 `ProviderSyncService`
+    负责，不得重复搬入 registry 或 client factory。未知数据源配置已在 settings 加载时安全回退到
+    `mt5` 并持久化规范化值；插件发现、正式扩展契约和 builder 锁外执行证据仍待后续收口。
 13. **L6 当前进度**：`AppContext` 已拆出共享 core helper 和 `bootstrap_gui()`；`bootstrap()`
     委托 GUI 路径。headless 复用 core helper，必须继续保持无 Qt `EventBus` import、无数据源连接；
     GUI adapter 继续负责 `EventBus`、数据源连接/订阅，且 `event_sink` 指向 `EventBus`。第 229 轮已
