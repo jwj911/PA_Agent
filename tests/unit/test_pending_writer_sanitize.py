@@ -134,6 +134,14 @@ class TestSaveFullSanitizes:
         content = path.read_text(encoding="utf-8")
         assert api_key in content
 
+    def test_save_full_exposes_disk_failure_without_raising(self, tmp_path, monkeypatch):
+        writer = PendingWriter(pending_dir=tmp_path)
+        monkeypatch.setattr(writer, "_write_json", lambda _path, _data: False)
+
+        writer.save_full(_make_record("sk-test"))
+
+        assert writer.last_write_succeeded is False
+
 
 class TestSavePartialSanitizes:
     def test_api_key_not_in_written_file(self, tmp_path):

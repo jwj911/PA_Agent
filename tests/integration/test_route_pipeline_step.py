@@ -154,7 +154,7 @@ def test_route_step_preserves_pre_stage2_cancel_boundary(frame) -> None:
     )
 
     assert state.terminal_status is TerminalStatus.CANCELLED
-    assert state.step_history == ["stage1", "route"]
+    assert state.step_history == ["stage1", "route", "persist"]
     assert state.strategy_files == ["strategy.txt"]
     assert events == [
         OrchestratorEvent.Stage1Started,
@@ -188,7 +188,7 @@ def test_route_step_maps_route_exception_to_partial_terminal(frame) -> None:
         "stage": "route",
         "message": "router unavailable",
     }
-    assert state.step_history == ["stage1", "route"]
+    assert state.step_history == ["stage1", "route", "persist"]
     assert client.stream_chat.call_count == 1
     pending_writer.save_partial.assert_called_once()
     assert pending_writer.save_partial.call_args.args[1] == "route_failed"

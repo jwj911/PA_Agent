@@ -111,11 +111,9 @@ def test_stage2_continuation_bytes_and_settings_flags_are_preserved(frame) -> No
         legacy_messages,
         ensure_ascii=False,
         separators=(",", ":"),
-    ).encode("utf-8") == json.dumps(
-        pipeline_messages,
-        ensure_ascii=False,
-        separators=(",", ":"),
-    ).encode("utf-8")
+    ).encode(
+        "utf-8"
+    ) == json.dumps(pipeline_messages, ensure_ascii=False, separators=(",", ":"),).encode("utf-8")
     assert state.stage2_messages[: len(pipeline_messages)] == pipeline_messages
     assert state.stage2_enable_next_bar_prediction is True
     assert state.stage2_structure_flip_cooldown_bars == 7
@@ -139,7 +137,7 @@ def test_stage2_pipeline_event_order_and_state_payload(frame) -> None:
 
     assert state.terminal_status is TerminalStatus.COMPLETED
     assert state.persistence_intent is PersistenceIntent.FULL
-    assert state.step_history == ["stage1", "route", "stage2", "legacy_persist"]
+    assert state.step_history == ["stage1", "route", "stage2", "persist"]
     assert state.stage2_normalized_json == state.record.stage2_decision
     assert state.stage2_reply == state.record.stage2_response
     assert state.stage2_usage == {
@@ -157,6 +155,7 @@ def test_stage2_pipeline_event_order_and_state_payload(frame) -> None:
         OrchestratorEvent.RecordSaved,
     ]
     pending_writer.save_full.assert_called_once_with(state.record)
+    pending_writer.save_partial.assert_not_called()
 
 
 def test_stage2_streaming_callbacks_receive_buffered_reasoning_and_content(frame) -> None:
@@ -260,7 +259,7 @@ def test_stage2_retry_preserves_messages_usage_and_event_order(frame) -> None:
     ]
 
 
-def test_stage2_network_failure_is_partial_and_does_not_enter_persist(frame) -> None:
+def test_stage2_network_failure_is_partial_and_persisted_once(frame) -> None:
     client = MagicMock()
     client.stream_chat.side_effect = [
         make_reply(VALID_STAGE1),
@@ -277,6 +276,8 @@ def test_stage2_network_failure_is_partial_and_does_not_enter_persist(frame) -> 
     assert state.partial_reason == "network_error"
     assert state.record.stage2_messages
     assert state.record.stage2_response is None
+    assert state.step_history == ["stage1", "route", "stage2", "persist"]
+    assert state.persistence_pending is False
     assert events == [
         OrchestratorEvent.Stage1Started,
         OrchestratorEvent.Stage1Done,
@@ -319,7 +320,7 @@ def test_stage2_validation_failure_is_partial_and_keeps_payload(frame) -> None:
     pending_writer.save_full.assert_not_called()
 
 
-def test_stage2_post_call_cancel_preserves_reply_and_skips_persist(frame) -> None:
+def test_stage2_post_call_cancel_preserves_reply_and_persists_partial_once(frame) -> None:
     cancel_token = CancelToken()
     call_number = 0
 
@@ -343,6 +344,8 @@ def test_stage2_post_call_cancel_preserves_reply_and_skips_persist(frame) -> Non
     assert state.partial_reason == "user_cancelled"
     assert state.stage2_reply == state.record.stage2_response
     assert state.stage2_normalized_json is None
+    assert state.step_history == ["stage1", "route", "stage2", "persist"]
+    assert state.persistence_pending is False
     assert events == [
         OrchestratorEvent.Stage1Started,
         OrchestratorEvent.Stage1Done,

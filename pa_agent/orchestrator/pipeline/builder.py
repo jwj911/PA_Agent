@@ -39,8 +39,10 @@ class PipelineBuilder:
         for index, step in enumerate(self._steps):
             if index >= self._max_steps:
                 raise PipelineExecutionError("Pipeline exceeded max_steps")
-            if current.terminal_status is not TerminalStatus.RUNNING:
-                break
+            if current.terminal_status is not TerminalStatus.RUNNING and not (
+                current.persistence_pending and getattr(step, "is_persistence_step", False)
+            ):
+                continue
             current.step_history.append(step.name)
             result = step.run(current, services)
             if not isinstance(result, StepResult):
@@ -55,6 +57,8 @@ class PipelineBuilder:
             if result.outcome is StepOutcome.FAIL:
                 if current.terminal_status is TerminalStatus.RUNNING:
                     current.mark_terminal(TerminalStatus.FAILED)
+                if current.persistence_pending:
+                    continue
                 break
         else:
             if current.terminal_status is TerminalStatus.RUNNING:

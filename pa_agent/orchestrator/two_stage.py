@@ -660,7 +660,8 @@ class TwoStageOrchestrator:
                         },
                     }
                 )
-                self._pending_writer.save_partial(record, "network_error")
+                if persist:
+                    self._pending_writer.save_partial(record, "network_error")
                 on_event(OrchestratorEvent.Stage2Failed)
                 return record
             raise
@@ -695,7 +696,8 @@ class TwoStageOrchestrator:
                     ),
                 }
             )
-            self._pending_writer.save_partial(record, "user_cancelled")
+            if persist:
+                self._pending_writer.save_partial(record, "user_cancelled")
             on_event(OrchestratorEvent.Cancelled)
             return record
 
@@ -797,7 +799,8 @@ class TwoStageOrchestrator:
                     },
                 }
             )
-            self._pending_writer.save_partial(record, f"stage2_{err.category}")
+            if persist:
+                self._pending_writer.save_partial(record, f"stage2_{err.category}")
             on_event(OrchestratorEvent.Stage2Failed)
             return record
 
@@ -841,6 +844,7 @@ class TwoStageOrchestrator:
         frame: KlineFrame,
         previous_record: AnalysisRecord | None,
         incremental_new_bar_count: int | None,
+        persist: bool = True,
     ) -> AnalysisRecord | tuple[dict, list[dict], Any, list[Any], bool, str]:
         """Build, call, and validate Stage 1 (Steps 3-9).
 
@@ -931,7 +935,8 @@ class TwoStageOrchestrator:
                         },
                     }
                 )
-                self._pending_writer.save_partial(record, "network_error")
+                if persist:
+                    self._pending_writer.save_partial(record, "network_error")
                 on_event(OrchestratorEvent.Stage1Failed)
                 return record
             raise
@@ -950,7 +955,8 @@ class TwoStageOrchestrator:
                     "usage_total": _accumulate_usage(record.usage_total, reply_s1.usage),
                 }
             )
-            self._pending_writer.save_partial(record, "user_cancelled")
+            if persist:
+                self._pending_writer.save_partial(record, "user_cancelled")
             on_event(OrchestratorEvent.Cancelled)
             return record
 
@@ -1041,7 +1047,8 @@ class TwoStageOrchestrator:
                     },
                 }
             )
-            self._pending_writer.save_partial(record, f"stage1_{err.category}")
+            if persist:
+                self._pending_writer.save_partial(record, f"stage1_{err.category}")
             on_event(OrchestratorEvent.Stage1Failed)
             return record
 
@@ -1228,14 +1235,12 @@ class TwoStageOrchestrator:
     ) -> Any:
         """Run the opt-in pipeline adapter and return explicit execution state.
 
-        Stage 1 and route run as real PyQt-free steps. The Stage-2/persistence
-        tail stays behind one compatibility step until those migration slices
-        are implemented. The default GUI/headless callers continue to use
-        ``submit()`` directly.
+        All four migrated stages run as PyQt-free steps. The default
+        GUI/headless callers continue to use ``submit()`` directly.
         """
         from pa_agent.orchestrator.pipeline import PipelineBuilder, PipelineState
         from pa_agent.orchestrator.pipeline.steps import (
-            LegacyPersistStep,
+            PersistStep,
             RouteStep,
             Stage1Step,
             Stage2Step,
@@ -1254,9 +1259,10 @@ class TwoStageOrchestrator:
             previous_record=previous_record,
             incremental_new_bar_count=incremental_new_bar_count,
         )
-        return PipelineBuilder(
-            (Stage1Step(), RouteStep(), Stage2Step(), LegacyPersistStep())
-        ).run(state, self)
+        return PipelineBuilder((Stage1Step(), RouteStep(), Stage2Step(), PersistStep())).run(
+            state,
+            self,
+        )
 
     def submit_pipeline(
         self,

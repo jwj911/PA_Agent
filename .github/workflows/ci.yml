@@ -190,6 +190,7 @@ jobs:
           tests/integration/test_stage1_pipeline_step.py
           tests/integration/test_route_pipeline_step.py
           tests/integration/test_stage2_pipeline_step.py
+          tests/integration/test_persist_pipeline_step.py
           --tb=line
           -q
           -p pytest_cov
@@ -468,6 +469,7 @@ jobs:
           tests/integration/test_stage1_pipeline_step.py
           tests/integration/test_route_pipeline_step.py
           tests/integration/test_stage2_pipeline_step.py
+          tests/integration/test_persist_pipeline_step.py
           tests/property
           tests/integration
           tests/e2e

@@ -61,6 +61,7 @@ _FAILURE_TYPE_TO_STATUS = {
     "persistence_failure": TerminalStatus.PERSIST_FAILED,
     "persistence_failed": TerminalStatus.PERSIST_FAILED,
     "save_error": TerminalStatus.PERSIST_FAILED,
+    "disk_error": TerminalStatus.PERSIST_FAILED,
 }
 _USAGE_FIELDS = (
     "prompt_tokens",
@@ -358,6 +359,8 @@ class PipelineState:
     feature_metadata: dict[str, Any] = field(default_factory=dict, repr=False)
     usage_total: dict[str, Any] = field(default_factory=dict, repr=False)
     terminal_status: TerminalStatus = TerminalStatus.RUNNING
+    persistence_pending: bool = False
+    persistence_error: bool = False
     events: list[OrchestratorEvent] = field(default_factory=list)
     step_history: list[str] = field(default_factory=list)
 
@@ -380,9 +383,7 @@ class PipelineState:
             self.terminal_status is not TerminalStatus.RUNNING
             and self.terminal_status is not status
         ):
-            raise ValueError(
-                f"Pipeline already terminated with {self.terminal_status.value}"
-            )
+            raise ValueError(f"Pipeline already terminated with {self.terminal_status.value}")
         self.terminal_status = status
         if status is TerminalStatus.COMPLETED:
             if self.persistence_intent is PersistenceIntent.NONE:
@@ -402,6 +403,10 @@ class PipelineState:
     def set_persistence_intent(self, intent: PersistenceIntent | str) -> None:
         """Set the planned record write without touching the record schema."""
         self.persistence_intent = PersistenceIntent(intent)
+
+    def defer_persistence(self) -> None:
+        """Keep the terminal result eligible for the explicit PersistStep."""
+        self.persistence_pending = True
 
     def set_route_outputs(
         self,
@@ -548,6 +553,8 @@ class PipelineState:
             ),
             "partial_reason": _safe_partial_reason(self.partial_reason),
             "persistence_intent": self._safe_persistence_intent(),
+            "persistence_pending": self.persistence_pending,
+            "persistence_error": self.persistence_error,
             "settings": _safe_metadata(self.settings_metadata),
             "features": _safe_metadata(self.feature_metadata),
             "usage_total": _safe_usage(self.usage_total),

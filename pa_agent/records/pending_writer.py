@@ -64,6 +64,7 @@ class PendingWriter:
         self._event_bus = event_bus
         self._logger = logger or _default_logger()
         self._api_key = api_key
+        self._last_write_succeeded = True
 
         try:
             self._pending_dir.mkdir(parents=True, exist_ok=True)
@@ -87,6 +88,11 @@ class PendingWriter:
         """
         self._api_key = api_key or ""
 
+    @property
+    def last_write_succeeded(self) -> bool:
+        """Return whether the most recent record write reached the filesystem."""
+        return self._last_write_succeeded
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -100,7 +106,7 @@ class PendingWriter:
         path = self._pending_dir / f"{basename}.json"
         data = record.model_dump()
         data = self._sanitize(data, self._api_key)
-        self._write_json(path, data)
+        self._last_write_succeeded = self._write_json(path, data)
         try:
             from pa_agent.records.analysis_history import invalidate_latest_record_cache
 
@@ -126,7 +132,7 @@ class PendingWriter:
         if isinstance(data.get("exception"), dict):
             data["exception"] = {**data["exception"], "partial_reason": reason}
         data = self._sanitize(data, self._api_key)
-        self._write_json(path, data)
+        self._last_write_succeeded = self._write_json(path, data)
         try:
             from pa_agent.records.analysis_history import invalidate_latest_record_cache
 
@@ -176,13 +182,15 @@ class PendingWriter:
 
         return _walk(data)
 
-    def _write_json(self, path: Path, data: dict) -> None:
-        """Write *data* as pretty-printed JSON to *path*, handling errors."""
+    def _write_json(self, path: Path, data: dict) -> bool:
+        """Write *data* as pretty-printed JSON and report disk success."""
         try:
             text = json.dumps(data, ensure_ascii=False, indent=2)
             path.write_text(text, encoding="utf-8")
+            return True
         except OSError as exc:
             self._handle_disk_error(exc, path)
+            return False
 
     def _handle_disk_error(self, exc: OSError, path: Path) -> None:
         """Log the error and optionally emit to the event bus."""

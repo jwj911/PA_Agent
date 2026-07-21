@@ -165,11 +165,12 @@ price_action_agent/
   - `two_stage.py`：两阶段分析主流程。
   - `pipeline/`：PyQt-free `PipelineState`、`TerminalStatus`、`PersistenceIntent`、
     `PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step`
-    和 `LegacyPersistStep`。当前 state 显式承载 Stage 1/Stage 2 payload、usage、route 输出、
-    Stage 2 flags、partial reason 和持久化意图，并提供不暴露运行时 payload 的 safe summary；
-    opt-in sequence 为 `Stage1Step -> RouteStep -> Stage2Step -> legacy_persist`，其中
-    `legacy_persist` 只承接已组装的 full/partial 写入边界，真实 `PersistStep` 尚未实现；
-    默认 `submit()` 路径保持兼容。
+    和 `PersistStep`。当前 state 显式承载 Stage 1/Stage 2 payload、usage、route 输出、
+    Stage 2 flags、partial reason、持久化意图和 `persistence_pending`，并提供不暴露运行时
+    payload 的 safe summary；opt-in sequence 为
+    `Stage1Step -> RouteStep -> Stage2Step -> PersistStep`。PersistStep 负责 full/partial
+    record assembly/write、磁盘失败映射和 `RecordSaved` ordering；`LegacyPersistStep` 仅保留
+    兼容名称，默认 `submit()` 路径保持兼容。
   - `free_chat.py`：分析后自由追问与会话管理。
   - `validation_retry.py`：校验失败后的重试策略。
 
@@ -437,18 +438,20 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     `PipelineState`、`TerminalStatus`、`PipelineStep`、`StepResult` 和 `PipelineBuilder`，
     并通过 `TwoStageOrchestrator.run_pipeline()` / `submit_pipeline()` 提供 opt-in
     compatibility adapter。Task 5 扩展 `PipelineState` 承载 Stage 1/Stage 2 messages、
-    reply/raw response 引用、normalized JSON、usage、route outputs、`PersistenceIntent` 和
-    partial reason，补充 `route_failed`/`persist_failed` 映射，以及 callbacks、Provider client、
-    prompt/reply 正文、行情数据、密钥和 URL path/query/fragment 不进入的安全摘要。Task 6 已交付
-    真实 `Stage1Step`，Task 7 已交付真实 `RouteStep`，Task 8 已交付真实 `Stage2Step`；opt-in
-    sequence 固定为 `Stage1Step -> RouteStep -> Stage2Step -> legacy_persist`。`legacy_persist`
-    只承接已经组装的 full/partial 写入边界，真实 `PersistStep` 尚未实现。RouteStep 必须保持
-    callable/object router、策略文件顺序、经验数量/字符限制、空经验库、`current_bars` 和
-    Stage 2 前取消边界；route 异常映射为 `route_failed` partial terminal。Stage2Step 必须保持
-    continuation、settings flags、gate short-circuit、流式、retry、network、validation 和
-    cancel 语义。该摘要支持从 mapping/object 提取 usage counters，且不改变 `AnalysisRecord`
-    schema。默认 `submit()` 和 GUI/headless 调用路径保持不变；已补充 Stage 1
-    happy/retry/network/validation/cancel/incremental、RouteStep router/experience/cancel/failure、
-    Stage2Step continuation/flags/gate/retry/network/validation/cancel、最终 record/event
-    equivalence 测试，并将三个集成测试纳入 CI targeted pytest 与 focused Ruff/Black 清单。后续
-    仍需实现 PersistStep、完整终态与跨入口等价证据。
+    reply/raw response 引用、normalized JSON、usage、route outputs、`PersistenceIntent`、
+    partial reason 和 `persistence_pending`，补充 `route_failed`/`persist_failed` 映射，以及
+    callbacks、Provider client、prompt/reply 正文、行情数据、密钥和 URL path/query/fragment
+    不进入的安全摘要。Task 6 已交付真实 `Stage1Step`，Task 7 已交付真实 `RouteStep`，Task 8
+    已交付真实 `Stage2Step`，Task 9 已交付真实 `PersistStep`；opt-in sequence 固定为
+    `Stage1Step -> RouteStep -> Stage2Step -> PersistStep`。PersistStep 集中 full/partial
+    record assembly/write，前置终态通过 `persistence_pending` 防止重复保存，使用
+    `PendingWriter.last_write_succeeded` 识别磁盘失败，full 写入成功后才发出 `RecordSaved`，
+    partial 或磁盘失败不发成功事件。RouteStep 必须保持 callable/object router、策略文件顺序、
+    经验数量/字符限制、空经验库、`current_bars` 和 Stage 2 前取消边界；route 异常映射为
+    `route_failed` partial terminal。Stage2Step 必须保持 continuation、settings flags、
+    gate short-circuit、流式、retry、network、validation 和 cancel 语义。该摘要支持从
+    mapping/object 提取 usage counters，且不改变 `AnalysisRecord` schema。默认 `submit()` 和
+    GUI/headless 调用路径保持不变；已补充 Stage 1、RouteStep、Stage2Step 和 PersistStep
+    集成/等价测试，并将四个集成测试纳入 CI targeted pytest 与 focused Ruff/Black 清单。
+    四个真实步骤已齐，但 Pipeline feature flag、稳定观察周期和 GUI/headless final/partial/
+    cancel/failure 全链路等价仍未收口。

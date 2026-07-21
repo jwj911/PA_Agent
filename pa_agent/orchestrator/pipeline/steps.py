@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from pa_agent.orchestrator.pipeline.state import (
+    PersistenceIntent,
     PipelineState,
     TerminalStatus,
     terminal_status_for,
@@ -51,7 +52,74 @@ def _response_usage_calls(response: object) -> list[dict[str, object]]:
     return [usage] if usage else []
 
 
-def _set_terminal_from_record(state: PipelineState, record: Any) -> None:
+def _raw_reply(reply: Any) -> Any:
+    """Return the record-shaped raw reply for runtime or compatibility values."""
+    if reply is None:
+        return None
+    return getattr(reply, "raw", reply)
+
+
+def _experience_payload(entries: list[Any], fallback: list[dict]) -> list[dict]:
+    """Convert runtime experience entries while preserving the record schema."""
+    if not entries and fallback:
+        return list(fallback)
+    return [
+        entry.model_dump() if hasattr(entry, "model_dump") else dict(entry) for entry in entries
+    ]
+
+
+def _assemble_pipeline_record(state: PipelineState, *, full: bool) -> Any:
+    """Assemble the canonical record from state snapshots at the persist boundary."""
+    if state.record is None:
+        return None
+
+    record = state.record
+    stage1_messages = state.stage1_messages or record.stage1_messages
+    stage1_reply = (
+        _raw_reply(state.stage1_reply) if state.stage1_reply is not None else record.stage1_response
+    )
+    stage1_json = (
+        state.stage1_normalized_json
+        if state.stage1_normalized_json is not None
+        else record.stage1_diagnosis
+    )
+    stage2_messages = state.stage2_messages or record.stage2_messages
+    stage2_reply = (
+        _raw_reply(state.stage2_reply) if state.stage2_reply is not None else record.stage2_response
+    )
+    stage2_json = (
+        state.stage2_normalized_json
+        if state.stage2_normalized_json is not None
+        else record.stage2_decision
+    )
+    strategy_files = state.strategy_files or record.strategy_files_used
+    experience_loaded = _experience_payload(
+        state.experience_entries,
+        record.experience_loaded,
+    )
+    usage_total = dict(state.usage_total or record.usage_total)
+    updates = {
+        "stage1_messages": list(stage1_messages),
+        "stage1_response": stage1_reply,
+        "stage1_diagnosis": stage1_json,
+        "stage2_messages": list(stage2_messages),
+        "stage2_response": stage2_reply,
+        "stage2_decision": stage2_json,
+        "strategy_files_used": list(strategy_files),
+        "experience_loaded": experience_loaded,
+        "usage_total": usage_total,
+    }
+    if full:
+        updates["exception"] = None
+    return record.model_copy(update=updates)
+
+
+def _set_terminal_from_record(
+    state: PipelineState,
+    record: Any,
+    *,
+    persistence_pending: bool = False,
+) -> None:
     """Copy record metadata and derive the explicit pipeline terminal state."""
     state.record = record
     if state.partial_reason is None:
@@ -75,6 +143,8 @@ def _set_terminal_from_record(state: PipelineState, record: Any) -> None:
         partial_reason=state.partial_reason,
     )
     state.mark_terminal(status)
+    if persistence_pending:
+        state.defer_persistence()
 
 
 def _set_stage1_record_snapshot(
@@ -207,10 +277,13 @@ class Stage1Step:
             state.record = _build_empty_record(state.frame, services._settings)
 
         if state.cancel_token.is_set():
-            services._pending_writer.save_partial(state.record, "user_cancelled")
             state.partial_reason = "user_cancelled"
             state.emit(OrchestratorEvent.Cancelled)
-            _set_terminal_from_record(state, state.record)
+            _set_terminal_from_record(
+                state,
+                state.record,
+                persistence_pending=True,
+            )
             return StepResult.fail(state)
 
         from pa_agent.ai.decision_nodes import check_preflight_data
@@ -227,10 +300,13 @@ class Stage1Step:
                     }
                 }
             )
-            services._pending_writer.save_partial(state.record, "insufficient_data")
             state.partial_reason = "insufficient_data"
             state.emit(OrchestratorEvent.InsufficientData)
-            _set_terminal_from_record(state, state.record)
+            _set_terminal_from_record(
+                state,
+                state.record,
+                persistence_pending=True,
+            )
             return StepResult.fail(state)
 
         result = services._run_stage1(
@@ -243,10 +319,15 @@ class Stage1Step:
             frame=state.frame,
             previous_record=state.previous_record,
             incremental_new_bar_count=state.incremental_new_bar_count,
+            persist=False,
         )
         if not isinstance(result, tuple):
             _set_stage1_record_snapshot(state, result)
-            _set_terminal_from_record(state, result)
+            _set_terminal_from_record(
+                state,
+                result,
+                persistence_pending=True,
+            )
             return StepResult.fail(state)
 
         (
@@ -303,8 +384,11 @@ class RouteStep:
                     "message": str(exc) or type(exc).__name__,
                 },
             )
-            services._pending_writer.save_partial(state.record, "route_failed")
-            _set_terminal_from_record(state, state.record)
+            _set_terminal_from_record(
+                state,
+                state.record,
+                persistence_pending=True,
+            )
             return StepResult.fail(state)
 
         state.set_route_outputs(
@@ -318,18 +402,21 @@ class RouteStep:
                 strategy_files=strategy_files,
                 experience_entries=experience_entries,
             )
-            services._pending_writer.save_partial(state.record, "user_cancelled")
             state.partial_reason = "user_cancelled"
             state.emit(OrchestratorEvent.Cancelled)
             _set_stage1_record_snapshot(state, state.record, preserve_usage_calls=True)
-            _set_terminal_from_record(state, state.record)
+            _set_terminal_from_record(
+                state,
+                state.record,
+                persistence_pending=True,
+            )
             return StepResult.fail(state)
 
         return StepResult.continue_(state)
 
 
 class Stage2Step:
-    """Execute Stage 2 while leaving record persistence to a legacy tail."""
+    """Execute Stage 2 while leaving record persistence to PersistStep."""
 
     name = "stage2"
 
@@ -418,28 +505,115 @@ class Stage2Step:
             OrchestratorEvent.Stage2Failed in state.events
             or OrchestratorEvent.Cancelled in state.events
         ):
-            _set_terminal_from_record(state, state.record)
+            _set_terminal_from_record(
+                state,
+                state.record,
+                persistence_pending=True,
+            )
             return StepResult.fail(state)
         return StepResult.continue_(state)
 
 
-class LegacyPersistStep:
-    """Write the Stage-2-complete record until the real PersistStep is split."""
+class PersistStep:
+    """Assemble and persist the terminal record for the opt-in pipeline."""
 
-    name = "legacy_persist"
+    name = "persist"
+    is_persistence_step = True
 
     def run(self, state: PipelineState, services: Any) -> StepResult:
-        """Reuse only the existing full-record writer and saved event."""
-        if state.record is None or state.record.exception is not None:
-            state.mark_terminal(TerminalStatus.STAGE2_FAILED)
+        """Write exactly one full or partial record and finish the pipeline."""
+        if state.record is None:
+            state.partial_reason = state.partial_reason or "persist_failed"
+            state.set_persistence_intent(PersistenceIntent.PARTIAL)
+            state.persistence_pending = False
+            if state.terminal_status is TerminalStatus.RUNNING:
+                state.mark_terminal(TerminalStatus.PERSIST_FAILED)
             return StepResult.fail(state)
 
-        # PersistStep is intentionally still a separate migration slice:
-        # record assembly and partial-write policy remain in legacy helpers.
-        services._pending_writer.save_full(state.record)
-        state.emit(OrchestratorEvent.RecordSaved)
-        _set_terminal_from_record(state, state.record)
+        is_full = (
+            state.terminal_status is TerminalStatus.RUNNING
+            and state.partial_reason is None
+            and state.record.exception is None
+        )
+        writer = services._pending_writer
+        if is_full:
+            record = _assemble_pipeline_record(state, full=True)
+            state.record = record
+            state.set_persistence_intent(PersistenceIntent.FULL)
+            try:
+                result = writer.save_full(record)
+            except OSError:
+                state.persistence_error = True
+                state.partial_reason = "disk_error"
+                state.set_persistence_intent(PersistenceIntent.PARTIAL)
+                state.record = record.model_copy(
+                    update={
+                        "exception": {
+                            "type": "persist_error",
+                            "stage": "persist",
+                        }
+                    }
+                )
+                state.persistence_pending = False
+                state.mark_terminal(TerminalStatus.PERSIST_FAILED)
+                return StepResult.fail(state)
+            if not _write_succeeded(writer, result):
+                state.persistence_error = True
+                state.partial_reason = "disk_error"
+                state.set_persistence_intent(PersistenceIntent.PARTIAL)
+                state.record = record.model_copy(
+                    update={
+                        "exception": {
+                            "type": "persist_error",
+                            "stage": "persist",
+                        }
+                    }
+                )
+                state.persistence_pending = False
+                state.mark_terminal(TerminalStatus.PERSIST_FAILED)
+                return StepResult.fail(state)
+            state.persistence_pending = False
+            state.emit(OrchestratorEvent.RecordSaved)
+            state.mark_terminal(TerminalStatus.COMPLETED)
+            return StepResult.complete(state)
+
+        reason = _partial_reason(state)
+        record = _assemble_pipeline_record(state, full=False)
+        state.record = record
+        state.set_persistence_intent(PersistenceIntent.PARTIAL)
+        try:
+            result = writer.save_partial(record, reason)
+        except OSError:
+            state.persistence_error = True
+            state.persistence_pending = False
+            return StepResult.fail(state)
+        state.persistence_pending = False
+        if not _write_succeeded(writer, result):
+            state.persistence_error = True
+            return StepResult.fail(state)
         return StepResult.complete(state)
+
+
+def _write_succeeded(writer: Any, result: Any) -> bool:
+    """Read optional writer status without constraining compatibility fakes."""
+    if isinstance(result, bool):
+        return result
+    status = getattr(writer, "last_write_succeeded", None)
+    return status if isinstance(status, bool) else True
+
+
+def _partial_reason(state: PipelineState) -> str:
+    """Return the stable reason expected by PendingWriter.save_partial()."""
+    if state.partial_reason:
+        return state.partial_reason
+    state.update_terminal_metadata(state.record)
+    return state.partial_reason or "failed"
+
+
+class LegacyPersistStep(PersistStep):
+    """Compatibility name for callers that still refer to the old tail."""
+
+    name = "legacy_persist"
 
 
 class LegacyStage2PersistStep:
@@ -450,9 +624,9 @@ class LegacyStage2PersistStep:
     def run(self, state: PipelineState, services: Any) -> StepResult:
         """Run the new Stage2 boundary followed by the legacy writer."""
         result = Stage2Step().run(state, services)
-        if result.outcome is not StepOutcome.CONTINUE:
+        if result.outcome is not StepOutcome.CONTINUE and not state.persistence_pending:
             return result
-        return LegacyPersistStep().run(state, services)
+        return PersistStep().run(state, services)
 
 
 # Keep the old internal name importable while the opt-in history uses the

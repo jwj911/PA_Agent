@@ -16,7 +16,12 @@ from tests.fixtures.validators import schema_test_validator
 from .conftest import VALID_STAGE1, VALID_STAGE2, make_reply
 
 
-def _orchestrator(client: MagicMock, assembler: MagicMock | None = None):
+def _orchestrator(
+    client: MagicMock,
+    assembler: MagicMock | None = None,
+    *,
+    pending_writer: MagicMock | None = None,
+):
     if assembler is None:
         assembler = MagicMock()
         assembler.build_stage1.return_value = [{"role": "system", "content": "stage1"}]
@@ -31,7 +36,7 @@ def _orchestrator(client: MagicMock, assembler: MagicMock | None = None):
         assembler=assembler,
         router=route_strategy_files,
         validator=schema_test_validator(),
-        pending_writer=MagicMock(),
+        pending_writer=pending_writer or MagicMock(),
         exp_reader=exp_reader,
     )
 
@@ -129,7 +134,8 @@ def test_stage1_pipeline_network_error_is_explicit_partial_terminal(frame) -> No
     httpx = pytest.importorskip("httpx")
     client = MagicMock()
     client.stream_chat.side_effect = httpx.ReadError("connection reset")
-    orchestrator = _orchestrator(client)
+    pending_writer = MagicMock()
+    orchestrator = _orchestrator(client, pending_writer=pending_writer)
     events = []
 
     state = orchestrator.run_pipeline(
@@ -143,13 +149,17 @@ def test_stage1_pipeline_network_error_is_explicit_partial_terminal(frame) -> No
     assert state.partial_reason == "network_error"
     assert state.record is not None
     assert state.record.exception["type"] == "network_error"
+    assert state.step_history == ["stage1", "persist"]
+    pending_writer.save_partial.assert_called_once_with(state.record, "network_error")
+    pending_writer.save_full.assert_not_called()
     assert events == [OrchestratorEvent.Stage1Started, OrchestratorEvent.Stage1Failed]
 
 
 def test_stage1_pipeline_validation_failure_stops_before_stage2(frame) -> None:
     client = MagicMock()
     client.stream_chat.return_value = _text_reply("not json")
-    orchestrator = _orchestrator(client)
+    pending_writer = MagicMock()
+    orchestrator = _orchestrator(client, pending_writer=pending_writer)
     events = []
 
     state = orchestrator.run_pipeline(
@@ -165,6 +175,9 @@ def test_stage1_pipeline_validation_failure_stops_before_stage2(frame) -> None:
     assert state.record.exception["type"] == "validation_error"
     assert OrchestratorEvent.Stage2Started not in events
     assert state.stage2_messages == []
+    assert state.step_history == ["stage1", "persist"]
+    pending_writer.save_partial.assert_called_once_with(state.record, "stage1_d")
+    pending_writer.save_full.assert_not_called()
 
 
 def test_stage1_pipeline_post_call_cancel_preserves_partial_state(frame) -> None:
@@ -177,7 +190,8 @@ def test_stage1_pipeline_post_call_cancel_preserves_partial_state(frame) -> None
 
     client = MagicMock()
     client.stream_chat.side_effect = return_and_cancel
-    orchestrator = _orchestrator(client)
+    pending_writer = MagicMock()
+    orchestrator = _orchestrator(client, pending_writer=pending_writer)
     events = []
 
     state = orchestrator.run_pipeline(
@@ -191,6 +205,9 @@ def test_stage1_pipeline_post_call_cancel_preserves_partial_state(frame) -> None
     assert state.partial_reason == "user_cancelled"
     assert state.stage1_messages
     assert state.stage1_reply == stage1_reply.raw
+    assert state.step_history == ["stage1", "persist"]
+    pending_writer.save_partial.assert_called_once_with(state.record, "user_cancelled")
+    pending_writer.save_full.assert_not_called()
     assert events == [OrchestratorEvent.Stage1Started, OrchestratorEvent.Cancelled]
 
 

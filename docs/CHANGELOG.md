@@ -18,6 +18,53 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L3 Task 9：PersistStep 真实步骤）
+
+本轮同步规格 Task 9 的实际工作区状态。L3 opt-in Pipeline 已完成四个真实步骤的装配；
+默认 `TwoStageOrchestrator.submit()`、GUI/headless 默认调用路径和既有 `AnalysisRecord` 契约
+继续保持兼容。
+
+### 已交付
+
+- **真实 PersistStep**：新增 PyQt-free `PersistStep`，集中终态 record assembly 与
+  `PendingWriter` 写入；full record 汇总 Stage 1/Stage 2 messages、raw response、normalized
+  JSON、route 输出、经验条目和 usage，partial record 保留已完成阶段 payload 与
+  `partial_reason`。
+- **opt-in sequence**：`run_pipeline()` 固定执行
+  `Stage1Step -> RouteStep -> Stage2Step -> PersistStep`；Stage 1/Route/Stage 2 的终态通过
+  `persistence_pending` 交给唯一一次 PersistStep，防止前置步骤与 PersistStep 重复保存。
+- **写入与事件顺序**：full 写入成功后先清除 pending，再发出 `RecordSaved`，最后标记
+  completed；partial 写入不发 `RecordSaved`。写入异常或失败不伪造成功事件。
+- **磁盘失败可观测性**：`PendingWriter._write_json()` 返回写入结果并更新
+  `last_write_succeeded`；PersistStep 将 full 写入的 `False` 或 `OSError` 映射为
+  `persist_failed`/`disk_error` 边界，partial 写入失败保留原终态并设置 `persistence_error`，
+  同时保留 writer 的日志和磁盘错误事件通知。
+
+### 测试与 CI
+
+- 新增 `tests/integration/test_persist_pipeline_step.py`，覆盖 full/partial/insufficient-data
+  写入、`RecordSaved` ordering、磁盘失败、`persistence_pending` 防重复保存及 partial reason
+  保留。
+- `.github/workflows/ci.yml` 已将 PersistStep 集成测试加入 targeted pytest 与 focused
+  Ruff/Black 目标清单；既有 Stage 1、Route、Stage 2 等价测试继续保留。
+
+### 收尾边界
+
+- 四个真实步骤已齐，但 Pipeline feature flag 尚未切换，尚未完成至少一个完整稳定观察周期。
+- GUI/headless final、partial、cancel、failure 的全链路等价仍未收口；真实 Provider 环境验证
+  和公开 adapter 契约也仍按 L6 边界保留。
+- `LegacyPersistStep` 仅保留兼容名称；本轮没有修改默认旧 `submit()` 路径、`AnalysisRecord`
+  schema、prompt、normalizer 或 retry 语义。
+
+### 文档同步与验证
+
+- 同步 `docs/iteration_plan.md`、`docs/architecture_roadmap.md`、
+  `docs/backend_review_report.md` 和 `AGENTS.md` 的 L3 状态、步骤顺序、持久化边界及收尾条件。
+- 本次代理操作只更新项目文档，不修改业务代码或 `.trae/specs` 状态，不提交、不推送；仅运行
+  `git diff --check`，未运行 pytest。
+
+---
+
 ## [Unreleased] — 2026-07-22（L3 Task 8：Stage2Step 真实步骤）
 
 本轮同步规格 Task 8 的实际工作区状态。Stage 2 已进入 opt-in Pipeline 的真实步骤边界；
