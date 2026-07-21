@@ -64,7 +64,7 @@ def test_opt_in_pipeline_matches_legacy_record_and_events(frame) -> None:
     )
 
     assert pipeline_state.terminal_status is TerminalStatus.COMPLETED
-    assert pipeline_state.step_history == ["stage1", "legacy_post_stage1"]
+    assert pipeline_state.step_history == ["stage1", "route", "legacy_stage2_persist"]
     assert pipeline_state.record is not None
     assert pipeline_events == legacy_events
     assert _record_without_runtime_timestamp(pipeline_state.record) == (

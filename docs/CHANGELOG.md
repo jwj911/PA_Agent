@@ -18,6 +18,47 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L3 Task 7：RouteStep 真实步骤）
+
+本轮完成规格中 L3 Task 7 的文档同步，并记录当前工作区已交付的 Route/经验加载步骤化边界。
+opt-in Pipeline 继续保持兼容迁移，默认编排路径不切换。
+
+### 已交付
+
+- **真实 RouteStep**：新增 PyQt-free `RouteStep`，复用既有 router 与经验加载 helper，将
+  `strategy_files`、`experience_entries` 和 route outputs 回填到 `PipelineState`。
+- **opt-in sequence**：`TwoStageOrchestrator.run_pipeline()` 固定执行
+  `Stage1Step -> RouteStep -> legacy_stage2_persist`；`legacy_stage2_persist` 仍承接 Stage 2
+  和 Persist，直到后续真实步骤迁移完成。
+- **兼容语义**：保持 callable/object router、策略文件顺序、经验数量/字符限制、
+  `current_bars`、空经验库和 Stage 2 前取消边界；route 异常映射为 `route_failed` partial
+  terminal，并保存对应 partial record。
+- **默认路径兼容**：`TwoStageOrchestrator.submit()`、GUI/headless 默认调用路径、
+  `AnalysisRecord` schema、prompt 文本、normalizer 和既有 retry 语义保持不变。
+
+### 测试与 CI
+
+- `tests/integration/test_route_pipeline_step.py` 覆盖 callable/object router、策略顺序、经验
+  限制、`current_bars`、空经验库、取消和 `route_failed`。
+- `tests/integration/test_two_stage_pipeline_equivalence.py` 更新旧/新最终 record、事件序列
+  和 `["stage1", "route", "legacy_stage2_persist"]` 步骤顺序等价断言。
+- `.github/workflows/ci.yml` 将 RouteStep 集成测试加入 targeted pytest 与 focused Ruff/Black
+  目标清单；Pipeline 目录继续保持 PyQt-free。
+
+### 收尾边界
+
+- Stage 2、Persist 尚未拆为独立真实 `PipelineStep`，仍由 `legacy_stage2_persist` 执行。
+- 完整终态、GUI/headless 全链路 record 等价和 Pipeline feature flag 观察周期仍待后续切片。
+
+### 文档同步与验证
+
+- 同步 `docs/iteration_plan.md`、`docs/architecture_roadmap.md`、`docs/backend_review_report.md`
+  和 `AGENTS.md` 的 L3 状态、步骤顺序、测试与 CI 清单。
+- 本次代理操作只更新项目文档，未修改 `.trae/specs` 状态、未提交或推送；最终执行
+  `git diff --check`。
+
+---
+
 ## [Unreleased] — 2026-07-22（L3 Task 6：Stage1Step 真实步骤）
 
 本轮完成规格中 L3 Task 6 的 Stage 1 步骤化切片。新路径仍为 opt-in，不切换默认编排路径；

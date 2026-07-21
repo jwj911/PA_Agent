@@ -12,7 +12,6 @@ from pa_agent.orchestrator.pipeline.state import (
 )
 from pa_agent.orchestrator.pipeline.step import StepResult
 from pa_agent.orchestrator.two_stage import (
-    _accumulate_usage,
     _accumulate_usage_calls,
     _build_empty_record,
 )
@@ -133,6 +132,32 @@ def _set_stage1_runtime_snapshot(
     state.stage1_reasoning_effort = reasoning_effort
 
 
+def _record_with_route_snapshot(
+    state: PipelineState,
+    *,
+    strategy_files: list[str],
+    experience_entries: list[Any],
+    exception: dict[str, Any] | None = None,
+) -> Any:
+    """Build a partial record containing the completed Stage-1/route data."""
+    if state.record is None or state.stage1_reply is None:
+        return state.record
+    updates: dict[str, Any] = {
+        "stage1_messages": state.stage1_messages,
+        "stage1_response": state.stage1_reply.raw,
+        "stage1_diagnosis": state.stage1_normalized_json,
+        "strategy_files_used": strategy_files,
+        "experience_loaded": [
+            entry.model_dump() if hasattr(entry, "model_dump") else dict(entry)
+            for entry in experience_entries
+        ],
+        "usage_total": state.usage_total,
+    }
+    if exception is not None:
+        updates["exception"] = exception
+    return state.record.model_copy(update=updates)
+
+
 class LegacySubmitStep:
     """Run the unchanged ``TwoStageOrchestrator.submit`` implementation."""
 
@@ -235,45 +260,52 @@ class Stage1Step:
         return StepResult.continue_(state)
 
 
-class LegacyPostStage1Step:
-    """Run the existing route/Stage-2/persistence tail after ``Stage1Step``."""
+class RouteStep:
+    """Route Stage 1 and load bounded experience entries without Qt."""
 
-    name = "legacy_post_stage1"
+    name = "route"
 
     def run(self, state: PipelineState, services: Any) -> StepResult:
-        """Reuse legacy helpers until the remaining real steps are migrated."""
+        """Reuse the legacy route helper and expose its output in state."""
         if state.record is None or state.stage1_reply is None:
             state.mark_terminal(TerminalStatus.STAGE1_FAILED)
             return StepResult.fail(state)
 
         stage1_json = state.stage1_normalized_json or {}
-        messages_s1 = state.stage1_messages
-        reply_s1 = state.stage1_reply
-        strategy_files, experience_entries = services._route_and_load_experience(
-            stage1_json,
-            current_bars=state.frame.bars,
-        )
+        try:
+            strategy_files, experience_entries = services._route_and_load_experience(
+                stage1_json,
+                current_bars=state.frame.bars,
+            )
+            strategy_files = list(strategy_files)
+            experience_entries = list(experience_entries)
+        except Exception as exc:
+            state.partial_reason = "route_failed"
+            state.set_persistence_intent("partial")
+            state.record = _record_with_route_snapshot(
+                state,
+                strategy_files=[],
+                experience_entries=[],
+                exception={
+                    "type": "route_error",
+                    "stage": "route",
+                    "message": str(exc) or type(exc).__name__,
+                },
+            )
+            services._pending_writer.save_partial(state.record, "route_failed")
+            _set_terminal_from_record(state, state.record)
+            return StepResult.fail(state)
+
         state.set_route_outputs(
             strategy_files=strategy_files,
             experience_entries=experience_entries,
         )
 
         if state.cancel_token.is_set():
-            state.record = state.record.model_copy(
-                update={
-                    "stage1_messages": messages_s1,
-                    "stage1_response": reply_s1.raw,
-                    "stage1_diagnosis": stage1_json,
-                    "strategy_files_used": strategy_files,
-                    "experience_loaded": [
-                        e.model_dump() if hasattr(e, "model_dump") else dict(e)
-                        for e in experience_entries
-                    ],
-                    "usage_total": _accumulate_usage(
-                        state.record.usage_total,
-                        reply_s1.usage,
-                    ),
-                }
+            state.record = _record_with_route_snapshot(
+                state,
+                strategy_files=strategy_files,
+                experience_entries=experience_entries,
             )
             services._pending_writer.save_partial(state.record, "user_cancelled")
             state.partial_reason = "user_cancelled"
@@ -281,6 +313,26 @@ class LegacyPostStage1Step:
             _set_stage1_record_snapshot(state, state.record, preserve_usage_calls=True)
             _set_terminal_from_record(state, state.record)
             return StepResult.fail(state)
+
+        return StepResult.continue_(state)
+
+
+class LegacyStage2PersistStep:
+    """Run the existing Stage-2 and persistence tail after routing."""
+
+    name = "legacy_stage2_persist"
+
+    def run(self, state: PipelineState, services: Any) -> StepResult:
+        """Reuse legacy Stage-2/persistence helpers until those steps migrate."""
+        if state.record is None or state.stage1_reply is None:
+            state.mark_terminal(TerminalStatus.STAGE1_FAILED)
+            return StepResult.fail(state)
+
+        stage1_json = state.stage1_normalized_json or {}
+        messages_s1 = state.stage1_messages
+        reply_s1 = state.stage1_reply
+        strategy_files = list(state.strategy_files)
+        experience_entries = list(state.experience_entries)
 
         state.emit(OrchestratorEvent.Stage2Started)
         if state.on_stage2_files is not None:
@@ -342,3 +394,8 @@ class LegacyPostStage1Step:
         if state.terminal_status is TerminalStatus.COMPLETED:
             return StepResult.complete(state)
         return StepResult.fail(state)
+
+
+# Keep the old internal name importable while the opt-in history uses the
+# explicit boundary between Route and the legacy Stage-2/persistence tail.
+LegacyPostStage1Step = LegacyStage2PersistStep
