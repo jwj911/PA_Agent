@@ -18,6 +18,54 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L3 Task 8：Stage2Step 真实步骤）
+
+本轮同步规格 Task 8 的实际工作区状态。Stage 2 已进入 opt-in Pipeline 的真实步骤边界；
+默认 `TwoStageOrchestrator.submit()`、GUI/headless 调用路径和既有记录契约继续保持兼容。
+
+### 已交付
+
+- **真实 Stage2Step**：复用既有 continuation message 构建、Provider 调用、流式回调、
+  校验/retry 和终态处理，将 Stage 2 messages、reply、normalized JSON、usage/usage calls
+  回填到 `PipelineState`。
+- **opt-in sequence**：`run_pipeline()` 固定执行
+  `Stage1Step -> RouteStep -> Stage2Step -> legacy_persist`；Stage2Step 通过 `persist=False`
+  只组装结果，`legacy_persist` 再承接写入边界。
+- **flags 与门禁**：settings 派生的 `enable_next_bar_prediction`、
+  `structure_flip_cooldown_bars` 写入 state/安全 feature metadata；保持 `Stage2Started`、
+  gate short-circuit、流式 reasoning/content、retry、network、validation 和 cancel 语义。
+- **兼容性**：不切换 Pipeline 默认路径，不修改 `AnalysisRecord` schema、prompt 文本、normalizer
+  或既有 retry 语义；旧 `submit()` 仍是默认兼容 facade。
+
+### 测试与 CI
+
+- `tests/integration/test_stage2_pipeline_step.py` 覆盖 continuation 字节与 flags、事件顺序/
+  state payload、流式回调、gate short-circuit、retry、network failure、validation failure、
+  post-call cancel，以及 partial record 与 legacy `submit()` 等价。
+- `tests/integration/test_two_stage_pipeline_equivalence.py` 更新最终 record、事件序列和
+  `["stage1", "route", "stage2", "legacy_persist"]` 步骤顺序断言。
+- `.github/workflows/ci.yml` 已将 Stage 2 集成测试加入 targeted pytest 与 focused Ruff/Black
+  目标清单；CI 继续使用 Python 3.11/3.12 Windows 矩阵、`QT_QPA_PLATFORM=offscreen`、
+  `scripts/check_ci_workflow_targets.py`、非 live/non-e2e 回归、Ruff baseline、focused Ruff、
+  focused Black 和覆盖率门槛。
+
+### 收尾边界
+
+- `PersistStep` 尚未实现。当前 `legacy_persist` 只承接已组装的 full/partial 写入边界；
+  成功结果由其调用 `save_full`，Stage 2 网络/校验/取消等 partial 分支仍由既有 legacy helper
+  调用 `save_partial`。它不负责独立的 record 组装、partial reason 策略、磁盘错误处理或新的
+  持久化契约。
+- 完整 Persist 终态矩阵、GUI/headless 全链路等价和 feature flag 观察周期留待后续 Task 9/10。
+
+### 文档同步与验证
+
+- 同步 `docs/iteration_plan.md`、`docs/architecture_roadmap.md`、`docs/backend_review_report.md`
+  和 `AGENTS.md` 的 L3 状态、步骤顺序、测试及 CI 清单。
+- 本次代理操作只更新项目文档，不修改业务代码或 `.trae/specs` 状态，不提交、不推送；运行
+  `git diff --check`，未运行 pytest。
+
+---
+
 ## [Unreleased] — 2026-07-22（L3 Task 7：RouteStep 真实步骤）
 
 本轮完成规格中 L3 Task 7 的文档同步，并记录当前工作区已交付的 Route/经验加载步骤化边界。

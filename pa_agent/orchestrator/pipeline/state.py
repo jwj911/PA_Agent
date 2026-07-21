@@ -347,6 +347,8 @@ class PipelineState:
     stage2_normalized_json: dict[str, Any] | None = field(default=None, repr=False)
     stage2_usage: dict[str, Any] = field(default_factory=dict, repr=False)
     stage2_usage_calls: list[Any] = field(default_factory=list, repr=False)
+    stage2_enable_next_bar_prediction: bool = field(default=False, repr=False)
+    stage2_structure_flip_cooldown_bars: int = field(default=3, repr=False)
     strategy_files: list[str] = field(default_factory=list, repr=False)
     experience_entries: list[Any] = field(default_factory=list, repr=False)
     route_outputs: dict[str, Any] = field(default_factory=dict, repr=False)
@@ -452,6 +454,24 @@ class PipelineState:
     @stage2_json.setter
     def stage2_json(self, value: dict[str, Any] | None) -> None:
         self.stage2_normalized_json = value
+
+    @property
+    def enable_next_bar_prediction(self) -> bool:
+        """Compatibility alias for the Stage-2 prediction feature flag."""
+        return self.stage2_enable_next_bar_prediction
+
+    @enable_next_bar_prediction.setter
+    def enable_next_bar_prediction(self, value: bool) -> None:
+        self.stage2_enable_next_bar_prediction = bool(value)
+
+    @property
+    def structure_flip_cooldown_bars(self) -> int:
+        """Compatibility alias for the Stage-2 cooldown setting."""
+        return self.stage2_structure_flip_cooldown_bars
+
+    @structure_flip_cooldown_bars.setter
+    def structure_flip_cooldown_bars(self, value: int) -> None:
+        self.stage2_structure_flip_cooldown_bars = int(value)
 
     @property
     def route_output(self) -> dict[str, Any]:

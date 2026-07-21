@@ -31577,45 +31577,45 @@
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 465,
+      "row": 471,
       "column": 44,
-      "end_row": 465,
+      "end_row": 471,
       "end_column": 45,
       "message": "String contains ambiguous `（` (FULLWIDTH LEFT PARENTHESIS). Did you mean `(` (LEFT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 465,
+      "row": 471,
       "column": 53,
-      "end_row": 465,
+      "end_row": 471,
       "end_column": 54,
       "message": "String contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 465,
+      "row": 471,
       "column": 63,
-      "end_row": 465,
+      "end_row": 471,
       "end_column": 64,
       "message": "String contains ambiguous `）` (FULLWIDTH RIGHT PARENTHESIS). Did you mean `)` (RIGHT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 467,
+      "row": 473,
       "column": 44,
-      "end_row": 467,
+      "end_row": 473,
       "end_column": 45,
       "message": "String contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 467,
+      "row": 473,
       "column": 57,
-      "end_row": 467,
+      "end_row": 473,
       "end_column": 58,
       "message": "String contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?"
     },

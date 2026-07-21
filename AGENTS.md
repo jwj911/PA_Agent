@@ -164,10 +164,12 @@ price_action_agent/
 - **`pa_agent/orchestrator/`**：业务编排。
   - `two_stage.py`：两阶段分析主流程。
   - `pipeline/`：PyQt-free `PipelineState`、`TerminalStatus`、`PersistenceIntent`、
-    `PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep` 和
-    `LegacyStage2PersistStep`。当前 state 显式承载 Stage 1/Stage 2 payload、usage、route 输出、
-    partial reason 和持久化意图，并提供不暴露运行时 payload 的 safe summary；opt-in sequence
-    为 `Stage1Step -> RouteStep -> legacy_stage2_persist`，默认 `submit()` 路径保持兼容。
+    `PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step`
+    和 `LegacyPersistStep`。当前 state 显式承载 Stage 1/Stage 2 payload、usage、route 输出、
+    Stage 2 flags、partial reason 和持久化意图，并提供不暴露运行时 payload 的 safe summary；
+    opt-in sequence 为 `Stage1Step -> RouteStep -> Stage2Step -> legacy_persist`，其中
+    `legacy_persist` 只承接已组装的 full/partial 写入边界，真实 `PersistStep` 尚未实现；
+    默认 `submit()` 路径保持兼容。
   - `free_chat.py`：分析后自由追问与会话管理。
   - `validation_retry.py`：校验失败后的重试策略。
 
@@ -302,7 +304,9 @@ pytest -m live
 **测试约定**：
 
 - 修改 JSON schema、提示词、策略路由、决策节点时，请补充或更新对应测试用例。
-- CI（`.github/workflows/ci.yml`）在 Windows + Python 3.11 下执行安装/import 验证、目标测试（带覆盖率）、非 live 非 e2e 回归与聚焦 Ruff 检查。
+- CI（`.github/workflows/ci.yml`）在 Windows + Python 3.11/3.12 矩阵下执行安装/import 验证、
+  CI 目标清单检查、`QT_QPA_PLATFORM=offscreen` 目标测试（带覆盖率）、非 live 非 e2e 回归、
+  Ruff baseline、focused Ruff 和 focused Black 检查。
 - 提交前建议至少运行与改动相关的目标测试；较大改动应补跑 `pytest -m "not e2e"`。
 
 ---
@@ -384,11 +388,13 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
 - 部署方式以源码运行或 `pip install -e .` 为主：
   - Windows 用户：直接双击 `run.py` 或在终端执行 `python run.py`。
   - 开发者：`pip install -e ".[dev]"` 后使用 `make run` / `python -m pa_agent.main`。
-- CI（`.github/workflows/ci.yml`）在 `push` / `pull_request` 到 `main` 时触发，运行于 `windows-latest` + Python 3.11：
+- CI（`.github/workflows/ci.yml`）在 `push` / `pull_request` 到 `main` 时触发，运行于
+  `windows-latest` + Python 3.11/3.12：
   - 安装依赖并验证 `import pa_agent`；
-  - 运行目标测试（带覆盖率）；
+  - 检查 `scripts/check_ci_workflow_targets.py` 目标清单；
+  - 在 `QT_QPA_PLATFORM=offscreen` 下运行 targeted pytest（含覆盖率门槛）；
   - 运行非 live 非 e2e 测试；
-  - 运行聚焦 Ruff 检查。
+  - 运行 `scripts/check_ruff_baseline.py`、focused Ruff 和 focused Black。
 - `tools/` 目录包含大量一次性诊断脚本（网关探测、stage2 JSON 调试、MT5 时钟偏移检测等），不属于正式发布流程。
 
 ---
@@ -434,12 +440,15 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     reply/raw response 引用、normalized JSON、usage、route outputs、`PersistenceIntent` 和
     partial reason，补充 `route_failed`/`persist_failed` 映射，以及 callbacks、Provider client、
     prompt/reply 正文、行情数据、密钥和 URL path/query/fragment 不进入的安全摘要。Task 6 已交付
-    真实 `Stage1Step`，Task 7 已交付真实 `RouteStep`；opt-in sequence 固定为
-    `Stage1Step -> RouteStep -> legacy_stage2_persist`，后者仍承接 Stage 2/Persist 兼容尾步骤。
-    RouteStep 必须保持 callable/object router、策略文件顺序、经验数量/字符限制、空经验库、
-    `current_bars` 和 Stage 2 前取消边界；route 异常映射为 `route_failed` partial terminal。
-    该摘要支持从 mapping/object 提取 usage counters，且不改变 `AnalysisRecord` schema。默认
-    `submit()` 和 GUI/headless 调用路径保持不变；已补充 Stage 1 happy/retry/network/validation/
-    cancel/incremental、RouteStep router/experience/cancel/failure 及最终 record/event equivalence
-    测试，并将两个集成测试纳入 CI targeted pytest 与 focused Ruff/Black 清单。后续仍需实现
-    Stage 2/Persist 真实步骤、完整终态与跨入口等价证据。
+    真实 `Stage1Step`，Task 7 已交付真实 `RouteStep`，Task 8 已交付真实 `Stage2Step`；opt-in
+    sequence 固定为 `Stage1Step -> RouteStep -> Stage2Step -> legacy_persist`。`legacy_persist`
+    只承接已经组装的 full/partial 写入边界，真实 `PersistStep` 尚未实现。RouteStep 必须保持
+    callable/object router、策略文件顺序、经验数量/字符限制、空经验库、`current_bars` 和
+    Stage 2 前取消边界；route 异常映射为 `route_failed` partial terminal。Stage2Step 必须保持
+    continuation、settings flags、gate short-circuit、流式、retry、network、validation 和
+    cancel 语义。该摘要支持从 mapping/object 提取 usage counters，且不改变 `AnalysisRecord`
+    schema。默认 `submit()` 和 GUI/headless 调用路径保持不变；已补充 Stage 1
+    happy/retry/network/validation/cancel/incremental、RouteStep router/experience/cancel/failure、
+    Stage2Step continuation/flags/gate/retry/network/validation/cancel、最终 record/event
+    equivalence 测试，并将三个集成测试纳入 CI targeted pytest 与 focused Ruff/Black 清单。后续
+    仍需实现 PersistStep、完整终态与跨入口等价证据。

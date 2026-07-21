@@ -361,13 +361,15 @@ class TwoStageOrchestrator:
         s1_usage_calls: list[Any],
         s2_usage_calls: list[Any],
         _enable_next_bar: bool,
+        persist: bool = True,
     ) -> AnalysisRecord:
-        """Log predictions, build the final record, persist it, and return it.
+        """Log predictions and build the final record, optionally persisting it.
 
         Steps 19.5-24 of the happy path: emit next_bar / next_cycle prediction
         logs, assemble the fully-populated ``AnalysisRecord`` (accumulating
-        Stage 1 + Stage 2 usage), write it via ``save_full``, fire
-        ``RecordSaved``, and return the record.
+        Stage 1 + Stage 2 usage), and, when ``persist`` is true, write it via
+        ``save_full`` and fire ``RecordSaved``. The opt-in Stage2Step uses
+        ``persist=False`` so the legacy persistence boundary remains explicit.
         """
         # ── Step 19.5: Log next_bar_prediction (R9.3, NFR2.1) ───────────────────
         _pred = stage2_json if isinstance(stage2_json, dict) else {}
@@ -425,6 +427,9 @@ class TwoStageOrchestrator:
             }
         )
 
+        if not persist:
+            return record
+
         # ── Step 22: Persist full record ──────────────────────────────────────
         self._pending_writer.save_full(record)
 
@@ -446,12 +451,13 @@ class TwoStageOrchestrator:
         reply_s1: Any,
         strategy_files: list[str],
         experience_entries: list[Any],
+        persist: bool = True,
     ) -> AnalysisRecord | None:
         """Short-circuit Stage 2 when the Stage-1 gate did not proceed.
 
         Part of Step 13: when ``stage1_json['gate_result']`` is ``wait`` or
         ``unknown``, the program synthesises the Stage-2 result locally (no
-        model call), persists the full record, and returns it. Returns
+        model call), optionally persists the full record, and returns it. Returns
         ``None`` when the gate proceeds, signalling ``submit()`` to continue
         with the normal Stage-2 build/call/validate flow.
         """
@@ -490,9 +496,30 @@ class TwoStageOrchestrator:
                 "exception": None,
             }
         )
+        if not persist:
+            return record
         self._pending_writer.save_full(record)
         on_event(OrchestratorEvent.RecordSaved)
         return record
+
+    def _stage2_feature_flags(self) -> tuple[bool, int]:
+        """Return the Settings-derived Stage-2 feature values."""
+        enable_next_bar = bool(
+            getattr(
+                getattr(self._settings, "general", None),
+                "enable_next_bar_prediction",
+                False,
+            )
+        )
+        flip_cooldown = int(
+            getattr(
+                getattr(self._settings, "general", None),
+                "structure_flip_cooldown_bars",
+                3,
+            )
+            or 3
+        )
+        return enable_next_bar, flip_cooldown
 
     def _build_stage2_messages(
         self,
@@ -516,17 +543,7 @@ class TwoStageOrchestrator:
         flip_cooldown)`` so the caller can reuse the flags at validation and
         prediction-logging time.
         """
-        enable_next_bar = bool(
-            getattr(getattr(self._settings, "general", None), "enable_next_bar_prediction", False)
-        )
-        flip_cooldown = int(
-            getattr(
-                getattr(self._settings, "general", None),
-                "structure_flip_cooldown_bars",
-                3,
-            )
-            or 3
-        )
+        enable_next_bar, flip_cooldown = self._stage2_feature_flags()
         messages_s2 = self._assembler.build_stage2_continuation(
             frame=frame,
             stage1_messages=messages_s1,
@@ -564,8 +581,10 @@ class TwoStageOrchestrator:
         _thinking: bool,
         _effort: str,
         s1_usage_calls: list[Any],
+        persist: bool = True,
+        s2_usage_calls_out: list[Any] | None = None,
     ) -> AnalysisRecord:
-        """Call, validate, and persist Stage 2 (Steps 15-24).
+        """Call and validate Stage 2, optionally delegating persistence.
 
         Owns the Stage-2 streaming closures (``_on_s2_reasoning`` /
         ``_on_s2_content`` and the retry closure ``_call_s2_retry`` share the
@@ -573,8 +592,9 @@ class TwoStageOrchestrator:
         two terminal partials (network error, post-call cancel), the
         validate-with-retry loop and its validation-failure terminal, and the
         happy-path delegation to ``_persist_result``. Every path returns an
-        ``AnalysisRecord`` (terminal partial or the persisted final record),
-        so ``submit()`` tail-calls this and returns its result directly.
+        ``AnalysisRecord`` (terminal partial or a fully assembled final
+        record), so ``submit()`` can still tail-call this and the opt-in
+        Stage2Step can hand the assembled record to its legacy persist tail.
         """
         # ── Step 15: Call AI for Stage 2 ──────────────────────────────────────
         if logger.isEnabledFor(logging.DEBUG):
@@ -645,6 +665,11 @@ class TwoStageOrchestrator:
                 return record
             raise
 
+        s2_usage_calls: list[Any] = [getattr(reply_s2, "usage", None)]
+        if s2_usage_calls_out is not None:
+            s2_usage_calls_out.clear()
+            s2_usage_calls_out.extend(s2_usage_calls)
+
         if not s2_streamed_reasoning and reply_s2.reasoning_content:
             _emit_buffered_stream(reply_s2.reasoning_content, on_stage2_reasoning)
         if not s2_streamed_content and reply_s2.content:
@@ -689,8 +714,6 @@ class TwoStageOrchestrator:
         )
         logger.debug("="*80 + "\n")
 
-        s2_usage_calls: list[Any] = [getattr(reply_s2, "usage", None)]
-
         def _call_s2_retry(msgs: list[dict]) -> Any:
             nonlocal s2_streamed_reasoning, s2_streamed_content
             on_event(OrchestratorEvent.Stage2Retry)
@@ -708,7 +731,10 @@ class TwoStageOrchestrator:
                 _emit_buffered_stream(r.reasoning_content, on_stage2_reasoning)
             if not s2_streamed_content and r.content:
                 _emit_buffered_stream(r.content, on_stage2_content)
-            s2_usage_calls.append(getattr(r, "usage", None))
+            usage = getattr(r, "usage", None)
+            s2_usage_calls.append(usage)
+            if s2_usage_calls_out is not None:
+                s2_usage_calls_out.append(usage)
             return r
 
         vr_s2 = validate_with_retry(
@@ -800,6 +826,7 @@ class TwoStageOrchestrator:
             s1_usage_calls=s1_usage_calls,
             s2_usage_calls=s2_usage_calls,
             _enable_next_bar=_enable_next_bar,
+            persist=persist,
         )
 
     def _run_stage1(
@@ -1208,9 +1235,10 @@ class TwoStageOrchestrator:
         """
         from pa_agent.orchestrator.pipeline import PipelineBuilder, PipelineState
         from pa_agent.orchestrator.pipeline.steps import (
-            LegacyStage2PersistStep,
+            LegacyPersistStep,
             RouteStep,
             Stage1Step,
+            Stage2Step,
         )
 
         state = PipelineState(
@@ -1227,7 +1255,7 @@ class TwoStageOrchestrator:
             incremental_new_bar_count=incremental_new_bar_count,
         )
         return PipelineBuilder(
-            (Stage1Step(), RouteStep(), LegacyStage2PersistStep())
+            (Stage1Step(), RouteStep(), Stage2Step(), LegacyPersistStep())
         ).run(state, self)
 
     def submit_pipeline(

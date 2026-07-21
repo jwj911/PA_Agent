@@ -10,7 +10,7 @@ from pa_agent.orchestrator.pipeline.state import (
     TerminalStatus,
     terminal_status_for,
 )
-from pa_agent.orchestrator.pipeline.step import StepResult
+from pa_agent.orchestrator.pipeline.step import StepOutcome, StepResult
 from pa_agent.orchestrator.two_stage import (
     _accumulate_usage_calls,
     _build_empty_record,
@@ -94,13 +94,24 @@ def _set_stage1_record_snapshot(
     state.usage_total = dict(record.usage_total)
 
 
-def _set_stage2_record_snapshot(state: PipelineState, record: Any) -> None:
-    """Copy Stage-2 fields after the compatibility tail returns."""
+def _set_stage2_record_snapshot(
+    state: PipelineState,
+    record: Any,
+    *,
+    usage_calls: list[Any] | None = None,
+) -> None:
+    """Copy Stage-2 payload, usage, and route fields into pipeline state."""
     state.stage2_messages = list(record.stage2_messages)
     state.stage2_reply = record.stage2_response
     state.stage2_normalized_json = record.stage2_decision
+    state.stage2_usage_calls = (
+        list(usage_calls)
+        if usage_calls is not None
+        else _response_usage_calls(record.stage2_response)
+    )
     state.stage2_usage = _response_usage(record.stage2_response)
-    state.stage2_usage_calls = _response_usage_calls(record.stage2_response)
+    if not state.stage2_usage and state.stage2_usage_calls:
+        state.stage2_usage = _usage_snapshot({"usage": state.stage2_usage_calls[-1]})
     state.strategy_files = list(record.strategy_files_used)
     state.experience_entries = list(record.experience_loaded)
     state.route_outputs = {
@@ -317,13 +328,13 @@ class RouteStep:
         return StepResult.continue_(state)
 
 
-class LegacyStage2PersistStep:
-    """Run the existing Stage-2 and persistence tail after routing."""
+class Stage2Step:
+    """Execute Stage 2 while leaving record persistence to a legacy tail."""
 
-    name = "legacy_stage2_persist"
+    name = "stage2"
 
     def run(self, state: PipelineState, services: Any) -> StepResult:
-        """Reuse legacy Stage-2/persistence helpers until those steps migrate."""
+        """Build, call, validate, and snapshot Stage 2 without Qt dependencies."""
         if state.record is None or state.stage1_reply is None:
             state.mark_terminal(TerminalStatus.STAGE1_FAILED)
             return StepResult.fail(state)
@@ -338,6 +349,16 @@ class LegacyStage2PersistStep:
         if state.on_stage2_files is not None:
             state.on_stage2_files(list(strategy_files))
 
+        enable_next_bar, flip_cooldown = services._stage2_feature_flags()
+        state.stage2_enable_next_bar_prediction = enable_next_bar
+        state.stage2_structure_flip_cooldown_bars = flip_cooldown
+        state.feature_metadata.update(
+            {
+                "enable_next_bar_prediction": enable_next_bar,
+                "structure_flip_cooldown_bars": flip_cooldown,
+            }
+        )
+
         gate_record = services._try_gate_short_circuit(
             record=state.record,
             on_event=state.emit,
@@ -348,13 +369,13 @@ class LegacyStage2PersistStep:
             reply_s1=reply_s1,
             strategy_files=strategy_files,
             experience_entries=experience_entries,
+            persist=False,
         )
         if gate_record is not None:
             state.record = gate_record
             _set_stage1_record_snapshot(state, gate_record, preserve_usage_calls=True)
             _set_stage2_record_snapshot(state, gate_record)
-            _set_terminal_from_record(state, gate_record)
-            return StepResult.complete(state)
+            return StepResult.continue_(state)
 
         messages_s2, enable_next_bar, flip_cooldown = services._build_stage2_messages(
             frame=state.frame,
@@ -367,6 +388,7 @@ class LegacyStage2PersistStep:
             previous_record=state.previous_record,
         )
         state.stage2_messages = list(messages_s2)
+        s2_usage_calls: list[Any] = []
         state.record = services._run_stage2(
             record=state.record,
             on_event=state.emit,
@@ -387,13 +409,50 @@ class LegacyStage2PersistStep:
             _thinking=state.stage1_thinking,
             _effort=state.stage1_reasoning_effort,
             s1_usage_calls=state.stage1_usage_calls,
+            persist=False,
+            s2_usage_calls_out=s2_usage_calls,
         )
         _set_stage1_record_snapshot(state, state.record, preserve_usage_calls=True)
-        _set_stage2_record_snapshot(state, state.record)
+        _set_stage2_record_snapshot(state, state.record, usage_calls=s2_usage_calls)
+        if (
+            OrchestratorEvent.Stage2Failed in state.events
+            or OrchestratorEvent.Cancelled in state.events
+        ):
+            _set_terminal_from_record(state, state.record)
+            return StepResult.fail(state)
+        return StepResult.continue_(state)
+
+
+class LegacyPersistStep:
+    """Write the Stage-2-complete record until the real PersistStep is split."""
+
+    name = "legacy_persist"
+
+    def run(self, state: PipelineState, services: Any) -> StepResult:
+        """Reuse only the existing full-record writer and saved event."""
+        if state.record is None or state.record.exception is not None:
+            state.mark_terminal(TerminalStatus.STAGE2_FAILED)
+            return StepResult.fail(state)
+
+        # PersistStep is intentionally still a separate migration slice:
+        # record assembly and partial-write policy remain in legacy helpers.
+        services._pending_writer.save_full(state.record)
+        state.emit(OrchestratorEvent.RecordSaved)
         _set_terminal_from_record(state, state.record)
-        if state.terminal_status is TerminalStatus.COMPLETED:
-            return StepResult.complete(state)
-        return StepResult.fail(state)
+        return StepResult.complete(state)
+
+
+class LegacyStage2PersistStep:
+    """Compatibility composite for callers using the pre-Task-8 name."""
+
+    name = "legacy_stage2_persist"
+
+    def run(self, state: PipelineState, services: Any) -> StepResult:
+        """Run the new Stage2 boundary followed by the legacy writer."""
+        result = Stage2Step().run(state, services)
+        if result.outcome is not StepOutcome.CONTINUE:
+            return result
+        return LegacyPersistStep().run(state, services)
 
 
 # Keep the old internal name importable while the opt-in history uses the

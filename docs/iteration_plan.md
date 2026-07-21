@@ -16,7 +16,7 @@
 |---|---|---|---|
 | L1 Provider/数据源注册表 | 基础完成，治理切片已交付 | 数据源注册表、AI Provider 注册表、优先级 matcher、延迟 builder、运行时注册 API、未知数据源配置安全回退；本轮补齐规范化、replace/unregister、并发和懒导入证据 | 插件发现方案、正式扩展契约文档、builder 锁外执行证据 |
 | L2 Prompt 模板引擎 | 实现完成，兼容观察期 | `TemplateStore`、29 个模板 manifest、system/Stage 1/Stage 2/continuation 迁移、`TemplateContext`、严格变量渲染、golden snapshots 和整组回退 | 观察一个稳定周期后评估移除重复 helper、兼容开关和旧 loader |
-| L3 Pipeline Builder | Stage 1/Route 真实步骤已交付，默认旧路径 | 新增 PyQt-free `PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step` 和 `RouteStep`；opt-in `run_pipeline()` 顺序固定为 `Stage1Step -> RouteStep -> legacy_stage2_persist`，state 显式承载 Stage 1/Stage 2 payload、usage、route 输出、partial reason 和持久化意图；RouteStep 保持 callable/object router、策略文件顺序、经验限制、`current_bars`、空经验库和 Stage 2 前取消边界，并映射 `route_failed`；`legacy_stage2_persist` 仍承接 Stage 2/Persist；旧 `submit()` 保持不变 | Stage 2/Persist 真实步骤、完整终态与 GUI/headless 等价验证、feature flag 观察周期；当前不得将 `legacy_stage2_persist` 宣称为两个真实步骤 |
+| L3 Pipeline Builder | Stage 1/Route/Stage 2 真实步骤已交付，默认旧路径 | 新增 PyQt-free `PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep` 和 `Stage2Step`；opt-in `run_pipeline()` 顺序固定为 `Stage1Step -> RouteStep -> Stage2Step -> legacy_persist`，state 显式承载 Stage 1/Stage 2 payload、usage、route 输出、Stage 2 flags、partial reason 和持久化意图；Stage2Step 保持 continuation、gate、流式、retry、network、validation、cancel 语义；`legacy_persist` 只承接已组装的 full/partial 写入边界，真实 `PersistStep` 尚未实现；旧 `submit()` 保持不变 | `PersistStep` 真实步骤、完整终态与 GUI/headless 等价验证、feature flag 观察周期；当前不得将 `legacy_persist` 宣称为 `PersistStep` |
 | L4 性能预算 | 代码优化完成，预算未收口 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁 | 固定 synthetic benchmark、预算阈值、p50/p95 报告和持续回归监控 |
 | L5 经验库升级 | 排序实现完成，数据评估未收口 | 全量相关性排序和 K 线几何相似度已接入 | 脱敏数据集、固定评估集、离线指标、特征版本化和权重校准 |
 | L6 Headless/编排 | runner 第一切片已交付，等价契约未收口 | `AppEvent`、`EventSink`、`JsonlEventSink`、`replay_jsonl`、`bootstrap_headless()`、共享 `_build_core()`、`bootstrap_gui()`、兼容 `bootstrap()`、PyQt-free `pa-agent headless`；`analyze --run/--execute` 已接入两阶段 orchestrator、record 持久化和 JSONL 事件 | GUI/headless 最终/partial/cancel/failure record 等价、公开 adapter 契约和真实 Provider 环境验证 |
@@ -32,7 +32,7 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 | 优先级 | 路线 | 当前阻塞项 | 收尾证据 |
 |---|---|---|---|
 | P0 | L6 | `headless analyze --run` 已接入真实两阶段 runner，但 GUI/headless 全链路等价和公开 adapter 契约仍缺 | mock Provider 下的 final/partial/cancel/failure record、事件重放与 GUI 对照；真实 Provider 只允许显式执行 |
-| P1 | L3 | `Stage1Step` 与 `RouteStep` 已拆出并仅由 opt-in pipeline 使用；默认路径仍未切换，Stage 2/Persist 仍由 `legacy_stage2_persist` 兼容尾步骤承接 | 已有 Stage 1 happy/retry/network/validation/cancel/incremental、Route router/experience/cancel/failure 及最终 record/event equivalence 测试；仍需 Stage 2/Persist 真实步骤、完整终态与 GUI/headless 等价、feature flag 观察周期 |
+| P1 | L3 | `Stage1Step`、`RouteStep` 与 `Stage2Step` 已拆出并仅由 opt-in pipeline 使用；默认路径仍未切换，`legacy_persist` 只承接 Stage 2 已组装结果的 full/partial 写入边界，真实 `PersistStep` 尚未实现 | 已有 Stage 1 happy/retry/network/validation/cancel/incremental、Route router/experience/cancel/failure、Stage 2 continuation/flags/gate/retry/network/validation/cancel 及最终 record/event equivalence 测试；仍需 PersistStep、完整终态与 GUI/headless 等价、feature flag 观察周期 |
 | P1 | L5 | 没有脱敏经验数据集和固定离线评估基线 | 可重复的 `Recall@K`、`NDCG@K`、fallback rate、稳定性报告 |
 | P1 | L4 | 没有固定 benchmark、预算阈值和 p50/p95 报告 | 固定 fixture 基线、回归阈值和 CI/夜间任务报告 |
 | P2 | L1 | registry 基础、未知数据源配置回退和第一批生命周期/并发证据已完成；插件发现与正式扩展契约仍未收口 | 不改核心条件分支的扩展样例、entry points/显式注册方案、matcher/builder/settings 注入契约 |
@@ -46,8 +46,8 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 第 232 轮已完成 **L2 Stage 1 user prompt 迁移**，第 233 轮已完成 Stage 2/continuation
 和 `TemplateContext` 收尾实现。第 234 轮已完成 L6 JSONL event sink/replay 切片，第 237 轮
 已交付显式执行的 headless 两阶段 runner，第 238 轮已交付 L3 state/step compatibility
-adapter，Task 5 已完成 PipelineState foundation，Task 6 已完成 `Stage1Step` 真实步骤，
-本轮完成 Task 7 的 `RouteStep` 真实步骤；当前主线继续推进 Stage 2/Persist 真实步骤化和
+adapter，Task 5 已完成 PipelineState foundation，Task 6 已完成 `Stage1Step`，Task 7 已完成
+`RouteStep`，Task 8 已完成 `Stage2Step` 真实步骤；当前主线继续推进 PersistStep 真实步骤化和
 GUI/headless 最终 record 等价。
 
 推荐顺序如下：
@@ -78,8 +78,8 @@ GUI/headless 最终 record 等价。
    测试注入点，`build_core` 与 `build_gui_adapters` 是否公开，需要等 CLI/GUI adapter 契约稳定后再决定。
 5. L2 system、Stage 1、Stage 2/continuation、TemplateContext 和严格变量渲染已实现并保留严格
    失败回退；当前只剩旧 loader/helper 的兼容观察期。
-6. L3 的 `Stage1Step` 和 `RouteStep` 已有 opt-in 等价与失败路径证据，Stage 2/Persist
-   仍由 `legacy_stage2_persist` 兼容尾步骤承接；L1 插件发现方案与正式扩展契约、L5 脱敏数据集
+6. L3 的 `Stage1Step`、`RouteStep` 和 `Stage2Step` 已有 opt-in 等价与失败路径证据，Persist
+   仍由 `legacy_persist` 承接已组装的 full/partial 写入边界；L1 插件发现方案与正式扩展契约、L5 脱敏数据集
    与离线指标、L4 p50/p95 性能预算仍缺少固定证据，不能仅依据当前测试宣称收敛；L2 只剩兼容观察期。
 
 ## 2.2 第 233 轮完成结果（L2 Stage 2/continuation 与 TemplateContext）
@@ -342,6 +342,43 @@ gate short-circuit、增量分析和 GUI/headless 等价证据。
 - Route failure 只对 opt-in RouteStep 增加显式 `route_failed` partial 映射；旧 `submit()` 仍
   直接保持既有调用语义。
 
+## 2.11 本轮完成结果（L3 Task 8：Stage2Step 真实步骤）
+
+### 已交付
+
+1. 新增真实 PyQt-free `Stage2Step`，复用既有 continuation message 构建、Stage 2 Provider 调用、
+   流式回调、校验/retry 和终态映射；Stage 2 payload、usage/usage calls 和归一化 JSON 写入
+   `PipelineState`。
+2. `run_pipeline()` 的 opt-in sequence 固定为
+   `Stage1Step -> RouteStep -> Stage2Step -> legacy_persist`；`Stage2Step` 通过
+   `persist=False` 只组装结果，`legacy_persist` 再承接写入边界。
+3. settings 派生的 `enable_next_bar_prediction` 与 `structure_flip_cooldown_bars` 写入 state
+   和安全 feature metadata；continuation prompt 的旧/新调用参数与 UTF-8 字节内容保持等价。
+4. 保持 `Stage2Started`、gate short-circuit、reasoning/content 流式回调、retry、network failure、
+   validation failure 和 post-call cancel 语义；Stage 2 partial 分支不进入 full persist。
+5. 新增 `tests/integration/test_stage2_pipeline_step.py`，覆盖 continuation/flags、事件顺序和
+   state payload、流式回调、gate short-circuit、retry、network failure、validation failure、
+   post-call cancel，以及 partial record 与 legacy `submit()` 的等价；更新最终 record/event
+   equivalence 的步骤顺序断言。
+6. 将 Stage 2 集成测试加入 CI targeted pytest、focused Ruff 和 focused Black 目标清单；
+   Pipeline 模块继续保持 PyQt-free。
+
+### 明确未实现
+
+- `PersistStep` 尚未实现。当前 `legacy_persist` 只承接已经由 Stage 2/既有 helper 组装完成的
+  full/partial 写入边界：成功结果走 `save_full`，Stage 2 网络/校验/取消等 partial 分支仍由
+  现有 legacy helper 处理 `save_partial`；它不负责独立的 record 组装、partial reason 策略、
+  磁盘错误处理或新的持久化契约。
+- Pipeline 默认路径、`submit()` facade、`AnalysisRecord` schema、prompt 文本、normalizer 和
+  既有 retry 语义均未切换或改写；feature flag 仍处于观察前状态。
+- 完整 Persist 终态矩阵、GUI/headless 全链路 record 等价和 feature flag 观察周期仍待 Task 9/10。
+
+### 证据与边界
+
+- Stage 2 只推进准备/执行边界，不把 `legacy_persist` 宣称为真实 `PersistStep`，也不改变
+  JSON schema、normalizer、记录格式或默认旧 `submit()` 路径。
+- 本轮文档同步只运行 `git diff --check`；未运行 pytest，代码测试清单以工作区测试和 CI 配置为准。
+
 ## 3. 每轮建议交付物
 
 ### 3.1 L6 headless runner / CLI 最小入口
@@ -435,22 +472,24 @@ gate short-circuit、增量分析和 GUI/headless 等价证据。
 ### 3.3 L3 Pipeline state/step 化
 
 第 238 轮已交付协议和 legacy compatibility adapter，Task 5 已完成 PipelineState
-foundation，Task 6 已完成 `Stage1Step`，本轮已完成 `RouteStep` 真实步骤；后续交付物：
+foundation，Task 6 已完成 `Stage1Step`，Task 7 已完成 `RouteStep`，Task 8 已完成 `Stage2Step`
+真实步骤；后续交付物：
 
 - 保持 state 对 Stage 1/Stage 2 payload、usage、route 输出、partial reason、persistence intent
   和 terminal status 的显式承载。
-- 将现有 `_try_gate_short_circuit`、`_run_stage2`、`_persist_result` 等辅助方法逐步适配为
-  真实步骤；当前 `Stage1Step`、`RouteStep` 已实现，`Stage2Step`、`PersistStep` 仍未实现。
-- 在 opt-in pipeline 中保持 `Stage1Step -> RouteStep -> legacy_stage2_persist` 顺序，直到兼容
-  尾步骤被逐项替换。
+- 将现有 `_persist_result`、partial reason 处理和写入异常边界逐步适配为真实 `PersistStep`；
+  当前 `Stage1Step`、`RouteStep`、`Stage2Step` 已实现，`PersistStep` 仍未实现。
+- 在 opt-in pipeline 中保持 `Stage1Step -> RouteStep -> Stage2Step -> legacy_persist` 顺序，直到
+  `legacy_persist` 被真实 PersistStep 替换。
 - 保留 `TwoStageOrchestrator.submit()` 作为兼容 facade，通过显式 adapter/feature flag 控制新路径。
-- 继续增加 Stage 2/Persist 的网络错误、校验失败、gate short-circuit、增量分析和 partial
-  record 旧/新路径等价测试，并补齐完整 Route/Stage 2/Persist 终态矩阵。
+- 继续增加 Persist 的 final/partial、磁盘错误、partial reason 和 GUI/headless 等价测试，并
+  补齐完整 Route/Stage 2/Persist 终态矩阵。
 
 验收标准：
 
 - 每个终止状态都由显式 `TerminalStatus` 表示，不能再依赖局部变量是否存在推断进度。
-- Route failure 已映射到稳定的 `route_failed`；Persist failure 仍需在真实 PersistStep 中收口；
+- Route failure 已映射到稳定的 `route_failed`；Stage2Step 已覆盖 Stage 2 失败终态；Persist
+  failure 仍需在真实 PersistStep 中收口；
   状态摘要不得泄露
   callbacks、Provider client、prompt/reply 正文、行情数据、密钥或 URL path/query/fragment。
 - 新旧路径在相同 fixture 下最终记录、partial record 和事件序列可比对。
