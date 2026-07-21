@@ -18,6 +18,44 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L3 Task 5：PipelineState foundation）
+
+本轮完成规格中 L3 Task 5 的 PipelineState foundation，扩展显式状态承载和安全摘要边界；
+不切换默认编排路径，也不把 Stage 1/route/Stage 2/persist 的真实步骤迁移误标为已完成。
+
+### 已交付
+
+- **阶段 payload 与 route 状态**：`PipelineState` 显式承载 Stage 1/Stage 2 messages、
+  reply/raw response 引用、normalized JSON、usage/usage calls、strategy files、experience
+  entries 和 route outputs；`LegacySubmitStep` 在未改变的 legacy `submit()` 返回后回填这些字段。
+- **持久化意图**：新增 `PersistenceIntent`（`none`/`full`/`partial`）和 `partial_reason`，
+  让 completed 与非 completed 终态表达 full/partial 写入意图；不改变 `AnalysisRecord` schema。
+- **route/persist 终态**：`terminal_status_for()` 支持 `route`/`routing` 与
+  `persist`/`persistence` 的 stage、type、reason mapping，输出稳定的 `route_failed`、
+  `persist_failed` 终态。
+- **安全摘要与脱敏**：新增 `safe_summary()`/`to_safe_json()`，只输出阶段形状、消息角色、
+  route 数量、usage counters、稳定终态和 allowlist metadata；不包含 callbacks、Provider
+  client、prompt/reply 正文、normalized JSON 值、行情数据或密钥。usage 支持 mapping/object
+  读取；`base_url` 只保留 `http`/`https` origin，移除凭据、path、query 和 fragment。
+- **涉及文件**：`pa_agent/orchestrator/pipeline/state.py`、`steps.py`、`__init__.py`、
+  `tests/unit/test_pipeline.py`，以及同步的 `AGENTS.md`、路线图和执行计划。
+
+### 兼容与未完成边界
+
+- `TwoStageOrchestrator.submit()`、GUI/headless 默认调用路径和 opt-in adapter 语义保持兼容。
+- Stage 1、Route、Stage 2、Persist 的真实 `PipelineStep` 尚未实现；网络/校验失败、
+  gate short-circuit、取消、增量分析和完整旧/新事件与记录等价仍待后续切片。
+- Pipeline feature flag 尚未切换，必须继续保持默认 `submit()` 路径和现有安全边界。
+
+### 验证
+
+- `tests/unit/test_pipeline.py` 已补充阶段/route/persistence state、终态 mapping、安全摘要、
+  payload 排除和 URL path 脱敏覆盖；`tests/unit/test_pipeline.py` + `tests/integration/test_two_stage_pipeline_equivalence.py` 聚焦测试 → **19 passed**。
+- `git diff --check` → **通过**。
+- 未运行完整 pytest；本轮仅运行 Pipeline 聚焦测试和文档差异检查。
+
+---
+
 ## [Unreleased] — 2026-07-21（第二百三十八轮：L3 Pipeline state/step 第一切片）
 
 本轮推进 L3 Pipeline Builder，先建立显式状态/步骤协议和兼容适配器，不切换默认编排路径。

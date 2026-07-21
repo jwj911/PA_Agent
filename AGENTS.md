@@ -163,8 +163,10 @@ price_action_agent/
 
 - **`pa_agent/orchestrator/`**：业务编排。
   - `two_stage.py`：两阶段分析主流程。
-  - `pipeline/`：PyQt-free `PipelineState`、`TerminalStatus`、`PipelineStep`、`StepResult`、
-    `PipelineBuilder` 和 legacy compatibility step；默认 `submit()` 路径保持兼容。
+  - `pipeline/`：PyQt-free `PipelineState`、`TerminalStatus`、`PersistenceIntent`、
+    `PipelineStep`、`StepResult`、`PipelineBuilder` 和 legacy compatibility step。当前 state
+    显式承载 Stage 1/Stage 2 payload、usage、route 输出、partial reason 和持久化意图，并提供
+    不暴露运行时 payload 的 safe summary；默认 `submit()` 路径保持兼容。
   - `free_chat.py`：分析后自由追问与会话管理。
   - `validation_retry.py`：校验失败后的重试策略。
 
@@ -427,5 +429,10 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
 16. **L3 当前进度**：第 238 轮新增 PyQt-free `orchestrator/pipeline/`，定义
     `PipelineState`、`TerminalStatus`、`PipelineStep`、`StepResult` 和 `PipelineBuilder`，
     并通过 `TwoStageOrchestrator.run_pipeline()` / `submit_pipeline()` 提供 opt-in
-    compatibility adapter。默认 `submit()` 和 GUI/headless 调用路径保持不变；下一步才拆分
-    Stage 1、route、Stage 2、persist 真实步骤，并补全网络错误、校验失败、gate、增量和跨入口等价证据。
+    compatibility adapter。本轮 Task 5 扩展 `PipelineState` 承载 Stage 1/Stage 2 messages、
+    reply/raw response 引用、normalized JSON、usage、route outputs、`PersistenceIntent` 和
+    partial reason，补充 `route_failed`/`persist_failed` 映射，以及 callbacks、Provider client、
+    prompt/reply 正文、行情数据、密钥和 URL path/query/fragment 不进入的安全摘要。该摘要支持
+    从 mapping/object 提取 usage counters，且不改变 `AnalysisRecord` schema。默认 `submit()` 和
+    GUI/headless 调用路径保持不变；Stage 1、route、Stage 2、persist 真实步骤仍未实现，后续
+    还需补全网络错误、校验失败、gate、增量和跨入口等价证据。

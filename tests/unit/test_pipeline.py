@@ -7,12 +7,15 @@ from types import SimpleNamespace
 import pytest
 
 from pa_agent.orchestrator.pipeline import (
+    PersistenceIntent,
     PipelineBuilder,
     PipelineState,
     StepResult,
     TerminalStatus,
     terminal_status_for,
 )
+from pa_agent.orchestrator.pipeline.steps import LegacySubmitStep
+from pa_agent.records.schema import AnalysisRecord, RecordMeta
 from pa_agent.util.threading import CancelToken, OrchestratorEvent
 
 
@@ -59,10 +62,22 @@ def test_pipeline_builder_without_steps_is_explicit_failure() -> None:
 
 def test_pipeline_state_rejects_terminal_status_rewrite() -> None:
     state = _state()
-    state.mark_terminal(TerminalStatus.CANCELLED)
+    state.mark_terminal("cancelled")
 
     with pytest.raises(ValueError, match="already terminated"):
         state.mark_terminal(TerminalStatus.COMPLETED)
+
+
+def test_pipeline_state_normalizes_enum_constructor_inputs() -> None:
+    state = PipelineState(
+        frame=object(),
+        cancel_token=CancelToken(),
+        terminal_status="running",
+        persistence_intent="partial",
+    )
+
+    assert state.terminal_status is TerminalStatus.RUNNING
+    assert state.persistence_intent is PersistenceIntent.PARTIAL
 
 
 @pytest.mark.parametrize(
@@ -85,3 +100,160 @@ def test_terminal_status_maps_success_and_unexpected_failure() -> None:
     assert terminal_status_for(SimpleNamespace(exception={"type": "program_error"}), []) is (
         TerminalStatus.FAILED
     )
+
+
+@pytest.mark.parametrize(
+    ("exception", "expected"),
+    [
+        ({"stage": "route", "type": "route_error"}, TerminalStatus.ROUTE_FAILED),
+        ({"stage": "routing", "type": "program_error"}, TerminalStatus.ROUTE_FAILED),
+        ({"stage": "persist", "type": "persist_error"}, TerminalStatus.PERSIST_FAILED),
+        ({"stage": "persistence", "type": "program_error"}, TerminalStatus.PERSIST_FAILED),
+    ],
+)
+def test_terminal_status_maps_route_and_persist_failures(
+    exception: dict[str, str],
+    expected: TerminalStatus,
+) -> None:
+    assert terminal_status_for(SimpleNamespace(exception=exception), []) is expected
+
+
+def test_pipeline_state_carries_stage_route_and_persistence_runtime_data() -> None:
+    state = PipelineState(frame=object(), cancel_token=CancelToken())
+
+    state.stage1_messages = [{"role": "user", "content": "stage 1 prompt"}]
+    state.stage1_reply = SimpleNamespace(content="stage 1 reply", raw={"secret": "reply"})
+    state.stage1_normalized_json = {"direction": "up"}
+    state.stage1_usage = {"prompt_tokens": 10, "completion_tokens": 4}
+    state.stage2_messages = [{"role": "system", "content": "stage 2 prompt"}]
+    state.stage2_reply = SimpleNamespace(content="stage 2 reply", raw={"secret": "reply"})
+    state.stage2_normalized_json = {"decision": "wait"}
+    state.stage2_usage = {"prompt_tokens": 20, "completion_tokens": 5}
+    state.set_route_outputs(
+        strategy_files=["strategy.txt"],
+        experience_entries=[{"filename": "experience.json"}],
+    )
+    state.partial_reason = "user_cancelled"
+    state.set_persistence_intent(PersistenceIntent.PARTIAL)
+
+    assert state.stage1_messages[0]["content"] == "stage 1 prompt"
+    assert state.stage1_reply.content == "stage 1 reply"
+    assert state.stage1_normalized_json == {"direction": "up"}
+    assert state.stage2_usage["completion_tokens"] == 5
+    assert state.route_outputs["strategy_files"] == ["strategy.txt"]
+    assert state.persistence_intent is PersistenceIntent.PARTIAL
+
+
+def test_pipeline_state_safe_serialization_excludes_runtime_payloads() -> None:
+    prompt = "private prompt body"
+    market_value = "private market data"
+    api_key = "sk-private-api-key"
+    state = PipelineState(
+        frame=SimpleNamespace(symbol="SECRET-SYMBOL", bars=[market_value]),
+        cancel_token=CancelToken(),
+        on_event=lambda _event: None,
+        stage1_messages=[{"role": "user", "content": prompt}],
+        stage1_reply=SimpleNamespace(
+            content="private provider reply",
+            raw={"content": "private raw response"},
+            usage=SimpleNamespace(prompt_tokens=3, completion_tokens=2),
+        ),
+        stage1_normalized_json={"entry_price": market_value},
+        stage1_usage={"prompt_tokens": 3, "completion_tokens": 2},
+        settings_metadata={
+            "provider": {
+                "model": "test-model",
+                "base_url": "https://provider.test",
+                "api_key": api_key,
+                "client": object(),
+            },
+        },
+        feature_metadata={"enable_next_bar_prediction": True},
+    )
+    state.partial_reason = "persist_failed"
+    state.set_persistence_intent("partial")
+
+    summary = state.safe_summary()
+    serialized = state.to_safe_json()
+
+    assert summary["stage1"] == {
+        "message_count": 1,
+        "message_roles": ["user"],
+        "reply": {
+            "present": True,
+            "usage": {"prompt_tokens": 3, "completion_tokens": 2},
+        },
+        "normalized_json_present": True,
+        "usage": {"prompt_tokens": 3, "completion_tokens": 2},
+        "usage_call_count": 0,
+    }
+    assert summary["settings"] == {
+        "provider": {
+            "model": "test-model",
+            "base_url": "https://provider.test",
+        }
+    }
+    assert summary["features"] == {"enable_next_bar_prediction": True}
+    assert summary["partial_reason"] == "persist_failed"
+    assert prompt not in serialized
+    assert market_value not in serialized
+    assert api_key not in serialized
+    assert "private provider reply" not in serialized
+    assert "private raw response" not in serialized
+    assert "SECRET-SYMBOL" not in serialized
+
+
+def test_safe_summary_reads_usage_from_legacy_raw_response_and_redacts_url_path() -> None:
+    state = PipelineState(
+        frame=object(),
+        cancel_token=CancelToken(),
+        stage1_reply={"usage": {"prompt_tokens": 7}},
+        settings_metadata={
+            "provider": {
+                "base_url": "https://provider.test/sk-provider-secret/v1",
+            },
+        },
+    )
+
+    summary = state.safe_summary()
+
+    assert summary["stage1"]["reply"]["usage"] == {"prompt_tokens": 7}
+    assert summary["settings"] == {"provider": {"base_url": "https://provider.test"}}
+    assert "sk-provider-secret" not in state.to_safe_json()
+
+
+def test_legacy_submit_step_recovers_final_usage_call_snapshots() -> None:
+    record = AnalysisRecord(
+        meta=RecordMeta(
+            timestamp_local_iso="2026-07-22T00:00:00.000",
+            timestamp_local_ms=1,
+            symbol="TEST",
+            timeframe="1m",
+            bar_count=1,
+            ai_provider={},
+        ),
+        kline_data=[],
+        htf_text="",
+        stage1_messages=[{"role": "user", "content": "stage1"}],
+        stage1_response={"usage": {"prompt_tokens": 10, "total_tokens": 12}},
+        stage1_diagnosis={"gate_result": "proceed"},
+        stage2_messages=[{"role": "user", "content": "stage2"}],
+        stage2_response={"usage": {"prompt_tokens": 20, "total_tokens": 23}},
+        stage2_decision={"decision": {"order_type": "不下单"}},
+        strategy_files_used=[],
+        experience_loaded=[],
+        exception=None,
+        usage_total={"prompt_tokens": 30, "total_tokens": 35},
+    )
+
+    class _Services:
+        def submit(self, **_kwargs: object) -> AnalysisRecord:
+            return record
+
+    state = _state()
+    result = LegacySubmitStep().run(state, _Services())
+
+    assert result.state is state
+    assert state.stage1_usage_calls == [{"prompt_tokens": 10, "total_tokens": 12}]
+    assert state.stage2_usage_calls == [{"prompt_tokens": 20, "total_tokens": 23}]
+    assert state.usage_total == {"prompt_tokens": 30, "total_tokens": 35}
