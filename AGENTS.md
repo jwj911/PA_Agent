@@ -428,9 +428,10 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     GUI adapter 继续负责 `EventBus`、数据源连接/订阅，且 `event_sink` 指向 `EventBus`。第 229 轮已
     新增 `pa_agent.cli` 和 `pa-agent headless` 最小入口，第 234 轮已新增 PyQt-free JSONL
     `JsonlEventSink`/`replay_jsonl`，第 237 轮新增显式 `analyze --run/--execute` 两阶段 runner、
-    final/partial record 持久化、稳定退出码和 correlation 事件输出。默认 `analyze` 仍必须保持
-    provider-free dry-run；GUI/headless 全链路 record 等价、真实 Provider 环境验证和公开 adapter
-    契约仍未收敛。
+    final/partial record 持久化、稳定退出码和 correlation 事件输出；公开
+    `pa_agent.headless.HeadlessAnalysisAdapter` 统一 headless 执行边界。默认 `analyze` 仍必须保持
+    provider-free dry-run；GUI/headless 全链路 record 等价、真实 Provider 环境验证和事件 envelope
+    版本契约仍未收敛。
 14. **架构任务先读两份计划**：长期模块边界、迁移原则和完成定义以
     [`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md) 为准；短中期优先级、每轮建议
     交付物、验收标准和依赖顺序见 [`docs/iteration_plan.md`](./docs/iteration_plan.md)。

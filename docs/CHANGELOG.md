@@ -18,6 +18,29 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L6：公开 headless analysis adapter）
+
+本轮把 CLI 内部的 headless 两阶段执行边界提取为公开、PyQt-free 的
+`HeadlessAnalysisAdapter`，使 GUI/headless 共享 core 的执行、事件和结果合同可以被独立测试
+与后续服务入口复用。
+
+### 已交付
+
+- 新增 `pa_agent/headless.py`，提供 `HeadlessAnalysisAdapter`、
+  `HeadlessAnalysisResult` 和 `HeadlessAdapterError`。
+- adapter 统一依赖校验、`CancelToken`、correlation id、`EventSink` 发布和
+  `TwoStageOrchestrator` 调用；CLI `analyze --run/--execute` 改用该公开边界。
+- 保持默认 dry-run、GUI `EventBus`、数据源连接、record schema、退出码和 JSONL event envelope
+  语义不变；headless 模块不导入 Qt。
+- 新增 public adapter 的事件关联、结果封装、缺失依赖和 CLI 回归测试，并纳入 CI。
+
+### 验证
+
+- Headless adapter、CLI、AppContext 和 event sink focused tests → **通过**。
+- 受影响模块 Ruff、`py_compile`、CI target 检查和 `git diff --check` → **通过**。
+
+---
+
 ## [Unreleased] — 2026-07-22（L1：注册表扩展契约与 entry point 发现）
 
 本轮收口 L1 注册表治理的扩展边界。数据源和 AI client registry 现在可以从已安装包声明的

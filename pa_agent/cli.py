@@ -18,7 +18,6 @@ from pa_agent.data.base import KlineBar, KlineFrame, normalize_kline_bar
 from pa_agent.data.snapshot import compute_indicators
 from pa_agent.util.event_sink import JsonlEventSink, NullEventSink
 from pa_agent.util.events import AppEvent
-from pa_agent.util.threading import CancelToken, OrchestratorEvent
 from pa_agent.util.timefmt import now_local_ms
 
 EXIT_OK = 0
@@ -417,7 +416,7 @@ def _run_analyze(
 ) -> int:
     """Run the existing TwoStageOrchestrator through a headless adapter."""
     from pa_agent.app_context import AppContext
-    from pa_agent.orchestrator.two_stage import TwoStageOrchestrator
+    from pa_agent.headless import HeadlessAdapterError, HeadlessAnalysisAdapter
 
     correlation_id = str(getattr(args, "correlation_id", None) or uuid.uuid4().hex)
     event_sink = (
@@ -425,8 +424,6 @@ def _run_analyze(
         if getattr(args, "events", None) is not None
         else NullEventSink()
     )
-    event_names: list[str] = []
-
     try:
         bootstrap_kwargs: dict[str, Any] = {
             "settings": settings,
@@ -447,43 +444,16 @@ def _run_analyze(
                 code=EXIT_PROVIDER_ERROR,
             ) from exc
 
-        dependencies = (
-            "client",
-            "assembler",
-            "router",
-            "validator",
-            "pending_writer",
-            "exp_reader",
-        )
-        missing = [name for name in dependencies if getattr(ctx, name, None) is None]
-        if missing:
-            raise CliError(
-                f"headless runner 依赖未装配: {', '.join(missing)}",
-                code=EXIT_PROVIDER_ERROR,
-            )
-
-        def on_event(event: OrchestratorEvent) -> None:
-            name = event.name if isinstance(event, OrchestratorEvent) else str(event)
-            event_names.append(name)
-            event_sink.publish(
-                AppEvent.orchestrator(name, correlation_id=correlation_id)
-            )
-
-        orchestrator = TwoStageOrchestrator(
-            client=ctx.client,
-            assembler=ctx.assembler,
-            router=ctx.router,
-            validator=ctx.validator,
-            pending_writer=ctx.pending_writer,
-            exp_reader=ctx.exp_reader,
-            settings=ctx.settings,
-        )
         try:
-            record = orchestrator.submit(
-                frame=frame,
-                cancel_token=CancelToken(),
-                on_event=on_event,
-            )
+            result = HeadlessAnalysisAdapter(
+                ctx,
+                event_sink=event_sink,
+                correlation_id=correlation_id,
+            ).run(frame)
+            record = result.record
+            event_names = list(result.event_names)
+        except HeadlessAdapterError as exc:
+            raise CliError(str(exc), code=EXIT_PROVIDER_ERROR) from exc
         except Exception as exc:
             record = _persist_runner_error(ctx, frame, exc)
             event_names.append("RunnerFailed")
