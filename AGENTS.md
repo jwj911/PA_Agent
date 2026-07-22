@@ -429,9 +429,12 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     新增 `pa_agent.cli` 和 `pa-agent headless` 最小入口，第 234 轮已新增 PyQt-free JSONL
     `JsonlEventSink`/`replay_jsonl`，第 237 轮新增显式 `analyze --run/--execute` 两阶段 runner、
     final/partial record 持久化、稳定退出码和 correlation 事件输出；公开
-    `pa_agent.headless.HeadlessAnalysisAdapter` 统一 headless 执行边界。默认 `analyze` 仍必须保持
-    provider-free dry-run；GUI/headless 全链路 record 等价、真实 Provider 环境验证和事件 envelope
-    版本契约仍未收敛。
+    `pa_agent.headless.HeadlessAnalysisAdapter` 统一 headless 执行边界。本轮已扩展其阶段回调
+    合同，并用真实 GUI `_AnalysisWorker` 对照固定 fixture 的 final/partial/cancel/failure
+    record、milestone/status、prompt 和流式内容；JSONL 新事件必须写入
+    `schema="pa-agent.event.v1"`，未知 schema 拒绝，旧缺失 schema 事件继续可回放。默认
+    `analyze` 仍必须保持 provider-free dry-run；真实 Provider 环境观察、真实运行 record/事件
+    证据和跨进程 correlation 重放仍未收敛。
 14. **架构任务先读两份计划**：长期模块边界、迁移原则和完成定义以
     [`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md) 为准；短中期优先级、每轮建议
     交付物、验收标准和依赖顺序见 [`docs/iteration_plan.md`](./docs/iteration_plan.md)。

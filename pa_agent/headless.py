@@ -56,8 +56,19 @@ class HeadlessAnalysisAdapter:
         *,
         cancel_token: CancelToken | None = None,
         on_event: Callable[[OrchestratorEvent], None] | None = None,
+        on_stage1_reasoning: Callable[[str], None] | None = None,
+        on_stage1_content: Callable[[str], None] | None = None,
+        on_stage2_reasoning: Callable[[str], None] | None = None,
+        on_stage2_content: Callable[[str], None] | None = None,
+        on_stage_prompt: Callable[[str, str, str], None] | None = None,
+        on_stage2_files: Callable[[list[str]], None] | None = None,
     ) -> HeadlessAnalysisResult:
-        """Execute one two-stage analysis and publish milestone events."""
+        """Execute one two-stage analysis and publish observable callbacks.
+
+        The callback surface mirrors the GUI worker's orchestration boundary.
+        Keeping both adapters on the same callback contract makes record,
+        milestone, prompt, and streaming equivalence directly testable.
+        """
         self._require_dependencies()
         event_names: list[str] = []
         token = cancel_token or CancelToken()
@@ -80,11 +91,23 @@ class HeadlessAnalysisAdapter:
             exp_reader=self._context.exp_reader,
             settings=self._context.settings,
         )
-        record = orchestrator.submit(
-            frame=frame,
-            cancel_token=token,
-            on_event=emit,
+        submit_kwargs: dict[str, object] = {
+            "frame": frame,
+            "cancel_token": token,
+            "on_event": emit,
+        }
+        optional_callbacks = {
+            "on_stage1_reasoning": on_stage1_reasoning,
+            "on_stage1_content": on_stage1_content,
+            "on_stage2_reasoning": on_stage2_reasoning,
+            "on_stage2_content": on_stage2_content,
+            "on_stage_prompt": on_stage_prompt,
+            "on_stage2_files": on_stage2_files,
+        }
+        submit_kwargs.update(
+            {name: callback for name, callback in optional_callbacks.items() if callback is not None}
         )
+        record = orchestrator.submit(**submit_kwargs)
         return HeadlessAnalysisResult(
             record=record,
             correlation_id=self._correlation_id,

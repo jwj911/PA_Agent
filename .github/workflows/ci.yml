@@ -189,6 +189,7 @@ jobs:
           tests/integration/test_next_bar_prediction.py
           tests/integration/test_two_stage_no_order_with_prices.py
           tests/integration/test_two_stage_pipeline_equivalence.py
+          tests/integration/test_l6_gui_headless_equivalence.py
           tests/integration/test_task10_pipeline_rollout.py
           tests/integration/test_stage1_pipeline_step.py
           tests/integration/test_route_pipeline_step.py

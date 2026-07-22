@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -9,8 +10,14 @@ from pathlib import Path
 import pytest
 
 from pa_agent.util.event_replay import EventReplayError, replay_jsonl
+from pa_agent.util.event_serialization import (
+    EventSerializationError,
+    event_from_dict,
+    event_to_dict,
+)
 from pa_agent.util.event_sink import CollectingEventSink, JsonlEventSink, NullEventSink
 from pa_agent.util.events import (
+    EVENT_ENVELOPE_SCHEMA,
     EVENT_STATUS,
     AppEvent,
 )
@@ -62,6 +69,7 @@ def test_jsonl_event_sink_writes_and_replays_events(tmp_path: Path) -> None:
 
     lines = path.read_text(encoding="utf-8").splitlines()
     assert len(lines) == 2
+    assert json.loads(lines[0])["schema"] == EVENT_ENVELOPE_SCHEMA
     assert '"correlation_id":"run-1"' in lines[0]
 
     replayed = CollectingEventSink()
@@ -85,6 +93,32 @@ def test_replay_jsonl_reports_malformed_line(tmp_path: Path) -> None:
 
     with pytest.raises(EventReplayError, match="line 2"):
         replay_jsonl(path, CollectingEventSink())
+
+
+def test_event_envelope_rejects_unknown_schema() -> None:
+    with pytest.raises(EventSerializationError, match="Unsupported event schema"):
+        event_from_dict(
+            {
+                "schema": "pa-agent.event.v999",
+                "type": EVENT_STATUS,
+                "timestamp_ms": 1,
+                "payload": {},
+            }
+        )
+
+
+def test_event_envelope_replays_legacy_payload_without_schema() -> None:
+    event = AppEvent.status("legacy", correlation_id="legacy-1", timestamp_ms=1)
+
+    assert event_from_dict(event_to_dict(event)) == event
+    assert event_from_dict(
+        {
+            "type": EVENT_STATUS,
+            "timestamp_ms": 1,
+            "correlation_id": "legacy-1",
+            "payload": {"text": "legacy"},
+        }
+    ) == event
 
 
 def test_importing_util_package_does_not_eagerly_import_qt_event_bus() -> None:

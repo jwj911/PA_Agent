@@ -6,7 +6,7 @@ import dataclasses
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from pa_agent.util.events import AppEvent
+from pa_agent.util.events import EVENT_ENVELOPE_SCHEMA, AppEvent
 
 
 class EventSerializationError(ValueError):
@@ -32,6 +32,7 @@ def _json_safe(value: Any) -> Any:
 def event_to_dict(event: AppEvent) -> dict[str, Any]:
     """Return a JSON-compatible event envelope."""
     return {
+        "schema": EVENT_ENVELOPE_SCHEMA,
         "type": str(event.type),
         "timestamp_ms": int(event.timestamp_ms),
         "correlation_id": (str(event.correlation_id) if event.correlation_id is not None else None),
@@ -47,6 +48,9 @@ def event_from_dict(value: Any) -> AppEvent:
     timestamp_ms = value.get("timestamp_ms")
     correlation_id = value.get("correlation_id")
     payload = value.get("payload", {})
+    schema = value.get("schema")
+    if schema is not None and schema != EVENT_ENVELOPE_SCHEMA:
+        raise EventSerializationError(f"Unsupported event schema: {schema!r}")
     if not isinstance(event_type, str) or not event_type.strip():
         raise EventSerializationError("Event type must be a non-empty string")
     if isinstance(timestamp_ms, bool) or not isinstance(timestamp_ms, int):

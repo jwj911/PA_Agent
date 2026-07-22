@@ -13,6 +13,7 @@ EVENT_DATA_FRAME = "data_frame"
 EVENT_TOKEN_UPDATE = "token_update"
 EVENT_DISK_ERROR = "disk_error"
 EVENT_ORCHESTRATOR = "orchestrator"
+EVENT_ENVELOPE_SCHEMA = "pa-agent.event.v1"
 
 
 @dataclass(frozen=True)

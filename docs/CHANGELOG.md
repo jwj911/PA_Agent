@@ -18,6 +18,37 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L6：GUI/headless 全链路等价证据与事件 envelope v1）
+
+本轮完成 L6 的 mock/fixed-fixture 全链路等价证据，覆盖 GUI 实际 `_AnalysisWorker` 与公开
+`HeadlessAnalysisAdapter` 的 final、partial、cancel、failure 四类终态；不调用真实 Provider，
+不改变 GUI 启动、记录 schema 或 Pipeline 默认开关。
+
+### 已交付
+
+- 扩展 `HeadlessAnalysisAdapter.run()`，公开与 GUI worker 对齐的阶段 prompt、reasoning、
+  content 和策略文件回调边界，同时保留旧 fake orchestrator 可用的可选参数兼容性。
+- 新增 `tests/integration/test_l6_gui_headless_equivalence.py`，使用真实 GUI worker 边界和
+  固定 Provider fixture，对照 record、终态 milestone、GUI status、prompt、流式内容、策略
+  文件回调及 partial persistence。
+- JSONL 事件 envelope 新增 `schema: "pa-agent.event.v1"`；未知 schema 明确拒绝，缺失 schema
+  的历史事件继续可回放，`correlation_id` 和事件顺序保持不变。
+- 将 L6 等价测试纳入 CI targeted pytest。
+
+### 明确边界
+
+- 本轮只证明 mock Provider/fixed fixture 下的 GUI/headless 等价；真实 Provider 环境稳定观察、
+  跨进程事件重放和真实运行 record 证据仍属于 L6 后续收口。
+- 不启用 `orchestrator.pipeline_builder_enabled`，不修改 Prompt 文本、JSON schema 或 GUI
+  signal 语义。
+
+### 验证
+
+- L6/既有 Pipeline focused pytest → **通过**。
+- 受影响模块 Ruff、`py_compile`、Ruff baseline、CI target 和 `git diff --check` → **通过**。
+
+---
+
 ## [Unreleased] — 2026-07-22（L3：Pipeline 阶段边界耗时统计）
 
 本轮补充 Pipeline enabled 路径的阶段耗时日志，用于比较 legacy、flag-on Pipeline 和
