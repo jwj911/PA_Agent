@@ -18,6 +18,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L3：Pipeline 阶段边界耗时统计）
+
+本轮补充 Pipeline enabled 路径的阶段耗时日志，用于比较 legacy、flag-on Pipeline 和
+headless/GUI adapter 的全链路时序，不改变步骤控制流或记录语义。
+
+### 已交付
+
+- 新增 `pipeline.timing` 日志事件，记录每个步骤的耗时、Pipeline 累计耗时和完成步骤数。
+- 在 Stage 2 启动前记录 `stage1_to_stage2` 阶段边界，附带 Stage 1、Route 已完成耗时；
+  Stage 2 自身耗时通过 `pipeline_stage_elapsed_ms` 记录。
+- 所有耗时使用 `time.monotonic()`，字段只包含 `trace_id`、步骤、边界、毫秒数和安全计数，
+  不记录 prompt、reply、行情或 Provider 内容。
+- 新增阶段边界、单步耗时和 trace 关联测试。
+
+### 验证
+
+- Pipeline focused tests → **69 passed**。
+- Ruff、`py_compile`、Ruff baseline、CI target 和 `git diff --check` → **通过**。
+
+---
+
 ## [Unreleased] — 2026-07-22（四条主线实现切片收口审计）
 
 本轮对用户指定的 L1 注册表治理、L2 模板迁移、L6 headless 第一切片和 L3 Pipeline 四步骤/

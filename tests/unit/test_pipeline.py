@@ -37,6 +37,17 @@ class _CompleteStep:
         return StepResult.complete(state)
 
 
+class _NamedStep:
+    def __init__(self, name: str, *, complete: bool = False) -> None:
+        self.name = name
+        self._complete = complete
+
+    def run(self, state: PipelineState, _services: object) -> StepResult:
+        if self._complete:
+            return StepResult.complete(state)
+        return StepResult.continue_(state)
+
+
 class _RaiseStep:
     name = "raise"
 
@@ -91,7 +102,12 @@ def test_pipeline_builder_logs_ordered_safe_lifecycle(caplog) -> None:
             services=object(),
         )
 
-    records = [record for record in caplog.records if record.name.endswith("pipeline.builder")]
+    records = [
+        record
+        for record in caplog.records
+        if record.name.endswith("pipeline.builder")
+        and record.getMessage() == "pipeline.lifecycle"
+    ]
     assert [record.pipeline_event for record in records] == [
         "start",
         "step_start",
@@ -108,6 +124,42 @@ def test_pipeline_builder_logs_ordered_safe_lifecycle(caplog) -> None:
     assert "PRIVATE_REPLY" not in rendered
     assert "PRIVATE_RAW" not in rendered
     assert "PRIVATE_KEY" not in rendered
+
+
+def test_pipeline_builder_logs_stage_boundary_timing(caplog) -> None:
+    state = _state()
+    steps = (
+        _NamedStep("stage1"),
+        _NamedStep("route"),
+        _NamedStep("stage2"),
+        _NamedStep("persist", complete=True),
+    )
+
+    with caplog.at_level(logging.INFO, logger="pa_agent.orchestrator.pipeline.builder"):
+        result = PipelineBuilder(steps).run(state, services=object())
+
+    timing_records = [
+        record for record in caplog.records if record.getMessage() == "pipeline.timing"
+    ]
+    durations = {
+        record.pipeline_step: record
+        for record in timing_records
+        if record.pipeline_event == "step_duration"
+    }
+    boundary = next(
+        record
+        for record in timing_records
+        if record.pipeline_event == "stage_boundary"
+    )
+
+    assert set(durations) == {"stage1", "route", "stage2", "persist"}
+    assert boundary.pipeline_boundary == "stage1_to_stage2"
+    assert boundary.pipeline_stage1_elapsed_ms >= 0
+    assert boundary.pipeline_route_elapsed_ms >= 0
+    assert durations["stage1"].pipeline_stage_elapsed_ms >= 0
+    assert durations["stage2"].pipeline_stage_elapsed_ms >= 0
+    assert all(record.pipeline_elapsed_ms >= record.pipeline_step_elapsed_ms for record in durations.values())
+    assert {record.trace_id for record in timing_records} == {result.trace_id}
 
 
 @pytest.mark.parametrize(

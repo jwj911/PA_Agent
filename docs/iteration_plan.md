@@ -516,6 +516,22 @@ Pipeline enabled 路径使用同一 `trace_id` 关联一次执行，事件名分
 - L3 Pipeline/终态/生命周期日志 tests：`68 passed`
 - 受影响模块 Ruff、py_compile、CI target、Ruff baseline 和 git diff 检查通过
 
+## 2.16 本轮完成结果（L3 Pipeline 阶段边界耗时统计）
+
+Pipeline enabled 路径新增 `pipeline.timing` 事件：
+
+- 每个 `stage1`、`route`、`stage2`、`persist` 步骤记录
+  `pipeline_step_elapsed_ms`、`pipeline_stage_elapsed_ms`、累计
+  `pipeline_elapsed_ms` 和完成步骤数；
+- Stage 2 开始前记录 `stage1_to_stage2` 边界，并携带 Stage 1 与 Route 已完成耗时；
+- 所有时间来自 `time.monotonic()`，与 `trace_id` 关联，日志字段不包含 prompt、reply、行情
+  或 Provider 原文；
+- 该日志用于观察 full/partial/cancel/failure 的时序和 adapter 等价性，不代表真实生产
+  稳定观察已经完成，默认 Pipeline flag 继续关闭。
+
+验证：Pipeline focused tests **69 passed**；Ruff、`py_compile`、Ruff baseline、CI target 和
+`git diff --check` 通过。
+
 ## 3. 每轮建议交付物
 
 ### 3.1 L6 headless runner / CLI 最小入口

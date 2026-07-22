@@ -35,6 +35,7 @@ class PipelineBuilder:
         """Run steps until a terminal result is produced."""
         started_at = time.monotonic()
         current = state
+        step_timings_ms: dict[str, int] = {}
         logger.info(
             "pipeline.lifecycle",
             extra={
@@ -68,6 +69,13 @@ class PipelineBuilder:
                 ):
                     self._log_step_skip(current, step, index, reason="terminal_state")
                     continue
+                if step.name == "stage2":
+                    self._log_stage_boundary(
+                        current,
+                        started_at,
+                        step_timings_ms,
+                        boundary="stage1_to_stage2",
+                    )
                 current.step_history.append(step.name)
                 step_started_at = time.monotonic()
                 logger.info(
@@ -95,6 +103,15 @@ class PipelineBuilder:
                         f"Pipeline step {step.name!r} returned an invalid result"
                     )
                 current = result.state
+                step_elapsed_ms = _elapsed_ms(step_started_at)
+                step_timings_ms[step.name] = step_elapsed_ms
+                self._log_step_timing(
+                    current,
+                    started_at,
+                    step,
+                    step_elapsed_ms=step_elapsed_ms,
+                    completed_step_count=len(step_timings_ms),
+                )
                 logger.info(
                     "pipeline.lifecycle",
                     extra={
@@ -102,7 +119,8 @@ class PipelineBuilder:
                         "pipeline_event": "step_result",
                         "pipeline_step": step.name,
                         "pipeline_outcome": result.outcome.value,
-                        "pipeline_step_elapsed_ms": _elapsed_ms(step_started_at),
+                        "pipeline_step_elapsed_ms": step_elapsed_ms,
+                        "pipeline_elapsed_ms": _elapsed_ms(started_at),
                         "pipeline_summary": current.safe_summary(),
                     },
                 )
@@ -170,6 +188,46 @@ class PipelineBuilder:
                 "pipeline_terminal_status": state.terminal_status.value,
             },
         )
+
+    @staticmethod
+    def _log_step_timing(
+        state: PipelineState,
+        started_at: float,
+        step: PipelineStep,
+        *,
+        step_elapsed_ms: int,
+        completed_step_count: int,
+    ) -> None:
+        fields: dict[str, Any] = {
+            "trace_id": state.trace_id,
+            "pipeline_event": "step_duration",
+            "pipeline_step": step.name,
+            "pipeline_step_elapsed_ms": step_elapsed_ms,
+            "pipeline_elapsed_ms": _elapsed_ms(started_at),
+            "pipeline_completed_step_count": completed_step_count,
+        }
+        if step.name in {"stage1", "route", "stage2", "persist"}:
+            fields["pipeline_stage_elapsed_ms"] = step_elapsed_ms
+        logger.info("pipeline.timing", extra=fields)
+
+    @staticmethod
+    def _log_stage_boundary(
+        state: PipelineState,
+        started_at: float,
+        step_timings_ms: dict[str, int],
+        *,
+        boundary: str,
+    ) -> None:
+        fields: dict[str, Any] = {
+            "trace_id": state.trace_id,
+            "pipeline_event": "stage_boundary",
+            "pipeline_boundary": boundary,
+            "pipeline_elapsed_ms": _elapsed_ms(started_at),
+        }
+        for step_name in ("stage1", "route", "stage2"):
+            if step_name in step_timings_ms:
+                fields[f"pipeline_{step_name}_elapsed_ms"] = step_timings_ms[step_name]
+        logger.info("pipeline.timing", extra=fields)
 
     @staticmethod
     def _log_end(

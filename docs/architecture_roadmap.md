@@ -306,11 +306,12 @@ normalized JSON 值、frame bars、行情数据或密钥；mapping/object usage 
 `base_url` 只保留 `http`/`https` origin，移除凭据、path、query 和 fragment。
 
 Pipeline enabled 生命周期日志使用同一 `trace_id` 关联一次执行，事件名为
-`pipeline.lifecycle`、`pipeline.event` 和 `pipeline.step`，字段通过 allowlist 限制为
+`pipeline.lifecycle`、`pipeline.event`、`pipeline.step` 和 `pipeline.timing`，字段通过 allowlist 限制为
 步骤/阶段、结果或终态分类、异常类型分类、耗时、跳过原因、写入状态和 `safe_summary`。
-诊断时可按 `trace_id` 聚合，或按三个事件名过滤，再按 `pipeline_step` 查询
+诊断时可按 `trace_id` 聚合，或按四个事件名过滤，再按 `pipeline_step` 查询
 `Preflight -> Stage1 -> Route -> Stage2 -> Persist`。禁止写入原始行情、股票/合约代码、
-价格、prompt/Provider 原文、API Key、Provider Token、callbacks 或 client 对象。
+价格、prompt/Provider 原文、API Key、Provider Token、callbacks 或 client 对象。`pipeline.timing`
+在 Stage 2 启动前记录 `stage1_to_stage2` 边界及 Stage 1/Route 已完成耗时。
 Task 11 已同步生命周期日志业务代码、聚焦测试和项目文档/规格，并已纳入原子提交/推送。
 
 步骤协议建议：

@@ -460,10 +460,11 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     本轮只完成 rollout 观察与切换准备，后续需真实稳定观察周期和 GUI/headless final/partial/
     cancel/failure 全链路 evidence 后才评估启用默认 flag。
 17. **L3 Pipeline 生命周期日志**：Pipeline enabled 路径以同一 `trace_id` 关联一次执行，
-    使用 `pipeline.lifecycle`、`pipeline.event` 和 `pipeline.step` 三类结构化事件；主要字段
+    使用 `pipeline.lifecycle`、`pipeline.event`、`pipeline.step` 和 `pipeline.timing` 四类结构化事件；主要字段
     为 `pipeline_step`、结果/终态分类、异常类型分类、耗时、跳过原因、写入状态和
     `PipelineState.safe_summary()`。查询时可按 `trace_id` 聚合，按上述事件名过滤，再按
-    `pipeline_step` 重建 `Preflight -> Stage1 -> Route -> Stage2 -> Persist`。日志只允许
+    `pipeline_step` 重建 `Preflight -> Stage1 -> Route -> Stage2 -> Persist`；
+    `pipeline.timing` 在 Stage 2 启动前记录 Stage 1/Route 边界耗时。日志只允许
     allowlist 安全字段，不得写入原始行情、股票/合约代码、价格、prompt/Provider 原文、
     API Key、Provider Token、callbacks 或 client。`orchestrator.pipeline_builder_enabled`
     默认仍为 `false`，flag-off 必须保持 legacy `submit()`、事件顺序、retry/cancel 语义和
