@@ -148,6 +148,7 @@ def run_live_observation(
     summary = {
         "schema": LIVE_OBSERVATION_SCHEMA,
         "correlation_id": run_id,
+        "event_file": events_path.name,
         "pipeline_builder_enabled": pipeline_builder_enabled,
         "status": status,
         "provider_called": any(

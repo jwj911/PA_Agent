@@ -18,6 +18,32 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L6：live observation artifact validator）
+
+本轮补充真实观察结果的离线审计工具，不调用 Provider、不读取密钥，也不改变 headless 执行
+路径。
+
+### 已交付
+
+- 新增 `tools/validate_live_observation.py`，校验 `pa-agent.live-observation.v1` summary、
+  event 文件、correlation、event schema/顺序/数量和 record 文件边界。
+- 严格复用 `replay_jsonl(..., expected_correlation_id=...)`；summary 与 replay 不一致、缺失
+  record 或路径越界时失败。
+- 输出 `pa-agent.live-observation-validation.v1` 结果，供 legacy/Pipeline 两次显式运行后的
+  artifact 审计。
+- 新增无网络单测并纳入 CI targeted pytest/focused Ruff。
+
+### 明确边界
+
+- validator 只能证明已有 artifact 自洽，不能证明 Provider 稳定性、GUI/headless 等价或模型
+  质量；真实运行仍需授权凭据。
+
+### 验证
+
+- live harness/validator 测试、Ruff、`py_compile`、CI target 和 `git diff --check` → **通过**。
+
+---
+
 ## [Unreleased] — 2026-07-22（L4：hosted runner baseline cache）
 
 本轮继续收口 L4 持续回归：使用 GitHub Actions cache 保存固定 Windows/Python/iterations/

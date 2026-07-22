@@ -24,7 +24,7 @@
 | L3 Pipeline Builder | 受控 fixture rollout 和显式 live legacy/Pipeline 入口已建立，默认 legacy，真实观察周期未收口 | 新增 PyQt-free `orchestrator/pipeline/`、`PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step` 和 `PersistStep`；新增 `orchestrator.pipeline_builder_enabled`（默认 `false`）及 `pa_agent/config/orchestrator.py`；flag-off 的 `submit()` 走 legacy，flag-on 委托 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep`；Task 10 终态矩阵、本轮 5 场景×3 轮对照和 live harness opt-in 均通过；默认路径仍为 legacy | 在有凭据环境分别运行 legacy/Pipeline，完成真实稳定观察和 GUI/headless final/partial/cancel/failure evidence；满足后才评估启用默认 flag，L3 尚未收口 |
 | L4 性能优化 | synthetic benchmark 已接入手动/夜间预算门禁和 hosted runner baseline cache，首轮缓存仍待运行 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；新增 `pa-agent.performance.v1` runner、p50/p95 报告、100/500/5000 bars 基准、`.github/workflows/l4-benchmark.yml` 和按 iterations/warmups 分区的成功 baseline cache | 运行首轮成功 baseline，审核 runner image 变化并维护超过 10% 回退告警 |
 | L5 经验库升级 | 评估合同、scorer 和 instrument-grouped 固定切分已交付，真实数据评估未收口 | 全量相关性排序 + K 线几何相似度；新增 `pa-agent.experience-eval.v1`、`pa-agent.experience-split.v1`、`instrument-hash.v1`、dataset digest 和 `Recall@K`/`NDCG@K`/fallback/stability scorer；不改变线上排序 | 真实脱敏数据集、人工标注、指标报告和权重校准 |
-| L6 无 GUI 运行 | mock 全链路等价、跨进程 event replay 和显式 live harness 已建立，真实环境观察未收口 | `AppEvent`、`EventSink`、`CollectingEventSink`、`JsonlEventSink`、`replay_jsonl`、严格 `expected_correlation_id` replay、共享 `_build_core()`、`bootstrap_gui()`/`bootstrap_headless()`、兼容 `bootstrap()`、`HeadlessAnalysisAdapter`、`pa-agent.event.v1` 和 PyQt-free `pa-agent headless`；显式 `analyze --run/--execute` 已接入两阶段 orchestrator、record 和 JSONL 事件；新增 `tools/run_live_headless_observation.py`；GUI `_AnalysisWorker` 与 headless adapter 已有 final/partial/cancel/failure fixture 对照 | 在有凭据环境运行真实 Provider 稳定周期、收集 record/event 完整等价证据 |
+| L6 无 GUI 运行 | mock 全链路等价、跨进程 replay、显式 live harness 和 artifact validator 已建立，真实环境观察未收口 | `AppEvent`、`EventSink`、`CollectingEventSink`、`JsonlEventSink`、`replay_jsonl`、严格 `expected_correlation_id` replay、共享 `_build_core()`、`bootstrap_gui()`/`bootstrap_headless()`、兼容 `bootstrap()`、`HeadlessAnalysisAdapter`、`pa-agent.event.v1` 和 PyQt-free `pa-agent headless`；显式 `analyze --run/--execute` 已接入两阶段 orchestrator、record 和 JSONL 事件；新增 `tools/run_live_headless_observation.py`/`tools/validate_live_observation.py`；GUI `_AnalysisWorker` 与 headless adapter 已有 final/partial/cancel/failure fixture 对照 | 在有凭据环境运行真实 Provider 稳定周期，使用 validator 审计并收集 record/event 完整等价证据 |
 
 当前经验目录主要是空目录占位，因而 L5 的 scorer 目前只能由合成 fixture 验证，不能据此
 判断真实交易结构的检索质量；本轮只交付数据合同和指标实现，不改变线上权重。L5 后续工作
@@ -617,8 +617,9 @@ pa-agent headless analyze --input snapshot.json --run --records-dir records/ --e
 - 公开 `HeadlessAnalysisAdapter` 已交付；已补 GUI `_AnalysisWorker` 与 headless adapter 的
   final/partial/cancel/failure fixture 等价、阶段回调对照、`pa-agent.event.v1` envelope 和
   跨进程 replay contract；新增显式 `tools/run_live_headless_observation.py`，只读环境变量
-  凭据并输出脱敏 summary；下一步在有授权凭据环境进行真实 Provider 稳定观察和真实运行
-  event/record 等价。
+  凭据并输出脱敏 summary；`tools/validate_live_observation.py` 可离线核对 summary/event/
+  record 自洽性；下一步在有授权凭据环境进行真实 Provider 稳定观察和真实运行 event/record
+  等价。
 
 ### Phase 3：L2 Prompt engine
 

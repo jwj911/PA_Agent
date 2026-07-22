@@ -19,7 +19,7 @@
 | L3 Pipeline Builder | 受控 fixture rollout 和显式 live legacy/Pipeline 入口已建立，默认 legacy，真实观察周期未收口 | 新增 PyQt-free `PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step` 和 `PersistStep`；新增 `orchestrator.pipeline_builder_enabled`（默认 `false`）及 `pa_agent/config/orchestrator.py`；`submit()` flag-off 走原 legacy 实现，flag-on 委托完整 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep` Pipeline；Task 10 终态矩阵、本轮 5 场景×3 轮对照和 live harness opt-in 均通过 | 在有凭据环境分别运行 legacy/Pipeline，完成真实稳定周期和 GUI/headless final/partial/cancel/failure evidence，之后才评估默认 flag |
 | L4 性能预算 | synthetic benchmark 已接入手动/夜间预算门禁和 hosted runner baseline cache，首轮缓存仍待运行 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；新增 `pa-agent.performance.v1` runner、p50/p95 报告、100/500/5000 bars 基准、`.github/workflows/l4-benchmark.yml` 和按 iterations/warmups 分区的成功 baseline cache | 运行首轮成功 baseline，持续审核 runner image 变化并维护超过 10% 回退告警 |
 | L5 经验库升级 | 评估合同、scorer 和 instrument-grouped 固定切分已交付，真实数据评估未收口 | 全量相关性排序和 K 线几何相似度已接入；新增 `pa-agent.experience-eval.v1`、`pa-agent.experience-split.v1`、`instrument-hash.v1`、dataset digest、`Recall@K`/`NDCG@K`/fallback/stability scorer，不改变线上排序 | 真实脱敏数据集、人工标注、指标报告和权重校准 |
-| L6 Headless/编排 | mock 全链路等价、跨进程 event replay 和显式 live harness 已建立，真实环境观察未收口 | `AppEvent`、`EventSink`、`JsonlEventSink`、`replay_jsonl`、严格 `expected_correlation_id` replay、`bootstrap_headless()`、共享 `_build_core()`、`bootstrap_gui()`、兼容 `bootstrap()`、`HeadlessAnalysisAdapter`、PyQt-free `pa-agent headless`、`tools/run_live_headless_observation.py`；`analyze --run/--execute` 已接入两阶段 orchestrator、record 持久化和 JSONL 事件；GUI `_AnalysisWorker` 与 headless adapter 已覆盖 final/partial/cancel/failure fixture | 在有凭据环境运行真实 Provider 稳定周期、收集 record/event 完整等价证据 |
+| L6 Headless/编排 | mock 全链路等价、跨进程 replay、显式 live harness 和 artifact validator 已建立，真实环境观察未收口 | `AppEvent`、`EventSink`、`JsonlEventSink`、`replay_jsonl`、严格 `expected_correlation_id` replay、`bootstrap_headless()`、共享 `_build_core()`、`bootstrap_gui()`、兼容 `bootstrap()`、`HeadlessAnalysisAdapter`、PyQt-free `pa-agent headless`、`tools/run_live_headless_observation.py`、`tools/validate_live_observation.py`；`analyze --run/--execute` 已接入两阶段 orchestrator、record 持久化和 JSONL 事件；GUI `_AnalysisWorker` 与 headless adapter 已覆盖 final/partial/cancel/failure fixture | 在有凭据环境运行真实 Provider 稳定周期，使用 validator 审计并收集 record/event 完整等价证据 |
 
 L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、数据源连接和订阅；
 `bootstrap_headless()` 复用 core helper，但不导入或创建 Qt `EventBus`，不连接数据源，默认使用
@@ -31,7 +31,7 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 
 | 优先级 | 路线 | 当前阻塞项 | 收尾证据 |
 |---|---|---|---|
-| P0 | L6 | mock Provider/fixed fixture 下 GUI/headless final/partial/cancel/failure 等价、`pa-agent.event.v1` envelope、严格跨进程 replay 和显式 live harness 已交付 | 真实 Provider 只允许显式执行；需在有凭据环境补真实运行 record/事件证据、稳定观察和 record/event 完整等价 |
+| P0 | L6 | mock Provider/fixed fixture 下 GUI/headless final/partial/cancel/failure 等价、`pa-agent.event.v1` envelope、严格跨进程 replay、显式 live harness 和 artifact validator 已交付 | 真实 Provider 只允许显式执行；需在有凭据环境补真实运行 record/事件证据、稳定观察和 record/event 完整等价 |
 | P1 | L3 | `Stage1Step`、`RouteStep`、`Stage2Step`、`PersistStep` 已拆出并由 `orchestrator.pipeline_builder_enabled` 控制；默认 `false`，flag-off 仍走 legacy；显式 live harness 可切换本次运行 | Task 10 终态矩阵及本轮 5 场景×3 轮 flag-off/flag-on 对照均通过；仍需在有凭据环境完成真实 Provider 稳定观察及 GUI/headless 真实运行 final/partial/cancel/failure evidence，之后才评估启用默认 flag |
 | P1 | L5 | scorer、数据合同和 instrument-grouped 固定切分已建立，但经验目录仍无真实案例 | 真实脱敏数据集、人工标注、可重复的 `Recall@K`、`NDCG@K`、fallback rate、稳定性报告和权重校准 |
 | P1 | L4 | benchmark、预算、手动/夜间 workflow 和 hosted runner baseline cache 已建立；首轮成功 baseline 尚未产生 | 运行首轮成功 baseline，审核 runner image 变化并保持同环境回归阈值和超过 10% 回退告警 |
@@ -751,6 +751,21 @@ split 报告和线上权重校准。
 收尾边界：当前环境无法直接执行 GitHub Actions；首轮成功 hosted baseline 和 runner image 变更
 审核仍需由 Actions 运行产生。
 
+## 2.28 本轮完成结果（L6：live observation artifact validator）
+
+本轮不调用 Provider，只增加真实观察 artifact 的离线审计：
+
+- 新增 `tools/validate_live_observation.py`；
+- 校验 `pa-agent.live-observation.v1` summary、event_file、event schema、correlation、事件
+  序列/数量和 record 文件是否存在且未越出 records 目录；
+- 输出 `pa-agent.live-observation-validation.v1`，可分别审计 legacy/Pipeline 两次运行；
+- 新增无网络 validator 单测并纳入 CI targeted pytest/focused Ruff。
+
+验证：live harness/validator 测试、Ruff、`py_compile`、CI target 和 `git diff --check` 通过。
+
+收尾边界：validator 只证明 artifact 自洽，不能替代真实 Provider 稳定周期或 GUI/headless
+完整等价证据。
+
 ## 3. 每轮建议交付物
 
 ### 3.1 L6 headless runner / CLI 最小入口
@@ -777,6 +792,8 @@ split 报告和线上权重校准。
   兼容。
 - 新增显式 `tools/run_live_headless_observation.py`：使用环境变量凭据、严格 correlation replay
   和脱敏 summary；未确认或缺少凭据时不触网。
+- 新增 `tools/validate_live_observation.py`：离线核对 summary、event、correlation 和 record
+  文件自洽性，不替代真实运行证据。
 
 仍需交付：
 
