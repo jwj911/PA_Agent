@@ -18,7 +18,7 @@
 
 ---
 
-## [Unreleased] — 2026-07-23（L1：外部 registry 扩展兼容观察）
+## [Unreleased] — 2026-07-22（L1：外部 registry 扩展兼容观察）
 
 本轮只补充外部扩展兼容证据和版本化 registrar 契约，不修改内置 Provider/data source
 路由、配置持久化、Provider token 同步或网络探测。
