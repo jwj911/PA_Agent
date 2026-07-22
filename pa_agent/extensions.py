@@ -19,6 +19,8 @@ from pa_agent.data.registry import DataSourceRegistry
 
 DATA_SOURCE_ENTRY_POINT_GROUP = "pa_agent.data_sources"
 AI_CLIENT_ENTRY_POINT_GROUP = "pa_agent.ai_clients"
+EXTENSION_CONTRACT_VERSION = "pa-agent.registry-extension.v1"
+REGISTRAR_VERSION_ATTRIBUTE = "__pa_agent_extension_version__"
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +32,16 @@ class RegistryRegistrar(Protocol):
         """Register one or more specs into the supplied registry."""
 
 
+class VersionedRegistryRegistrar(RegistryRegistrar, Protocol):
+    """Versioned registrar contract for newly published extensions."""
+
+    __pa_agent_extension_version__: str
+
+
+class ExtensionContractError(ValueError):
+    """Raised when a versioned registrar does not match the supported contract."""
+
+
 @dataclass(frozen=True, slots=True)
 class ExtensionLoadResult:
     """Safe outcome metadata for one discovered extension."""
@@ -38,6 +50,7 @@ class ExtensionLoadResult:
     name: str
     loaded: bool
     error_type: str | None = None
+    contract_version: str | None = None
 
 
 def discover_data_source_extensions(
@@ -97,10 +110,12 @@ def discover_registry_extensions(
     results: list[ExtensionLoadResult] = []
     for extension in sorted(discovered, key=_entry_point_sort_key):
         name = _safe_label(getattr(extension, "name", "unknown"))
+        contract_version: str | None = None
         try:
             registrar = extension.load()
             if not callable(registrar):
                 raise TypeError("entry point must load a callable registrar")
+            contract_version = _validate_registrar_contract(registrar)
             registrar(registry)
         except Exception as exc:
             log.warning(
@@ -115,6 +130,7 @@ def discover_registry_extensions(
                     name=name,
                     loaded=False,
                     error_type=type(exc).__name__,
+                    contract_version=contract_version,
                 )
             )
         else:
@@ -123,7 +139,14 @@ def discover_registry_extensions(
                 _safe_label(group),
                 name,
             )
-            results.append(ExtensionLoadResult(group=group, name=name, loaded=True))
+            results.append(
+                ExtensionLoadResult(
+                    group=group,
+                    name=name,
+                    loaded=True,
+                    contract_version=contract_version,
+                )
+            )
     return tuple(results)
 
 
@@ -145,6 +168,16 @@ def _entry_point_sort_key(extension: EntryPoint) -> tuple[str, str]:
     )
 
 
+def _validate_registrar_contract(registrar: object) -> str | None:
+    """Accept legacy callables and validate an explicit contract version."""
+    version = getattr(registrar, REGISTRAR_VERSION_ATTRIBUTE, None)
+    if version is None:
+        return None
+    if version != EXTENSION_CONTRACT_VERSION:
+        raise ExtensionContractError(f"unsupported registry extension contract: {version!r}")
+    return version
+
+
 def _safe_label(value: Any) -> str:
     """Keep diagnostic labels bounded and free of newline/control characters."""
     text = str(value or "").replace("\r", "?").replace("\n", "?")
@@ -154,8 +187,12 @@ def _safe_label(value: Any) -> str:
 __all__ = [
     "AI_CLIENT_ENTRY_POINT_GROUP",
     "DATA_SOURCE_ENTRY_POINT_GROUP",
+    "EXTENSION_CONTRACT_VERSION",
+    "REGISTRAR_VERSION_ATTRIBUTE",
+    "ExtensionContractError",
     "ExtensionLoadResult",
     "RegistryRegistrar",
+    "VersionedRegistryRegistrar",
     "discover_ai_client_extensions",
     "discover_data_source_extensions",
     "discover_registry_extensions",

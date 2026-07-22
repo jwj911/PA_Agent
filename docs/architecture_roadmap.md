@@ -19,7 +19,7 @@
 
 | 路线 | 当前状态 | 已有基础 | 主要剩余工作 |
 |---|---|---|---|
-| L1 Provider/数据源注册表 | 治理与扩展契约已交付，进入观察期 | `data/registry.py`、`ai/provider_registry.py` 已支持规格、优先级、延迟 builder、运行时注册和 entry point 扩展发现；未知数据源配置已安全回退；第 236 轮及本轮补齐规范化、replace/unregister、并发、lazy-import、扩展失败隔离和锁外执行证据 | 观察外部扩展样例；必要时补充版本化契约和插件兼容策略 |
+| L1 Provider/数据源注册表 | 外部扩展兼容观察已通过，仍保留 legacy registrar | `data/registry.py`、`ai/provider_registry.py` 已支持规格、优先级、延迟 builder、运行时注册和 entry point 扩展发现；未知数据源配置已安全回退；第 236 轮及本轮补齐规范化、replace/unregister、并发、lazy-import、扩展失败隔离、锁外执行和 `pa-agent.registry-extension.v1` 版本化 registrar 证据 | 继续观察已安装扩展；形成 legacy registrar/版本合同的长期兼容与下线策略 |
 | L2 Prompt 模板引擎 | 5 轮固定 fixture 兼容观察已通过，仍保留回滚路径 | `Stage1PromptBuilder`、`Stage2PromptBuilder`、29 个模板 manifest、`TemplateStore`、`TemplateContext`、严格变量渲染、system/Stage 1/Stage 2/continuation golden snapshots；本轮重复比较 TemplateStore/旧 loader 的 system、Stage 1、Stage 2 和 continuation 输出 | 继续记录稳定周期，之后评估旧 helper、旧 loader 和兼容开关的下线 |
 | L3 Pipeline Builder | 受控 fixture rollout 观察已完成，默认 legacy，真实观察周期未收口 | 新增 PyQt-free `orchestrator/pipeline/`、`PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step` 和 `PersistStep`；新增 `orchestrator.pipeline_builder_enabled`（默认 `false`）及 `pa_agent/config/orchestrator.py`；flag-off 的 `submit()` 走 legacy，flag-on 委托 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep`；Task 10 终态矩阵和本轮 5 场景×3 轮 flag-off/flag-on 对照均通过；默认路径仍为 legacy | 真实 Provider 稳定观察周期、真实运行 GUI/headless final/partial/cancel/failure evidence；满足后才评估启用默认 flag，L3 尚未收口 |
 | L4 性能优化 | 固定 synthetic benchmark 和预算报告已交付，持续回归未收口 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；新增 `pa-agent.performance.v1` runner、p50/p95 报告和 100/500/5000 bars 基准 | CI/夜间持续回归、环境基线维护和超过 10% 回退告警 |
@@ -163,14 +163,17 @@ Client/DataSource:
 
 ### 4.3 后续收口
 
-1. **插件发现**：已采用 Python entry points；继续观察已安装扩展的兼容性，禁止扫描任意目录执行代码。
+1. **插件发现**：已采用 Python entry points；本轮以外部风格样例观察
+   `pa-agent.registry-extension.v1` 与旧 callable registrar 的兼容性，继续禁止扫描任意目录执行代码。
 2. **配置持久化**：自定义 kind/model 只作为字符串保存；加载时由注册表校验，未知值安全回退并记录 warning。
 3. **扩展契约**：已在 `pa_agent/extensions.py` 和项目文档中固定 registrar、builder、matcher、
    settings 注入、线程安全和注销时机边界。
 4. **生命周期测试**：验证重复注册、replace、注销、并发读取以及 builder 不在锁内执行。
 
-第 236 轮已完成第 2、4 项的第一批代码证据，本轮补齐已安装 entry point 发现、扩展失败隔离、
-正式 registrar 契约和 builder 锁外执行证据；运行时注册入口仍不需要修改 `create_*` 条件分支。
+第 236 轮已完成第 2、4 项的第一批代码证据，前轮补齐已安装 entry point 发现、扩展失败隔离、
+正式 registrar 契约和 builder 锁外执行证据；本轮又以 5 轮外部风格样例确认 versioned/legacy
+registrar、settings 注入、matcher 和 builder 的兼容边界；运行时注册入口仍
+不需要修改 `create_*` 条件分支。
 
 ### 4.4 验收标准
 

@@ -422,7 +422,8 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     负责，不得重复搬入 registry 或 client factory。未知数据源配置已在 settings 加载时安全回退到
     `mt5` 并持久化规范化值；扩展 registrar 通过 `pa_agent.extensions` 的
     `pa_agent.data_sources`/`pa_agent.ai_clients` entry point group 注册，失败隔离且不扫描任意目录；
-    外部扩展兼容观察和版本化契约策略仍待收口。
+    本轮固定 `pa-agent.registry-extension.v1` 和可选
+    `__pa_agent_extension_version__` 声明，未声明版本的旧 callable registrar 继续兼容。
 13. **L6 当前进度**：`AppContext` 已拆出共享 core helper 和 `bootstrap_gui()`；`bootstrap()`
     委托 GUI 路径。headless 复用 core helper，必须继续保持无 Qt `EventBus` import、无数据源连接；
     GUI adapter 继续负责 `EventBus`、数据源连接/订阅，且 `event_sink` 指向 `EventBus`。第 229 轮已
@@ -494,3 +495,7 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     standalone/prefix-chain，并覆盖 conservative/balanced stance，结果保持字节等价。
     `use_template_store=False`、旧 `_load()` 和兼容回滚路径在完整稳定周期结束前不得删除，
     不得顺手重写 `prompt_engineering/` 中文文本。
+21. **L1 外部扩展兼容观察当前进度**：外部风格 data source/AI client registrar 已完成 5 轮
+    重复观察；versioned registrar 必须声明 `pa-agent.registry-extension.v1`，旧的未声明版本
+    callable 继续兼容，未知显式版本只隔离当前扩展。观察样例只使用 marker builder，不连接
+    真实 Provider/数据源，不记录 token、行情或 prompt。

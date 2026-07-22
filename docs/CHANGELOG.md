@@ -18,6 +18,33 @@
 
 ---
 
+## [Unreleased] — 2026-07-23（L1：外部 registry 扩展兼容观察）
+
+本轮只补充外部扩展兼容证据和版本化 registrar 契约，不修改内置 Provider/data source
+路由、配置持久化、Provider token 同步或网络探测。
+
+### 已交付
+
+- `pa_agent.extensions` 新增 `pa-agent.registry-extension.v1` 合同版本和
+  `__pa_agent_extension_version__` 可选声明；未声明版本的旧 callable registrar 继续兼容。
+- 不匹配的显式版本只隔离当前扩展并返回 `ExtensionContractError`，不阻断其他扩展或内置
+  registry；`ExtensionLoadResult` 返回实际合同版本摘要。
+- 新增外部风格 data source/AI client registrar 的 5 轮重复观察，覆盖 versioned registrar、
+  legacy registrar、settings 注入、matcher 和 builder。
+- 将 L1 兼容观察纳入 CI targeted pytest 和 focused Ruff。
+
+### 明确边界
+
+- 测试使用无行情、无密钥的 marker builder，不连接真实 Provider 或数据源。
+- 本轮不删除旧 registrar 入口，不改变 entry point group，也不允许任意目录扫描。
+
+### 验证
+
+- L1 extension 单测和 5 轮兼容观察 → **通过**。
+- Ruff、Ruff format、`py_compile`、CI target 和 `git diff --check` → **通过**。
+
+---
+
 ## [Unreleased] — 2026-07-22（L2：TemplateStore/旧 loader 兼容观察）
 
 本轮不修改中文 Prompt 文本和模板 manifest，只重复验证 TemplateStore 迁移与旧 loader 回滚
