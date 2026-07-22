@@ -18,6 +18,33 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L6：跨进程 correlation replay 契约）
+
+本轮补齐 JSONL event stream 的跨进程重放边界，不调用真实 Provider、不写入行情或密钥，
+默认旧 replay 行为保持兼容。
+
+### 已交付
+
+- `replay_jsonl()` 新增可选 `expected_correlation_id` 和
+  `require_correlation_id` 严格模式，要求整条流使用同一个非空 correlation id。
+- 严格模式先完成全文件 schema、类型和 correlation 校验，再向 sink 发布，混流、缺失 ID、
+  未知 schema 或损坏行不会产生部分 replay。
+- 新增独立 Python 子进程集成测试，验证 `JsonlEventSink` 写入的
+  `pa-agent.event.v1` stream 可在另一进程按原顺序和 correlation id 重放。
+- 将 L6 replay contract 纳入 CI targeted pytest 和 focused Ruff。
+
+### 明确边界
+
+- 默认 `replay_jsonl(path, sink)` 仍接受旧缺失 schema 和缺失 correlation id 的历史事件。
+- 本轮只收口 event replay contract；真实 Provider record/事件落盘和稳定运行观察仍待完成。
+
+### 验证
+
+- event sink、CLI、headless 和跨进程 replay 测试 → **通过**。
+- Ruff、Ruff format、`py_compile`、CI target 和 `git diff --check` → **通过**。
+
+---
+
 ## [Unreleased] — 2026-07-22（L1：外部 registry 扩展兼容观察）
 
 本轮只补充外部扩展兼容证据和版本化 registrar 契约，不修改内置 Provider/data source

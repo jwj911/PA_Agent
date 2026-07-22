@@ -193,6 +193,7 @@ jobs:
           tests/integration/test_two_stage_no_order_with_prices.py
           tests/integration/test_two_stage_pipeline_equivalence.py
           tests/integration/test_l6_gui_headless_equivalence.py
+          tests/integration/test_l6_event_replay_contract.py
           tests/integration/test_l3_rollout_observation.py
           tests/integration/test_l2_template_compatibility_observation.py
           tests/integration/test_task10_pipeline_rollout.py
@@ -328,6 +329,7 @@ jobs:
           pa_agent/headless.py
           tests/unit/test_extensions.py
           tests/integration/test_l1_extension_compatibility_observation.py
+          tests/integration/test_l6_event_replay_contract.py
           tests/unit/test_headless.py
           tests/unit/test_performance_benchmark.py
           tests/__init__.py

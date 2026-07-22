@@ -95,6 +95,45 @@ def test_replay_jsonl_reports_malformed_line(tmp_path: Path) -> None:
         replay_jsonl(path, CollectingEventSink())
 
 
+def test_replay_jsonl_strict_correlation_validation_is_atomic(tmp_path: Path) -> None:
+    path = tmp_path / "events.jsonl"
+    path.write_text(
+        "\n".join(
+            [
+                json.dumps(event_to_dict(AppEvent.status("one", correlation_id="run-1"))),
+                json.dumps(event_to_dict(AppEvent.status("two", correlation_id="run-2"))),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    sink = CollectingEventSink()
+
+    with pytest.raises(EventReplayError, match="expected 'run-1'"):
+        replay_jsonl(
+            path,
+            sink,
+            expected_correlation_id="run-1",
+        )
+
+    assert sink.events == ()
+
+
+def test_replay_jsonl_strict_mode_rejects_missing_correlation_id(tmp_path: Path) -> None:
+    path = tmp_path / "events.jsonl"
+    path.write_text(
+        json.dumps(event_to_dict(AppEvent.status("missing"))) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(EventReplayError, match="missing a correlation_id"):
+        replay_jsonl(
+            path,
+            CollectingEventSink(),
+            require_correlation_id=True,
+        )
+
+
 def test_event_envelope_rejects_unknown_schema() -> None:
     with pytest.raises(EventSerializationError, match="Unsupported event schema"):
         event_from_dict(
@@ -111,14 +150,17 @@ def test_event_envelope_replays_legacy_payload_without_schema() -> None:
     event = AppEvent.status("legacy", correlation_id="legacy-1", timestamp_ms=1)
 
     assert event_from_dict(event_to_dict(event)) == event
-    assert event_from_dict(
-        {
-            "type": EVENT_STATUS,
-            "timestamp_ms": 1,
-            "correlation_id": "legacy-1",
-            "payload": {"text": "legacy"},
-        }
-    ) == event
+    assert (
+        event_from_dict(
+            {
+                "type": EVENT_STATUS,
+                "timestamp_ms": 1,
+                "correlation_id": "legacy-1",
+                "payload": {"text": "legacy"},
+            }
+        )
+        == event
+    )
 
 
 def test_importing_util_package_does_not_eagerly_import_qt_event_bus() -> None:

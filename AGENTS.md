@@ -433,9 +433,10 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     `pa_agent.headless.HeadlessAnalysisAdapter` 统一 headless 执行边界。本轮已扩展其阶段回调
     合同，并用真实 GUI `_AnalysisWorker` 对照固定 fixture 的 final/partial/cancel/failure
     record、milestone/status、prompt 和流式内容；JSONL 新事件必须写入
-    `schema="pa-agent.event.v1"`，未知 schema 拒绝，旧缺失 schema 事件继续可回放。默认
-    `analyze` 仍必须保持 provider-free dry-run；真实 Provider 环境观察、真实运行 record/事件
-    证据和跨进程 correlation 重放仍未收敛。
+    `pa-agent.event.v1` envelope，未知 schema 拒绝，旧缺失 schema 事件继续可回放；严格
+    `replay_jsonl(..., expected_correlation_id=...)` 会在发布前校验整条跨进程流的 correlation
+    一致性。默认 `analyze` 仍必须保持 provider-free dry-run；真实 Provider 环境观察、真实运行
+    record/事件证据和 record/event 完整等价仍未收敛。
 14. **架构任务先读两份计划**：长期模块边界、迁移原则和完成定义以
     [`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md) 为准；短中期优先级、每轮建议
     交付物、验收标准和依赖顺序见 [`docs/iteration_plan.md`](./docs/iteration_plan.md)。
