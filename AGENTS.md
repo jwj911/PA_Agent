@@ -469,4 +469,4 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     默认仍为 `false`，flag-off 必须保持 legacy `submit()`、事件顺序、retry/cancel 语义和
     final/partial record 不变；真实稳定观察周期及 GUI/headless final/partial/cancel/failure
     全链路 evidence 完成前，不得启用默认 flag。本轮已同步业务代码、聚焦测试和项目文档/
-    规格；当前提交与推送待完成。
+    规格，并已纳入原子提交/推送。

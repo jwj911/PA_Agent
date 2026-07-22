@@ -18,6 +18,31 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（四条主线实现切片收口审计）
+
+本轮对用户指定的 L1 注册表治理、L2 模板迁移、L6 headless 第一切片和 L3 Pipeline 四步骤/
+生命周期日志进行逐项回归与收口审计。
+
+### 结论
+
+- L1 entry point 扩展契约与 registry 治理已交付，进入外部扩展兼容观察期。
+- L2 TemplateStore、TemplateContext、严格渲染和 system/Stage 1/Stage 2/continuation 迁移
+  已通过 golden/兼容回归；旧 loader 继续保留作回滚路径。
+- L6 headless 第一切片已补齐公开 `HeadlessAnalysisAdapter`；GUI/headless 全链路等价和真实
+  Provider 验证仍属于 L6 后续收口。
+- L3 四个真实 Pipeline steps 和 lifecycle logging 已交付；默认 flag 仍关闭，真实稳定观察
+  周期和全链路等价仍属于后续收口。
+
+### 验证
+
+- L1：`24 passed`
+- L2：`59 passed`
+- L6：`30 passed`
+- L3：`68 passed`
+- 受影响模块 Ruff、`py_compile`、CI target、Ruff baseline 和 `git diff --check` 通过。
+
+---
+
 ## [Unreleased] — 2026-07-22（L6：公开 headless analysis adapter）
 
 本轮把 CLI 内部的 headless 两阶段执行边界提取为公开、PyQt-free 的
