@@ -186,6 +186,7 @@ jobs:
           tests/unit/test_headless.py
           tests/unit/test_ruff_baseline.py
           tests/unit/test_ci_workflow_targets.py
+          tests/unit/test_performance_benchmark.py
           tests/property
           tests/integration/test_next_bar_prediction.py
           tests/integration/test_two_stage_no_order_with_prices.py
@@ -314,15 +315,18 @@ jobs:
           pa_agent/util/trade_metrics.py
           pa_agent/security
           pa_agent/records
+          pa_agent/perf
           pa_agent/demo
           pa_agent/indicators
           pa_agent/gui/theme
           scripts/check_ci_workflow_targets.py
+          tools/run_l4_benchmark.py
           pa_agent/config/orchestrator.py
           pa_agent/extensions.py
           pa_agent/headless.py
           tests/unit/test_extensions.py
           tests/unit/test_headless.py
+          tests/unit/test_performance_benchmark.py
           tests/__init__.py
           tests/e2e/__init__.py
           tests/fixtures/__init__.py

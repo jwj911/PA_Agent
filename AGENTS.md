@@ -482,3 +482,9 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     opaque instrument id 数据合同和离线 `Recall@K`/`NDCG@K`/fallback/stability scorer；
     评估数据不得包含价格、K 线原文、截图路径、密钥或本地绝对路径。真实脱敏数据集、
     固定切分、人工标注和线上权重校准仍待完成，不得顺手修改 `ExperienceReader` 线上排序。
+19. **L4 性能基准当前进度**：`pa_agent.perf.benchmark` 和
+    `tools/run_l4_benchmark.py` 提供 `pa-agent.performance.v1` 报告、p50/p95、p95 budget
+    和超过 10% baseline regression 判定；固定 suite 覆盖 snapshot build、indicator、
+    K-line geometry 的 100/500/5000 bars，报告只保留耗时、平台和预算状态，不写行情原文。
+    当前基线见 `docs/benchmarks/l4_synthetic_2026-07-22.json`；CI/夜间持续回归和同环境
+    baseline 维护完成前，不得据单次 benchmark 修改热路径。

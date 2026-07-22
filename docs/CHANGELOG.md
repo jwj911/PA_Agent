@@ -18,6 +18,33 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L4：固定 synthetic benchmark 与 p50/p95 预算）
+
+本轮建立 L4 的固定性能证据，不修改 snapshot、K 线几何或其他热路径实现。
+
+### 已交付
+
+- 新增 `pa_agent.perf.benchmark`，定义 `pa-agent.performance.v1` report、p50/p95 计算、
+  p95 budget 和 baseline regression（超过 10% 判定失败）。
+- 新增 `tools/run_l4_benchmark.py`，固定 snapshot build、indicator、K-line geometry 的
+  100/500/5000 bars synthetic suite，支持输出 JSON 报告和 baseline 对比。
+- 生成 `docs/benchmarks/l4_synthetic_2026-07-22.json`；9 个基准在 30 次采样、5 次预热下
+  全部通过 p95 预算。
+- 新增 benchmark contract 单测并纳入 CI targeted pytest、focused Ruff/format targets。
+
+### 明确边界
+
+- 报告只代表当前 Windows/Python 环境的固定 fixture 基线，不代表跨机器性能结论。
+- CI/夜间持续回归、同环境 baseline 维护以及剩余 records/prompt/Pipeline 热点仍待后续。
+
+### 验证
+
+- benchmark、L5 经验评估和经验读取回归 → **通过**。
+- Ruff、Ruff format、`py_compile`、CI target 和 `git diff --check` → **通过**。
+- 本机 Black 26.5 单文件检查无输出挂起；CI 使用项目锁定版本，需由 Actions 最终确认。
+
+---
+
 ## [Unreleased] — 2026-07-22（L5：脱敏经验评估合同与离线 scorer）
 
 本轮建立经验库离线评估的最小可重复基线，不读取当前空经验目录中的真实案例，不修改线上

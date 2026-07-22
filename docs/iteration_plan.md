@@ -17,7 +17,7 @@
 | L1 Provider/数据源注册表 | 治理与扩展契约已交付，进入观察期 | 数据源注册表、AI Provider 注册表、优先级 matcher、延迟 builder、运行时注册 API、未知数据源配置安全回退；本轮补齐 entry point 发现、registrar 契约、失败隔离、规范化、replace/unregister、并发和懒导入证据 | 外部扩展样例的兼容观察、版本化契约策略 |
 | L2 Prompt 模板引擎 | 实现完成，兼容观察期 | `TemplateStore`、29 个模板 manifest、system/Stage 1/Stage 2/continuation 迁移、`TemplateContext`、严格变量渲染、golden snapshots 和整组回退 | 观察一个稳定周期后评估移除重复 helper、兼容开关和旧 loader |
 | L3 Pipeline Builder | 受控 fixture rollout 观察已完成，默认 legacy，真实观察周期未收口 | 新增 PyQt-free `PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step` 和 `PersistStep`；新增 `orchestrator.pipeline_builder_enabled`（默认 `false`）及 `pa_agent/config/orchestrator.py`；`submit()` flag-off 走原 legacy 实现，flag-on 委托完整 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep` Pipeline；Task 10 终态矩阵及本轮 5 场景×3 轮 flag-off/flag-on 对照均通过 | 真实 Provider 稳定观察周期、真实运行 GUI/headless final/partial/cancel/failure evidence，以及满足后再启用默认 flag |
-| L4 性能预算 | 代码优化完成，预算未收口 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁 | 固定 synthetic benchmark、预算阈值、p50/p95 报告和持续回归监控 |
+| L4 性能预算 | 固定 synthetic benchmark 和预算报告已交付，持续回归未收口 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；新增 `pa-agent.performance.v1` runner、p50/p95 报告和 100/500/5000 bars 基准 | CI/夜间持续回归、环境基线维护和超过 10% 回退告警 |
 | L5 经验库升级 | 离线评估合同/scorer 已交付，真实数据评估未收口 | 全量相关性排序和 K 线几何相似度已接入；新增版本化脱敏评估 dataset、`Recall@K`/`NDCG@K`/fallback/stability scorer，不改变线上排序 | 真实脱敏数据集、固定 train/evaluation 切分、人工标注和权重校准 |
 | L6 Headless/编排 | headless 第一切片与公开 adapter 已交付，mock 全链路等价证据已建立，真实环境观察未收口 | `AppEvent`、`EventSink`、`JsonlEventSink`、`replay_jsonl`、`pa-agent.event.v1` envelope、`bootstrap_headless()`、共享 `_build_core()`、`bootstrap_gui()`、兼容 `bootstrap()`、`HeadlessAnalysisAdapter`、PyQt-free `pa-agent headless`；`analyze --run/--execute` 已接入两阶段 orchestrator、record 持久化和 JSONL 事件；GUI `_AnalysisWorker` 与 headless adapter 已覆盖 final/partial/cancel/failure fixture | 真实 Provider 环境稳定观察、真实运行 record/事件证据和跨进程 correlation 重放契约 |
 
@@ -34,7 +34,7 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 | P0 | L6 | mock Provider/fixed fixture 下 GUI/headless final/partial/cancel/failure 等价和 `pa-agent.event.v1` envelope 已交付 | 真实 Provider 只允许显式执行；需补真实运行 record/事件证据、稳定观察和跨进程 correlation 重放 |
 | P1 | L3 | `Stage1Step`、`RouteStep`、`Stage2Step`、`PersistStep` 已拆出并由 `orchestrator.pipeline_builder_enabled` 控制；默认 `false`，flag-off 仍走 legacy。PersistStep 集中 full/partial record assembly/write，使用 `persistence_pending` 防止前置终态重复保存，并依据 `PendingWriter.last_write_succeeded` 处理磁盘失败 | Task 10 终态矩阵及本轮 5 场景×3 轮 flag-off/flag-on 对照均通过；仍需真实 Provider 稳定观察周期及 GUI/headless 真实运行 final/partial/cancel/failure evidence，之后才评估启用默认 flag |
 | P1 | L5 | scorer 和数据合同已建立，但经验目录仍无真实案例 | 真实脱敏数据集、固定切分和可重复的 `Recall@K`、`NDCG@K`、fallback rate、稳定性报告 |
-| P1 | L4 | 没有固定 benchmark、预算阈值和 p50/p95 报告 | 固定 fixture 基线、回归阈值和 CI/夜间任务报告 |
+| P1 | L4 | benchmark、预算和当前报告已建立，但尚未接入持续回归 | 固定 fixture 基线、同环境回归阈值和 CI/夜间任务报告 |
 | P2 | L1 | registry 基础、未知数据源配置回退、生命周期/并发证据和 entry point 扩展契约已完成 | 外部扩展样例的兼容观察和版本化契约策略 |
 | P2 | L2 | 实现已完成，但 `use_template_store` 与旧 loader 尚处兼容观察期 | 稳定周期内新旧路径持续等价，并形成兼容入口下线计划 |
 
@@ -592,6 +592,26 @@ CI target 和 `git diff --check` 通过。
 收尾边界：经验目录仍只有占位文件，当前指标只能证明 scorer 正确性；真实脱敏数据集、
 固定 train/evaluation 切分、人工标注和权重校准仍未完成。
 
+## 2.20 本轮完成结果（L4：固定 synthetic benchmark 与 p50/p95 预算）
+
+本轮不修改热路径实现，只建立可重复的性能证据：
+
+- 新增 `pa_agent.perf.benchmark`，定义 `pa-agent.performance.v1` report、p50/p95 计算、
+  p95 budget 和 baseline regression（超过 10% 判定失败）；
+- 新增 `tools/run_l4_benchmark.py`，固定 snapshot build、indicator 和 K-line geometry 的
+  100/500/5000 bars synthetic suite，支持 `--iterations`、`--warmups`、`--output` 和
+  `--baseline`；
+- 当前报告写入 `docs/benchmarks/l4_synthetic_2026-07-22.json`，9 个基准在 30 次采样、
+  5 次预热下全部通过 p95 预算；
+- 新增 benchmark contract 单测，纳入 CI targeted pytest 和 focused Ruff/format targets。
+
+验证：benchmark 单测、经验库相关回归、Ruff、Ruff format、`py_compile`、CI target 和
+`git diff --check` 通过。当前本机 Black 26.5 单文件检查无输出挂起，已由 Ruff format 作为
+本地格式证据；CI 锁定依赖仍需由 GitHub Actions 验证。
+
+收尾边界：当前报告是固定环境基线，不代表跨机器性能结论；CI/夜间持续回归和同环境基线维护
+仍未完成。
+
 ## 3. 每轮建议交付物
 
 ### 3.1 L6 headless runner / CLI 最小入口
@@ -768,13 +788,16 @@ adapter 对照测试；后续交付物：
 
 ### 3.5 L4 性能预算和持续基准
 
-建议交付物：
+已交付：
 
-- 为 prompt build、snapshot 构建、K 线几何、records 读取、Pipeline dry-run 等路径建立固定
-  synthetic benchmark。
-- 输出 p50/p95、样本数量、解释器版本、操作系统和关键配置。
-- 设定保守预算阈值，并决定进入 CI、夜间任务或手工报告的范围。
-- 将超过 10% 的回退定义为需要先分析后优化的事件。
+- `pa-agent.performance.v1` benchmark/report contract、p50/p95 和 10% regression 判定；
+- `tools/run_l4_benchmark.py` 的 100/500/5000 bars snapshot/indicator/geometry synthetic suite；
+- 当前固定环境报告 `docs/benchmarks/l4_synthetic_2026-07-22.json` 和 contract 单测。
+
+仍需交付：
+
+- 将 benchmark 接入 CI/夜间任务，维护同环境 baseline；
+- 评估 prompt build、records 读取、Pipeline dry-run 等剩余热点是否需要纳入 suite。
 
 验收标准：
 
