@@ -18,7 +18,7 @@
 | L2 Prompt 模板引擎 | 实现完成，兼容观察期 | `TemplateStore`、29 个模板 manifest、system/Stage 1/Stage 2/continuation 迁移、`TemplateContext`、严格变量渲染、golden snapshots 和整组回退 | 观察一个稳定周期后评估移除重复 helper、兼容开关和旧 loader |
 | L3 Pipeline Builder | 受控 fixture rollout 观察已完成，默认 legacy，真实观察周期未收口 | 新增 PyQt-free `PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step` 和 `PersistStep`；新增 `orchestrator.pipeline_builder_enabled`（默认 `false`）及 `pa_agent/config/orchestrator.py`；`submit()` flag-off 走原 legacy 实现，flag-on 委托完整 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep` Pipeline；Task 10 终态矩阵及本轮 5 场景×3 轮 flag-off/flag-on 对照均通过 | 真实 Provider 稳定观察周期、真实运行 GUI/headless final/partial/cancel/failure evidence，以及满足后再启用默认 flag |
 | L4 性能预算 | 代码优化完成，预算未收口 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁 | 固定 synthetic benchmark、预算阈值、p50/p95 报告和持续回归监控 |
-| L5 经验库升级 | 排序实现完成，数据评估未收口 | 全量相关性排序和 K 线几何相似度已接入 | 脱敏数据集、固定评估集、离线指标、特征版本化和权重校准 |
+| L5 经验库升级 | 离线评估合同/scorer 已交付，真实数据评估未收口 | 全量相关性排序和 K 线几何相似度已接入；新增版本化脱敏评估 dataset、`Recall@K`/`NDCG@K`/fallback/stability scorer，不改变线上排序 | 真实脱敏数据集、固定 train/evaluation 切分、人工标注和权重校准 |
 | L6 Headless/编排 | headless 第一切片与公开 adapter 已交付，mock 全链路等价证据已建立，真实环境观察未收口 | `AppEvent`、`EventSink`、`JsonlEventSink`、`replay_jsonl`、`pa-agent.event.v1` envelope、`bootstrap_headless()`、共享 `_build_core()`、`bootstrap_gui()`、兼容 `bootstrap()`、`HeadlessAnalysisAdapter`、PyQt-free `pa-agent headless`；`analyze --run/--execute` 已接入两阶段 orchestrator、record 持久化和 JSONL 事件；GUI `_AnalysisWorker` 与 headless adapter 已覆盖 final/partial/cancel/failure fixture | 真实 Provider 环境稳定观察、真实运行 record/事件证据和跨进程 correlation 重放契约 |
 
 L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、数据源连接和订阅；
@@ -33,7 +33,7 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 |---|---|---|---|
 | P0 | L6 | mock Provider/fixed fixture 下 GUI/headless final/partial/cancel/failure 等价和 `pa-agent.event.v1` envelope 已交付 | 真实 Provider 只允许显式执行；需补真实运行 record/事件证据、稳定观察和跨进程 correlation 重放 |
 | P1 | L3 | `Stage1Step`、`RouteStep`、`Stage2Step`、`PersistStep` 已拆出并由 `orchestrator.pipeline_builder_enabled` 控制；默认 `false`，flag-off 仍走 legacy。PersistStep 集中 full/partial record assembly/write，使用 `persistence_pending` 防止前置终态重复保存，并依据 `PendingWriter.last_write_succeeded` 处理磁盘失败 | Task 10 终态矩阵及本轮 5 场景×3 轮 flag-off/flag-on 对照均通过；仍需真实 Provider 稳定观察周期及 GUI/headless 真实运行 final/partial/cancel/failure evidence，之后才评估启用默认 flag |
-| P1 | L5 | 没有脱敏经验数据集和固定离线评估基线 | 可重复的 `Recall@K`、`NDCG@K`、fallback rate、稳定性报告 |
+| P1 | L5 | scorer 和数据合同已建立，但经验目录仍无真实案例 | 真实脱敏数据集、固定切分和可重复的 `Recall@K`、`NDCG@K`、fallback rate、稳定性报告 |
 | P1 | L4 | 没有固定 benchmark、预算阈值和 p50/p95 报告 | 固定 fixture 基线、回归阈值和 CI/夜间任务报告 |
 | P2 | L1 | registry 基础、未知数据源配置回退、生命周期/并发证据和 entry point 扩展契约已完成 | 外部扩展样例的兼容观察和版本化契约策略 |
 | P2 | L2 | 实现已完成，但 `use_template_store` 与旧 loader 尚处兼容观察期 | 稳定周期内新旧路径持续等价，并形成兼容入口下线计划 |
@@ -573,6 +573,25 @@ CI target 和 `git diff --check` 通过。
 收尾边界：本轮只证明固定 fixture 下的受控稳定性，不等价于真实 Provider 生产观察；真实
 稳定周期、GUI/headless 真实运行终态证据和默认 flag 切换仍未完成。
 
+## 2.19 本轮完成结果（L5：脱敏经验评估合同与离线 scorer）
+
+本轮只建立离线评估能力，不读取当前空经验目录中的真实案例，也不修改线上排序权重：
+
+- 新增 `pa_agent.records.experience_eval`，定义 `pa-agent.experience-eval.v1` dataset envelope
+  和 `kline-geometry.v1` feature version；
+- 评估案例只允许 opaque instrument id、timeframe、cycle、direction、patterns、候选数量和
+  人工标注的相关案例 id，不包含价格、K 线原文、截图路径、密钥或本地绝对路径；
+- 新增 `dump_dataset()` / `load_dataset()` 的 schema 校验和
+  `evaluate_rankings()`，输出宏平均 `Recall@K`、`NDCG@K`、similarity fallback rate、
+  top-K ranking stability 和 score distribution；
+- 新增固定脱敏 fixture 单测，验证 dataset round-trip、未知 schema 拒绝、指标计算和空集边界。
+
+验证：`test_experience_eval.py` 与既有 `test_experience_reader.py` 全部通过；Ruff 和
+`py_compile` 通过。
+
+收尾边界：经验目录仍只有占位文件，当前指标只能证明 scorer 正确性；真实脱敏数据集、
+固定 train/evaluation 切分、人工标注和权重校准仍未完成。
+
 ## 3. 每轮建议交付物
 
 ### 3.1 L6 headless runner / CLI 最小入口
@@ -715,14 +734,20 @@ adapter 对照测试；后续交付物：
 
 ### 3.4 L5 脱敏数据集与离线评估
 
-建议交付物：
+已交付：
 
-- 定义经验案例 schema version、feature extraction version 和脱敏导出格式。
-- 建立固定 train/evaluation 切分，保留 symbol、timeframe、cycle、direction、patterns、
-  success/failure 等必要元数据。
-- 新增离线 scorer，输出 `Recall@K`、`NDCG@K`、legacy fallback rate、score distribution 和
-  ranking stability。
-- 生成旧排序规则和候选新规则的并排报告。
+- `pa-agent.experience-eval.v1` dataset envelope、`kline-geometry.v1` feature version 和
+  opaque instrument id 等脱敏字段合同；
+- 离线 scorer，输出 `Recall@K`、`NDCG@K`、legacy fallback rate、score distribution 和
+  ranking stability；
+- scorer 及 dataset round-trip 的固定单测。
+
+仍需交付：
+
+- 导出满足合同的真实脱敏经验案例，并补齐 symbol opaque id、timeframe、cycle、direction、
+  patterns、success/failure 等必要元数据。
+- 建立固定 train/evaluation 切分，避免同一结构泄漏到评估集。
+- 生成旧排序规则和候选新规则的并排报告，并进行人工抽样评审。
 
 验收标准：
 

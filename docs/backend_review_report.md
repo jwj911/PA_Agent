@@ -57,7 +57,9 @@ continuation/flags/gate/流式/retry/network/validation/cancel/partial record，
   fixture rollout 对照，覆盖 record、事件、prompt、流式内容、策略文件和 writer 边界；真实
   Provider 稳定观察周期和 GUI/headless 真实运行 final/partial/cancel/failure evidence 仍待
   完成，之后才评估启用默认 flag。
-- L5 已接入 K 线几何相似度，但真实脱敏数据集和离线指标尚未具备，不应调整线上权重。
+- L5 已接入 K 线几何相似度；本轮新增版本化脱敏评估合同和离线
+  `Recall@K`/`NDCG@K`/fallback/stability scorer，但经验目录仍为空，不能据此判断真实交易
+  结构检索质量，也不应调整线上权重。
 - L6 已完成 `AppEvent`/`EventSink`、`bootstrap_headless()`、共享 core/GUI bootstrap 边界，
   第 229 轮新增 PyQt-free CLI 最小切片，第 234 轮新增 JSONL event sink/replay，第 237 轮又
   通过显式 `--run/--execute` 接入两阶段 runner、final/partial record 持久化、退出码映射和

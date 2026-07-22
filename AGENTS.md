@@ -476,3 +476,9 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     final/partial record 不变；真实稳定观察周期及 GUI/headless final/partial/cancel/failure
     全链路 evidence 完成前，不得启用默认 flag。本轮已同步业务代码、聚焦测试和项目文档/
     规格，并已纳入原子提交/推送。
+18. **L5 经验库评估当前进度**：经验目录当前只有占位文件，禁止把合成 fixture 的指标当作
+    真实检索质量结论。`pa_agent.records.experience_eval` 提供
+    `pa-agent.experience-eval.v1` dataset envelope、`kline-geometry.v1` feature version、
+    opaque instrument id 数据合同和离线 `Recall@K`/`NDCG@K`/fallback/stability scorer；
+    评估数据不得包含价格、K 线原文、截图路径、密钥或本地绝对路径。真实脱敏数据集、
+    固定切分、人工标注和线上权重校准仍待完成，不得顺手修改 `ExperienceReader` 线上排序。

@@ -18,6 +18,35 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L5：脱敏经验评估合同与离线 scorer）
+
+本轮建立经验库离线评估的最小可重复基线，不读取当前空经验目录中的真实案例，不修改线上
+相似度排序和权重。
+
+### 已交付
+
+- 新增 `pa_agent.records.experience_eval`，定义 `pa-agent.experience-eval.v1` dataset envelope
+  和 `kline-geometry.v1` feature version。
+- 案例合同仅允许 opaque instrument id、timeframe、cycle、direction、patterns、候选数量和
+  相关案例 id，禁止价格、K 线原文、截图路径、密钥和本地绝对路径进入评估数据。
+- 新增 `dump_dataset()` / `load_dataset()` schema 校验，以及
+  `evaluate_rankings()` 的 `Recall@K`、`NDCG@K`、fallback rate、top-K stability 和
+  score distribution 指标。
+- 新增固定脱敏 fixture 单测，覆盖 round-trip、未知 schema、指标计算和空数据集边界。
+
+### 明确边界
+
+- 当前经验目录仍只有占位文件；本轮只验证合同和 scorer 正确性，不把合成 fixture 指标当作
+  真实交易结构结论。
+- 真实脱敏数据集、固定 train/evaluation 切分、人工标注和线上权重校准仍待后续。
+
+### 验证
+
+- `test_experience_eval.py`、`test_experience_reader.py` → **通过**。
+- 受影响模块 Ruff、`py_compile` 和 `git diff --check` → **通过**。
+
+---
+
 ## [Unreleased] — 2026-07-22（L3：flag-off/flag-on 受控 rollout 观察）
 
 本轮建立默认 Pipeline flag 关闭状态下的可重复 rollout 观察基线，不调用真实 Provider，
