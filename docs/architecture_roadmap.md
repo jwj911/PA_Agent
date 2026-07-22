@@ -21,7 +21,7 @@
 |---|---|---|---|
 | L1 Provider/数据源注册表 | 外部扩展兼容观察已通过，仍保留 legacy registrar | `data/registry.py`、`ai/provider_registry.py` 已支持规格、优先级、延迟 builder、运行时注册和 entry point 扩展发现；未知数据源配置已安全回退；第 236 轮及本轮补齐规范化、replace/unregister、并发、lazy-import、扩展失败隔离、锁外执行和 `pa-agent.registry-extension.v1` 版本化 registrar 证据 | 继续观察已安装扩展；形成 legacy registrar/版本合同的长期兼容与下线策略 |
 | L2 Prompt 模板引擎 | 5 轮固定 fixture 兼容观察已通过，仍保留回滚路径 | `Stage1PromptBuilder`、`Stage2PromptBuilder`、29 个模板 manifest、`TemplateStore`、`TemplateContext`、严格变量渲染、system/Stage 1/Stage 2/continuation golden snapshots；本轮重复比较 TemplateStore/旧 loader 的 system、Stage 1、Stage 2 和 continuation 输出 | 继续记录稳定周期，之后评估旧 helper、旧 loader 和兼容开关的下线 |
-| L3 Pipeline Builder | 受控 fixture rollout 观察已完成，默认 legacy，真实观察周期未收口 | 新增 PyQt-free `orchestrator/pipeline/`、`PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step` 和 `PersistStep`；新增 `orchestrator.pipeline_builder_enabled`（默认 `false`）及 `pa_agent/config/orchestrator.py`；flag-off 的 `submit()` 走 legacy，flag-on 委托 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep`；Task 10 终态矩阵和本轮 5 场景×3 轮 flag-off/flag-on 对照均通过；默认路径仍为 legacy | 真实 Provider 稳定观察周期、真实运行 GUI/headless final/partial/cancel/failure evidence；满足后才评估启用默认 flag，L3 尚未收口 |
+| L3 Pipeline Builder | 受控 fixture rollout 和显式 live legacy/Pipeline 入口已建立，默认 legacy，真实观察周期未收口 | 新增 PyQt-free `orchestrator/pipeline/`、`PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step` 和 `PersistStep`；新增 `orchestrator.pipeline_builder_enabled`（默认 `false`）及 `pa_agent/config/orchestrator.py`；flag-off 的 `submit()` 走 legacy，flag-on 委托 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep`；Task 10 终态矩阵、本轮 5 场景×3 轮对照和 live harness opt-in 均通过；默认路径仍为 legacy | 在有凭据环境分别运行 legacy/Pipeline，完成真实稳定观察和 GUI/headless final/partial/cancel/failure evidence；满足后才评估启用默认 flag，L3 尚未收口 |
 | L4 性能优化 | synthetic benchmark 已接入手动/夜间预算门禁，持续 baseline 未收口 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；新增 `pa-agent.performance.v1` runner、p50/p95 报告、100/500/5000 bars 基准和 `.github/workflows/l4-benchmark.yml` | 在固定 runner 环境维护 baseline，并启用同环境超过 10% 回退告警 |
 | L5 经验库升级 | 评估合同、scorer 和 instrument-grouped 固定切分已交付，真实数据评估未收口 | 全量相关性排序 + K 线几何相似度；新增 `pa-agent.experience-eval.v1`、`pa-agent.experience-split.v1`、`instrument-hash.v1`、dataset digest 和 `Recall@K`/`NDCG@K`/fallback/stability scorer；不改变线上排序 | 真实脱敏数据集、人工标注、指标报告和权重校准 |
 | L6 无 GUI 运行 | mock 全链路等价、跨进程 event replay 和显式 live harness 已建立，真实环境观察未收口 | `AppEvent`、`EventSink`、`CollectingEventSink`、`JsonlEventSink`、`replay_jsonl`、严格 `expected_correlation_id` replay、共享 `_build_core()`、`bootstrap_gui()`/`bootstrap_headless()`、兼容 `bootstrap()`、`HeadlessAnalysisAdapter`、`pa-agent.event.v1` 和 PyQt-free `pa-agent headless`；显式 `analyze --run/--execute` 已接入两阶段 orchestrator、record 和 JSONL 事件；新增 `tools/run_live_headless_observation.py`；GUI `_AnalysisWorker` 与 headless adapter 已有 final/partial/cancel/failure fixture 对照 | 在有凭据环境运行真实 Provider 稳定周期、收集 record/event 完整等价证据 |
@@ -640,6 +640,8 @@ pa-agent headless analyze --input snapshot.json --run --records-dir records/ --e
   full 写入成功后才发 `RecordSaved`，partial 或 disk failure 不发成功事件；
 - 继续用 headless harness 做新旧事件和记录等价性验证，补齐 GUI/headless final/partial/cancel/
   failure 全链路 evidence；
+- 显式 `tools/run_live_headless_observation.py --pipeline-builder-enabled` 只对本次有授权运行
+  打开 Pipeline，未传参数保持 legacy；
 - 默认 flag 仍关闭；后续先进行受控 flag-on rollout 并观察至少一个真实稳定周期，待 GUI/headless
   全链路 evidence 无未解释偏差后，再评估默认路径切换和旧路径下线。
 

@@ -82,6 +82,7 @@ def run_live_observation(
     base_url: str = _DEFAULT_BASE_URL,
     model: str = _DEFAULT_MODEL,
     correlation_id: str | None = None,
+    pipeline_builder_enabled: bool = False,
     client: object | None = None,
 ) -> dict[str, object]:
     """Run one live headless request and write only sanitized evidence."""
@@ -111,6 +112,7 @@ def run_live_observation(
             last_symbol="live-observation",
             last_timeframe="5m",
         ),
+        orchestrator={"pipeline_builder_enabled": pipeline_builder_enabled},
     )
     resolved_client = client or DeepSeekClient(
         settings=settings.provider,
@@ -146,6 +148,7 @@ def run_live_observation(
     summary = {
         "schema": LIVE_OBSERVATION_SCHEMA,
         "correlation_id": run_id,
+        "pipeline_builder_enabled": pipeline_builder_enabled,
         "status": status,
         "provider_called": any(
             name in result.event_names for name in ("Stage1Started", "Stage2Started")
@@ -174,6 +177,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--model", default=os.environ.get("PA_AGENT_LIVE_MODEL", _DEFAULT_MODEL))
     parser.add_argument("--correlation-id")
+    parser.add_argument(
+        "--pipeline-builder-enabled",
+        action="store_true",
+        help="Opt into the Pipeline path for this explicit live observation",
+    )
     args = parser.parse_args(argv)
 
     if not args.confirm_live:
@@ -191,6 +199,7 @@ def main(argv: list[str] | None = None) -> int:
             base_url=args.base_url,
             model=args.model,
             correlation_id=args.correlation_id,
+            pipeline_builder_enabled=args.pipeline_builder_enabled,
         )
     except Exception as exc:
         print(

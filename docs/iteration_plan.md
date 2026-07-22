@@ -16,7 +16,7 @@
 |---|---|---|---|
 | L1 Provider/数据源注册表 | 外部扩展兼容观察已通过，仍保留 legacy registrar | 数据源注册表、AI Provider 注册表、优先级 matcher、延迟 builder、运行时注册 API、未知数据源配置安全回退；本轮补齐 entry point 发现、registrar 契约、失败隔离、规范化、replace/unregister、并发、懒导入和 `pa-agent.registry-extension.v1` 版本观察证据 | 继续观察已安装扩展并形成 legacy registrar/版本合同的长期兼容与下线策略 |
 | L2 Prompt 模板引擎 | 5 轮固定 fixture 兼容观察已通过，仍保留回滚路径 | `TemplateStore`、29 个模板 manifest、system/Stage 1/Stage 2/continuation 迁移、`TemplateContext`、严格变量渲染、golden snapshots 和整组回退；本轮重复比较 TemplateStore/旧 loader 的 system、Stage 1、Stage 2 和 continuation 输出 | 继续记录稳定周期后评估移除重复 helper、兼容开关和旧 loader |
-| L3 Pipeline Builder | 受控 fixture rollout 观察已完成，默认 legacy，真实观察周期未收口 | 新增 PyQt-free `PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step` 和 `PersistStep`；新增 `orchestrator.pipeline_builder_enabled`（默认 `false`）及 `pa_agent/config/orchestrator.py`；`submit()` flag-off 走原 legacy 实现，flag-on 委托完整 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep` Pipeline；Task 10 终态矩阵及本轮 5 场景×3 轮 flag-off/flag-on 对照均通过 | 真实 Provider 稳定观察周期、真实运行 GUI/headless final/partial/cancel/failure evidence，以及满足后再启用默认 flag |
+| L3 Pipeline Builder | 受控 fixture rollout 和显式 live legacy/Pipeline 入口已建立，默认 legacy，真实观察周期未收口 | 新增 PyQt-free `PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step` 和 `PersistStep`；新增 `orchestrator.pipeline_builder_enabled`（默认 `false`）及 `pa_agent/config/orchestrator.py`；`submit()` flag-off 走原 legacy 实现，flag-on 委托完整 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep` Pipeline；Task 10 终态矩阵、本轮 5 场景×3 轮对照和 live harness opt-in 均通过 | 在有凭据环境分别运行 legacy/Pipeline，完成真实稳定周期和 GUI/headless final/partial/cancel/failure evidence，之后才评估默认 flag |
 | L4 性能预算 | synthetic benchmark 已接入手动/夜间预算门禁，持续 baseline 未收口 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；新增 `pa-agent.performance.v1` runner、p50/p95 报告、100/500/5000 bars 基准和 `.github/workflows/l4-benchmark.yml` | 在固定 runner 环境维护 baseline，并启用同环境超过 10% 回退告警 |
 | L5 经验库升级 | 评估合同、scorer 和 instrument-grouped 固定切分已交付，真实数据评估未收口 | 全量相关性排序和 K 线几何相似度已接入；新增 `pa-agent.experience-eval.v1`、`pa-agent.experience-split.v1`、`instrument-hash.v1`、dataset digest、`Recall@K`/`NDCG@K`/fallback/stability scorer，不改变线上排序 | 真实脱敏数据集、人工标注、指标报告和权重校准 |
 | L6 Headless/编排 | mock 全链路等价、跨进程 event replay 和显式 live harness 已建立，真实环境观察未收口 | `AppEvent`、`EventSink`、`JsonlEventSink`、`replay_jsonl`、严格 `expected_correlation_id` replay、`bootstrap_headless()`、共享 `_build_core()`、`bootstrap_gui()`、兼容 `bootstrap()`、`HeadlessAnalysisAdapter`、PyQt-free `pa-agent headless`、`tools/run_live_headless_observation.py`；`analyze --run/--execute` 已接入两阶段 orchestrator、record 持久化和 JSONL 事件；GUI `_AnalysisWorker` 与 headless adapter 已覆盖 final/partial/cancel/failure fixture | 在有凭据环境运行真实 Provider 稳定周期、收集 record/event 完整等价证据 |
@@ -32,7 +32,7 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 | 优先级 | 路线 | 当前阻塞项 | 收尾证据 |
 |---|---|---|---|
 | P0 | L6 | mock Provider/fixed fixture 下 GUI/headless final/partial/cancel/failure 等价、`pa-agent.event.v1` envelope、严格跨进程 replay 和显式 live harness 已交付 | 真实 Provider 只允许显式执行；需在有凭据环境补真实运行 record/事件证据、稳定观察和 record/event 完整等价 |
-| P1 | L3 | `Stage1Step`、`RouteStep`、`Stage2Step`、`PersistStep` 已拆出并由 `orchestrator.pipeline_builder_enabled` 控制；默认 `false`，flag-off 仍走 legacy。PersistStep 集中 full/partial record assembly/write，使用 `persistence_pending` 防止前置终态重复保存，并依据 `PendingWriter.last_write_succeeded` 处理磁盘失败 | Task 10 终态矩阵及本轮 5 场景×3 轮 flag-off/flag-on 对照均通过；仍需真实 Provider 稳定观察周期及 GUI/headless 真实运行 final/partial/cancel/failure evidence，之后才评估启用默认 flag |
+| P1 | L3 | `Stage1Step`、`RouteStep`、`Stage2Step`、`PersistStep` 已拆出并由 `orchestrator.pipeline_builder_enabled` 控制；默认 `false`，flag-off 仍走 legacy；显式 live harness 可切换本次运行 | Task 10 终态矩阵及本轮 5 场景×3 轮 flag-off/flag-on 对照均通过；仍需在有凭据环境完成真实 Provider 稳定观察及 GUI/headless 真实运行 final/partial/cancel/failure evidence，之后才评估启用默认 flag |
 | P1 | L5 | scorer、数据合同和 instrument-grouped 固定切分已建立，但经验目录仍无真实案例 | 真实脱敏数据集、人工标注、可重复的 `Recall@K`、`NDCG@K`、fallback rate、稳定性报告和权重校准 |
 | P1 | L4 | benchmark、预算和手动/夜间 workflow 已建立；本地 baseline 与 hosted runner 环境不同 | 固定 runner 环境 baseline、同环境回归阈值和超过 10% 回退告警 |
 | P2 | L1 | registry 基础、未知数据源配置回退、生命周期/并发证据、entry point 扩展契约和 5 轮外部风格样例观察已完成 | 继续观察已安装扩展并形成 legacy registrar/版本合同的长期兼容与下线策略 |
@@ -722,6 +722,20 @@ split 报告和线上权重校准。
 
 收尾边界：当前环境没有 Provider 凭据，真实运行结果、稳定周期和 GUI/headless record/event
 完整等价仍待在有授权凭据的环境中执行。
+
+## 2.26 本轮完成结果（L3：live harness Pipeline opt-in）
+
+本轮不改变默认 rollout 开关，只扩展显式 live observation：
+
+- `tools/run_live_headless_observation.py` 新增 `--pipeline-builder-enabled`；
+- 不传参数保持 legacy，传入后仅本次运行使用 Pipeline；
+- summary 记录开关状态、终态、事件序列、record 写入和严格 replay 结果，不写入敏感原文；
+- 普通/夜间 CI 仍不会触发 Provider。
+
+验证：live harness 安全守卫测试、Ruff、`py_compile` 和 `git diff --check` 通过。
+
+收尾边界：当前环境没有 Provider 凭据，本轮未运行真实 legacy/Pipeline，不能宣称真实等价或
+稳定周期完成。
 
 ## 3. 每轮建议交付物
 

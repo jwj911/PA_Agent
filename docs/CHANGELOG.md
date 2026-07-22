@@ -18,6 +18,30 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L3：live harness Pipeline opt-in）
+
+本轮不改变 `pipeline_builder_enabled` 默认值，只让显式 live observation harness 可以在授权
+环境分别观测 legacy 和 Pipeline 路径。
+
+### 已交付
+
+- `tools/run_live_headless_observation.py` 新增 `--pipeline-builder-enabled`；
+  不传参数仍走 legacy，传入后仅本次显式运行使用 Pipeline。
+- summary 固定记录 `pipeline_builder_enabled`、终态、事件序列、record 写入和严格 replay
+  结果，不记录 Provider 原文、prompt、行情、价格或 token。
+- 保持普通/夜间 CI 不触发真实 Provider，现有固定 fixture rollout 和默认关闭约束不变。
+
+### 明确边界
+
+- 本轮只提供真实 rollout 的安全入口；未在当前环境调用 Provider，不能宣称 legacy/Pipeline
+  真实运行等价或稳定周期完成。
+
+### 验证
+
+- live harness 安全守卫测试、Ruff、`py_compile` 和 `git diff --check` → **通过**。
+
+---
+
 ## [Unreleased] — 2026-07-22（L6：显式 live headless observation harness）
 
 本轮提供真实 Provider 观察的显式入口，不读取 `config/settings.json`，不接入普通/夜间 CI，

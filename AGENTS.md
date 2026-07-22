@@ -472,6 +472,8 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     流式内容、策略文件和写入边界对照；这只是受控 rollout evidence，不是生产稳定观察。
     后续需真实 Provider 稳定观察周期和 GUI/headless 真实运行 final/partial/cancel/failure
     evidence 后才评估启用默认 flag。
+    显式 `tools/run_live_headless_observation.py --pipeline-builder-enabled` 只对本次运行打开
+    Pipeline；未传参数保持 legacy，普通/夜间 CI 不得触发该脚本。
 17. **L3 Pipeline 生命周期日志**：Pipeline enabled 路径以同一 `trace_id` 关联一次执行，
     使用 `pipeline.lifecycle`、`pipeline.event`、`pipeline.step` 和 `pipeline.timing` 四类结构化事件；主要字段
     为 `pipeline_step`、结果/终态分类、异常类型分类、耗时、跳过原因、写入状态和
