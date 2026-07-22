@@ -20,7 +20,7 @@
 | 路线 | 当前状态 | 已有基础 | 主要剩余工作 |
 |---|---|---|---|
 | L1 Provider/数据源注册表 | 治理与扩展契约已交付，进入观察期 | `data/registry.py`、`ai/provider_registry.py` 已支持规格、优先级、延迟 builder、运行时注册和 entry point 扩展发现；未知数据源配置已安全回退；第 236 轮及本轮补齐规范化、replace/unregister、并发、lazy-import、扩展失败隔离和锁外执行证据 | 观察外部扩展样例；必要时补充版本化契约和插件兼容策略 |
-| L2 Prompt 模板引擎 | 实现完成，兼容观察期 | `Stage1PromptBuilder`、`Stage2PromptBuilder`、29 个模板 manifest、`TemplateStore`、`TemplateContext`、严格变量渲染、system/Stage 1/Stage 2/continuation golden snapshots | 稳定周期后评估旧 helper、旧 loader 和兼容开关的下线 |
+| L2 Prompt 模板引擎 | 5 轮固定 fixture 兼容观察已通过，仍保留回滚路径 | `Stage1PromptBuilder`、`Stage2PromptBuilder`、29 个模板 manifest、`TemplateStore`、`TemplateContext`、严格变量渲染、system/Stage 1/Stage 2/continuation golden snapshots；本轮重复比较 TemplateStore/旧 loader 的 system、Stage 1、Stage 2 和 continuation 输出 | 继续记录稳定周期，之后评估旧 helper、旧 loader 和兼容开关的下线 |
 | L3 Pipeline Builder | 受控 fixture rollout 观察已完成，默认 legacy，真实观察周期未收口 | 新增 PyQt-free `orchestrator/pipeline/`、`PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step` 和 `PersistStep`；新增 `orchestrator.pipeline_builder_enabled`（默认 `false`）及 `pa_agent/config/orchestrator.py`；flag-off 的 `submit()` 走 legacy，flag-on 委托 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep`；Task 10 终态矩阵和本轮 5 场景×3 轮 flag-off/flag-on 对照均通过；默认路径仍为 legacy | 真实 Provider 稳定观察周期、真实运行 GUI/headless final/partial/cancel/failure evidence；满足后才评估启用默认 flag，L3 尚未收口 |
 | L4 性能优化 | 固定 synthetic benchmark 和预算报告已交付，持续回归未收口 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；新增 `pa-agent.performance.v1` runner、p50/p95 报告和 100/500/5000 bars 基准 | CI/夜间持续回归、环境基线维护和超过 10% 回退告警 |
 | L5 经验库升级 | 离线评估合同/scorer 已交付，真实数据评估未收口 | 全量相关性排序 + K 线几何相似度；新增版本化脱敏评估 dataset 和 `Recall@K`/`NDCG@K`/fallback/stability scorer；不改变线上排序 | 真实脱敏数据集、固定 train/evaluation 切分、人工标注和权重校准 |
@@ -255,6 +255,9 @@ Stage 1、Stage 2 和 continuation，不替换任何中文策略文本。Templat
 5. 已迁移 Stage 2 user prompt 和 continuation prompt，并覆盖 standalone/prefix-chain 两条路径。
 6. 已新增 `TemplateContext`、严格变量渲染和 Stage 2 golden snapshots；旧 helper、旧 loader
    和兼容开关进入观察期，暂不删除。
+7. 本轮新增 5 轮固定 fixture 兼容观察，重复验证 system、Stage 1、Stage 2 standalone、
+   continuation standalone/prefix-chain 与旧 loader 字节相等；`use_template_store=False` 继续
+   作为显式回滚路径。
 
 ### 5.5 验收/回滚
 
@@ -263,7 +266,8 @@ Stage 1、Stage 2 和 continuation，不替换任何中文策略文本。Templat
 - KV prefix 测试确认 system 前缀不漂移；
 - 任一迁移阶段出现差异时，关闭对应的 `use_template_store`/feature flag 即可回退旧 assembler；
 - 模板目录损坏不会影响旧路径启动；
-- 兼容观察期内旧/新 loader 可按固定 fixture 重放并回滚。
+- 兼容观察期内旧/新 loader 可按固定 fixture 重放并回滚；本轮已完成 5 轮观察，尚未达到
+  删除旧入口的发布/回滚条件。
 
 ## 6. L3：Pipeline Builder / State Machine
 

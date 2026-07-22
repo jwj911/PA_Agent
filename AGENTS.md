@@ -488,3 +488,9 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     K-line geometry 的 100/500/5000 bars，报告只保留耗时、平台和预算状态，不写行情原文。
     当前基线见 `docs/benchmarks/l4_synthetic_2026-07-22.json`；CI/夜间持续回归和同环境
     baseline 维护完成前，不得据单次 benchmark 修改热路径。
+20. **L2 Prompt 兼容观察当前进度**：TemplateStore、TemplateContext、严格变量渲染和
+    29 个模板 golden snapshot 已完成；本轮用固定 `prompt_golden.json` 连续 5 轮比较
+    TemplateStore/旧 loader 的 shared system、Stage 1、Stage 2 standalone、continuation
+    standalone/prefix-chain，并覆盖 conservative/balanced stance，结果保持字节等价。
+    `use_template_store=False`、旧 `_load()` 和兼容回滚路径在完整稳定周期结束前不得删除，
+    不得顺手重写 `prompt_engineering/` 中文文本。

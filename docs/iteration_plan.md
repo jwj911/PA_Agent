@@ -15,7 +15,7 @@
 | 路线 | 当前状态 | 已完成基础 | 主要剩余工作 |
 |---|---|---|---|
 | L1 Provider/数据源注册表 | 治理与扩展契约已交付，进入观察期 | 数据源注册表、AI Provider 注册表、优先级 matcher、延迟 builder、运行时注册 API、未知数据源配置安全回退；本轮补齐 entry point 发现、registrar 契约、失败隔离、规范化、replace/unregister、并发和懒导入证据 | 外部扩展样例的兼容观察、版本化契约策略 |
-| L2 Prompt 模板引擎 | 实现完成，兼容观察期 | `TemplateStore`、29 个模板 manifest、system/Stage 1/Stage 2/continuation 迁移、`TemplateContext`、严格变量渲染、golden snapshots 和整组回退 | 观察一个稳定周期后评估移除重复 helper、兼容开关和旧 loader |
+| L2 Prompt 模板引擎 | 5 轮固定 fixture 兼容观察已通过，仍保留回滚路径 | `TemplateStore`、29 个模板 manifest、system/Stage 1/Stage 2/continuation 迁移、`TemplateContext`、严格变量渲染、golden snapshots 和整组回退；本轮重复比较 TemplateStore/旧 loader 的 system、Stage 1、Stage 2 和 continuation 输出 | 继续记录稳定周期后评估移除重复 helper、兼容开关和旧 loader |
 | L3 Pipeline Builder | 受控 fixture rollout 观察已完成，默认 legacy，真实观察周期未收口 | 新增 PyQt-free `PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step` 和 `PersistStep`；新增 `orchestrator.pipeline_builder_enabled`（默认 `false`）及 `pa_agent/config/orchestrator.py`；`submit()` flag-off 走原 legacy 实现，flag-on 委托完整 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep` Pipeline；Task 10 终态矩阵及本轮 5 场景×3 轮 flag-off/flag-on 对照均通过 | 真实 Provider 稳定观察周期、真实运行 GUI/headless final/partial/cancel/failure evidence，以及满足后再启用默认 flag |
 | L4 性能预算 | 固定 synthetic benchmark 和预算报告已交付，持续回归未收口 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；新增 `pa-agent.performance.v1` runner、p50/p95 报告和 100/500/5000 bars 基准 | CI/夜间持续回归、环境基线维护和超过 10% 回退告警 |
 | L5 经验库升级 | 离线评估合同/scorer 已交付，真实数据评估未收口 | 全量相关性排序和 K 线几何相似度已接入；新增版本化脱敏评估 dataset、`Recall@K`/`NDCG@K`/fallback/stability scorer，不改变线上排序 | 真实脱敏数据集、固定 train/evaluation 切分、人工标注和权重校准 |
@@ -36,7 +36,7 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 | P1 | L5 | scorer 和数据合同已建立，但经验目录仍无真实案例 | 真实脱敏数据集、固定切分和可重复的 `Recall@K`、`NDCG@K`、fallback rate、稳定性报告 |
 | P1 | L4 | benchmark、预算和当前报告已建立，但尚未接入持续回归 | 固定 fixture 基线、同环境回归阈值和 CI/夜间任务报告 |
 | P2 | L1 | registry 基础、未知数据源配置回退、生命周期/并发证据和 entry point 扩展契约已完成 | 外部扩展样例的兼容观察和版本化契约策略 |
-| P2 | L2 | 实现已完成，但 `use_template_store` 与旧 loader 尚处兼容观察期 | 稳定周期内新旧路径持续等价，并形成兼容入口下线计划 |
+| P2 | L2 | 5 轮固定 fixture 新旧路径等价已通过，但 `use_template_store` 与旧 loader 仍需保留 | 继续稳定周期内重放并形成兼容入口下线计划 |
 
 当前主链路为 **L6 → L3 → L5/L4**；L2 已完成实现并进入兼容观察期，L1 可独立并行治理，
 但不得成为 L6/L3 主线的隐式前置条件。
@@ -611,6 +611,23 @@ CI target 和 `git diff --check` 通过。
 
 收尾边界：当前报告是固定环境基线，不代表跨机器性能结论；CI/夜间持续回归和同环境基线维护
 仍未完成。
+
+## 2.21 本轮完成结果（L2：TemplateStore/旧 loader 兼容观察）
+
+本轮不修改任何中文 Prompt 文本和模板 manifest，只重复验证迁移回滚边界：
+
+- 新增 `tests/integration/test_l2_template_compatibility_observation.py`；
+- 固定 `prompt_golden.json` Stage 2 fixture，连续 5 轮比较 TemplateStore 开启与
+  `use_template_store=False` 旧 loader；
+- 覆盖 shared system、Stage 1、Stage 2 standalone、continuation standalone 和
+  prefix-chain，并额外比较 conservative/balanced decision stance；
+- 将兼容观察测试纳入 CI targeted pytest，旧 loader 继续作为显式回滚路径。
+
+验证：L2 兼容观察、TemplateStore、TemplateContext 测试全部通过；Ruff、`py_compile`、CI
+target 和 `git diff --check` 通过。
+
+收尾边界：本轮只证明固定 fixture 下 5 轮稳定等价，不代表旧 helper/loader 可以立即删除；
+仍需完整稳定周期和兼容入口下线计划。
 
 ## 3. 每轮建议交付物
 

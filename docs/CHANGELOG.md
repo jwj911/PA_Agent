@@ -18,6 +18,32 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L2：TemplateStore/旧 loader 兼容观察）
+
+本轮不修改中文 Prompt 文本和模板 manifest，只重复验证 TemplateStore 迁移与旧 loader 回滚
+边界。
+
+### 已交付
+
+- 新增 `tests/integration/test_l2_template_compatibility_observation.py`。
+- 固定 `prompt_golden.json` Stage 2 fixture，连续 5 轮比较 TemplateStore 开启与
+  `use_template_store=False` 旧 loader。
+- 覆盖 shared system、Stage 1、Stage 2 standalone、continuation standalone/prefix-chain，
+  并比较 conservative/balanced decision stance；所有 prompt 消息保持字节相等。
+- 将兼容观察测试加入 CI targeted pytest，旧 loader 继续作为显式回滚路径。
+
+### 明确边界
+
+- 本轮只证明固定 fixture 下 5 轮稳定等价，不删除旧 helper、旧 loader 或兼容开关。
+- 完整稳定周期和兼容入口下线计划仍待后续。
+
+### 验证
+
+- L2 兼容观察、TemplateStore、TemplateContext 测试 → **通过**。
+- Ruff、`py_compile`、CI target 和 `git diff --check` → **通过**。
+
+---
+
 ## [Unreleased] — 2026-07-22（L4：固定 synthetic benchmark 与 p50/p95 预算）
 
 本轮建立 L4 的固定性能证据，不修改 snapshot、K 线几何或其他热路径实现。
