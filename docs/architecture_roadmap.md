@@ -22,7 +22,7 @@
 | L1 Provider/数据源注册表 | 外部扩展兼容观察已通过，仍保留 legacy registrar | `data/registry.py`、`ai/provider_registry.py` 已支持规格、优先级、延迟 builder、运行时注册和 entry point 扩展发现；未知数据源配置已安全回退；第 236 轮及本轮补齐规范化、replace/unregister、并发、lazy-import、扩展失败隔离、锁外执行和 `pa-agent.registry-extension.v1` 版本化 registrar 证据 | 继续观察已安装扩展；形成 legacy registrar/版本合同的长期兼容与下线策略 |
 | L2 Prompt 模板引擎 | 5 轮固定 fixture 兼容观察已通过，仍保留回滚路径 | `Stage1PromptBuilder`、`Stage2PromptBuilder`、29 个模板 manifest、`TemplateStore`、`TemplateContext`、严格变量渲染、system/Stage 1/Stage 2/continuation golden snapshots；本轮重复比较 TemplateStore/旧 loader 的 system、Stage 1、Stage 2 和 continuation 输出 | 继续记录稳定周期，之后评估旧 helper、旧 loader 和兼容开关的下线 |
 | L3 Pipeline Builder | 受控 fixture rollout 和显式 live legacy/Pipeline 入口已建立，默认 legacy，真实观察周期未收口 | 新增 PyQt-free `orchestrator/pipeline/`、`PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step` 和 `PersistStep`；新增 `orchestrator.pipeline_builder_enabled`（默认 `false`）及 `pa_agent/config/orchestrator.py`；flag-off 的 `submit()` 走 legacy，flag-on 委托 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep`；Task 10 终态矩阵、本轮 5 场景×3 轮对照和 live harness opt-in 均通过；默认路径仍为 legacy | 在有凭据环境分别运行 legacy/Pipeline，完成真实稳定观察和 GUI/headless final/partial/cancel/failure evidence；满足后才评估启用默认 flag，L3 尚未收口 |
-| L4 性能优化 | synthetic benchmark 已接入手动/夜间预算门禁和 hosted runner baseline cache，首轮缓存仍待运行 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；新增 `pa-agent.performance.v1` runner、p50/p95 报告、100/500/5000 bars 基准、`.github/workflows/l4-benchmark.yml` 和按 iterations/warmups 分区的成功 baseline cache | 运行首轮成功 baseline，审核 runner image 变化并维护超过 10% 回退告警 |
+| L4 性能优化 | 首轮 hosted runner baseline 已成功产生，第二次同参数 regression 对照仍待运行 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；新增 `pa-agent.performance.v1` runner、p50/p95 报告、100/500/5000 bars 基准、`.github/workflows/l4-benchmark.yml` 和按 iterations/warmups 分区的成功 baseline cache | 使用相同 iterations/warmups 再运行一次，审核 runner image 变化并维护超过 10% 回退告警 |
 | L5 经验库升级 | 评估合同、scorer 和 instrument-grouped 固定切分已交付，真实数据评估未收口 | 全量相关性排序 + K 线几何相似度；新增 `pa-agent.experience-eval.v1`、`pa-agent.experience-split.v1`、`instrument-hash.v1`、dataset digest 和 `Recall@K`/`NDCG@K`/fallback/stability scorer；不改变线上排序 | 真实脱敏数据集、人工标注、指标报告和权重校准 |
 | L6 无 GUI 运行 | mock 全链路等价、跨进程 replay、显式 live harness 和 artifact validator 已建立，真实环境观察未收口 | `AppEvent`、`EventSink`、`CollectingEventSink`、`JsonlEventSink`、`replay_jsonl`、严格 `expected_correlation_id` replay、共享 `_build_core()`、`bootstrap_gui()`/`bootstrap_headless()`、兼容 `bootstrap()`、`HeadlessAnalysisAdapter`、`pa-agent.event.v1` 和 PyQt-free `pa-agent headless`；显式 `analyze --run/--execute` 已接入两阶段 orchestrator、record 和 JSONL 事件；新增 `tools/run_live_headless_observation.py`/`tools/validate_live_observation.py`；GUI `_AnalysisWorker` 与 headless adapter 已有 final/partial/cancel/failure fixture 对照 | 在有凭据环境运行真实 Provider 稳定周期，使用 validator 审计并收集 record/event 完整等价证据 |
 
@@ -658,12 +658,16 @@ pa-agent headless analyze --input snapshot.json --run --records-dir records/ --e
 
 - 已建立固定 synthetic benchmark、p50/p95 报告和 10% regression 判定；
 - 已新增 `.github/workflows/l4-benchmark.yml`，接入手动/夜间预算门禁和报告 artifact；
-- workflow 已按 runner/Python/iterations/warmups 缓存最近一次成功 baseline；首次 Actions 运行
-  后维护并审核 runner image 变化；
+- workflow 已按 runner/Python/iterations/warmups 缓存最近一次成功 baseline；首次
+  `workflow_dispatch` 已在 Windows/Python 3.12.9 成功完成 benchmark、baseline save 和 artifact
+  upload；后续仍需审核 runner image 变化；
 - 下一轮由具备仓库 Write 权限的账号手动触发 `.github/workflows/l4-benchmark.yml`：网页入口
   不需本地 token；CLI/API 入口使用仅限 `PA_Agent` 的 Fine-grained PAT，Repository
   `Actions: Read and write`。首次以 `iterations=30`、`warmups=5` 建立 baseline，第二次同参
   数运行验证 restore、`--baseline` p95 比较和 10% regression 门禁；
+- 首轮证据为 workflow run `29923921295`、job `Windows / Python 3.12.9` 和 artifact
+  `l4-benchmark-29923921295`；首轮无旧 baseline，因此不把该次成功解释为已完成 10% regression
+  对照；
 - PAT、Provider key 和 benchmark 原始敏感配置不得写入仓库或日志；触发权限配置不等于扩大
   workflow 内的 `GITHUB_TOKEN` 权限，当前 `contents: read` 保持最小范围；
 - 只对有数据证明的热点继续优化；

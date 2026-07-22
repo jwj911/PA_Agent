@@ -502,12 +502,13 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     当前基线见 `docs/benchmarks/l4_synthetic_2026-07-22.json`；`.github/workflows/l4-benchmark.yml`
     已提供 Windows/Python 3.12.9 的手动/夜间预算门禁、按 iterations/warmups 分区的最近成功
     baseline cache 和 artifact 留存。仓库本地 baseline 不得直接用于 hosted runner 的 10%
-    regression 比较；首次 Actions 运行后仍须审核 runner image 变化，不得据单次 benchmark
+    regression 比较；首次 Actions 运行已在 run `29923921295` 成功产生 baseline 和
+    `l4-benchmark-29923921295` artifact，但仍须审核 runner image 变化，不得据单次 benchmark
     修改热路径。后续手动触发要求仓库 Write 权限；Fine-grained PAT 仅选择
     `PA_Agent` 并授予 Repository `Actions: Read and write`，或直接使用 GitHub Actions
     网页的 **Run workflow**。首次以 `iterations=30`、`warmups=5` 建立 baseline，第二次同参数
-    运行验证 restore、p95 比较和 10% regression 门禁；PAT、Provider key 和 benchmark
-    敏感配置不得写入仓库、日志或聊天。
+    运行验证 restore、p95 比较和 10% regression 门禁；首轮无历史 baseline，不能单独证明
+    regression 对照；PAT、Provider key 和 benchmark 敏感配置不得写入仓库、日志或聊天。
 20. **L2 Prompt 兼容观察当前进度**：TemplateStore、TemplateContext、严格变量渲染和
     29 个模板 golden snapshot 已完成；本轮用固定 `prompt_golden.json` 连续 5 轮比较
     TemplateStore/旧 loader 的 shared system、Stage 1、Stage 2 standalone、continuation

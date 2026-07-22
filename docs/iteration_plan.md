@@ -17,7 +17,7 @@
 | L1 Provider/数据源注册表 | 外部扩展兼容观察已通过，仍保留 legacy registrar | 数据源注册表、AI Provider 注册表、优先级 matcher、延迟 builder、运行时注册 API、未知数据源配置安全回退；本轮补齐 entry point 发现、registrar 契约、失败隔离、规范化、replace/unregister、并发、懒导入和 `pa-agent.registry-extension.v1` 版本观察证据 | 继续观察已安装扩展并形成 legacy registrar/版本合同的长期兼容与下线策略 |
 | L2 Prompt 模板引擎 | 5 轮固定 fixture 兼容观察已通过，仍保留回滚路径 | `TemplateStore`、29 个模板 manifest、system/Stage 1/Stage 2/continuation 迁移、`TemplateContext`、严格变量渲染、golden snapshots 和整组回退；本轮重复比较 TemplateStore/旧 loader 的 system、Stage 1、Stage 2 和 continuation 输出 | 继续记录稳定周期后评估移除重复 helper、兼容开关和旧 loader |
 | L3 Pipeline Builder | 受控 fixture rollout 和显式 live legacy/Pipeline 入口已建立，默认 legacy，真实观察周期未收口 | 新增 PyQt-free `PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step` 和 `PersistStep`；新增 `orchestrator.pipeline_builder_enabled`（默认 `false`）及 `pa_agent/config/orchestrator.py`；`submit()` flag-off 走原 legacy 实现，flag-on 委托完整 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep` Pipeline；Task 10 终态矩阵、本轮 5 场景×3 轮对照和 live harness opt-in 均通过 | 在有凭据环境分别运行 legacy/Pipeline，完成真实稳定周期和 GUI/headless final/partial/cancel/failure evidence，之后才评估默认 flag |
-| L4 性能预算 | synthetic benchmark 已接入手动/夜间预算门禁和 hosted runner baseline cache，首轮缓存仍待运行 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；新增 `pa-agent.performance.v1` runner、p50/p95 报告、100/500/5000 bars 基准、`.github/workflows/l4-benchmark.yml` 和按 iterations/warmups 分区的成功 baseline cache | 运行首轮成功 baseline，持续审核 runner image 变化并维护超过 10% 回退告警 |
+| L4 性能预算 | 首轮 hosted runner baseline 已成功产生，第二次同参数 regression 对照仍待运行 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；新增 `pa-agent.performance.v1` runner、p50/p95 报告、100/500/5000 bars 基准、`.github/workflows/l4-benchmark.yml` 和按 iterations/warmups 分区的成功 baseline cache | 使用相同 iterations/warmups 再运行一次，审核 runner image 变化并完成超过 10% 回退告警验证 |
 | L5 经验库升级 | 评估合同、scorer 和 instrument-grouped 固定切分已交付，真实数据评估未收口 | 全量相关性排序和 K 线几何相似度已接入；新增 `pa-agent.experience-eval.v1`、`pa-agent.experience-split.v1`、`instrument-hash.v1`、dataset digest、`Recall@K`/`NDCG@K`/fallback/stability scorer，不改变线上排序 | 真实脱敏数据集、人工标注、指标报告和权重校准 |
 | L6 Headless/编排 | mock 全链路等价、跨进程 replay、显式 live harness 和 artifact validator 已建立，真实环境观察未收口 | `AppEvent`、`EventSink`、`JsonlEventSink`、`replay_jsonl`、严格 `expected_correlation_id` replay、`bootstrap_headless()`、共享 `_build_core()`、`bootstrap_gui()`、兼容 `bootstrap()`、`HeadlessAnalysisAdapter`、PyQt-free `pa-agent headless`、`tools/run_live_headless_observation.py`、`tools/validate_live_observation.py`；`analyze --run/--execute` 已接入两阶段 orchestrator、record 持久化和 JSONL 事件；GUI `_AnalysisWorker` 与 headless adapter 已覆盖 final/partial/cancel/failure fixture | 在有凭据环境运行真实 Provider 稳定周期，使用 validator 审计并收集 record/event 完整等价证据 |
 
@@ -34,7 +34,7 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 | P0 | L6 | mock Provider/fixed fixture 下 GUI/headless final/partial/cancel/failure 等价、`pa-agent.event.v1` envelope、严格跨进程 replay、显式 live harness 和 artifact validator 已交付 | 真实 Provider 只允许显式执行；需在有凭据环境补真实运行 record/事件证据、稳定观察和 record/event 完整等价 |
 | P1 | L3 | `Stage1Step`、`RouteStep`、`Stage2Step`、`PersistStep` 已拆出并由 `orchestrator.pipeline_builder_enabled` 控制；默认 `false`，flag-off 仍走 legacy；显式 live harness 可切换本次运行 | Task 10 终态矩阵及本轮 5 场景×3 轮 flag-off/flag-on 对照均通过；仍需在有凭据环境完成真实 Provider 稳定观察及 GUI/headless 真实运行 final/partial/cancel/failure evidence，之后才评估启用默认 flag |
 | P1 | L5 | scorer、数据合同和 instrument-grouped 固定切分已建立，但经验目录仍无真实案例 | 真实脱敏数据集、人工标注、可重复的 `Recall@K`、`NDCG@K`、fallback rate、稳定性报告和权重校准 |
-| P1 | L4 | benchmark、预算、手动/夜间 workflow 和 hosted runner baseline cache 已建立；首轮成功 baseline 尚未产生 | 运行首轮成功 baseline，审核 runner image 变化并保持同环境回归阈值和超过 10% 回退告警 |
+| P1 | L4 | benchmark、预算、手动/夜间 workflow 和 hosted runner baseline cache 已建立；首轮 hosted baseline 已成功产生 | 使用相同参数再次运行，确认 baseline restore、同环境 p95 对照和超过 10% 回退告警；审核 runner image 变化 |
 | P2 | L1 | registry 基础、未知数据源配置回退、生命周期/并发证据、entry point 扩展契约和 5 轮外部风格样例观察已完成 | 继续观察已安装扩展并形成 legacy registrar/版本合同的长期兼容与下线策略 |
 | P2 | L2 | 5 轮固定 fixture 新旧路径等价已通过，但 `use_template_store` 与旧 loader 仍需保留 | 继续稳定周期内重放并形成兼容入口下线计划 |
 
@@ -768,7 +768,7 @@ split 报告和线上权重校准。
 
 ## 2.29 下一轮待执行（L4：workflow dispatch 权限与 hosted baseline 验收）
 
-本轮只记录外部执行步骤，不把权限配置或 hosted runner 结果误标为已完成：
+本节记录外部执行步骤和验收边界，不把首轮预算通过误标为完整回归闭合：
 
 - 仓库 `jwj911/PA_Agent` 的 workflow 文件为 `.github/workflows/l4-benchmark.yml`，分支为
   `main`，已声明 `workflow_dispatch` 和每日 schedule；
@@ -793,8 +793,23 @@ gh workflow run l4-benchmark.yml `
 gh run list --repo jwj911/PA_Agent --workflow l4-benchmark.yml --limit 5
 ```
 
-收尾边界：当前工作区没有 GitHub Actions 触发凭据，且尚无 hosted run；本节仅作为后续
-授权环境的执行清单，不替代真实 runner 证据。
+收尾边界：首轮 hosted run 已由具备权限的仓库账号完成；第二次同参数运行及其
+`--baseline` 对照仍是本节的后续验收项。
+
+## 2.30 本轮完成结果（L4：首次 hosted runner baseline）
+
+GitHub Actions 已在授权环境通过 `workflow_dispatch` 执行首次 L4 benchmark：
+
+- workflow run：`L4 Synthetic Benchmark #1`，run ID `29923921295`，结论为 `success`；
+- head branch 为 `main`，head SHA 为 `7c6afd1539955bed04ceb6360d43125a971efe68`；
+- job `Windows / Python 3.12.9` 成功完成依赖安装、benchmark、baseline staging、baseline
+  cache save 和 report upload；
+- artifact 为 `l4-benchmark-29923921295`，GitHub 报告 digest 为
+  `sha256:67e0d83759cb1f7704ce731447a8461c4dad9637806f866f1a52b264408c443b`。
+
+验证边界：这是首次无历史 baseline 的 hosted 运行，证明预算门禁、baseline 保存和 artifact
+上传链路可用；尚未证明第二次运行的同环境 `--baseline` p95 比较和 10% regression 门禁，
+因此 L4 仍保留一项后续验收。
 
 ## 3. 每轮建议交付物
 

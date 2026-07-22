@@ -18,6 +18,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L4：首次 hosted runner baseline）
+
+本轮由授权仓库账号通过 `workflow_dispatch` 执行首次 L4 hosted benchmark，验证固定
+Windows/Python runner 的预算门禁、baseline 保存和 artifact 上传链路。
+
+### 运行证据
+
+- workflow run：`L4 Synthetic Benchmark #1`，run ID `29923921295`，`success`；
+- `main` / head SHA：`7c6afd1539955bed04ceb6360d43125a971efe68`；
+- job：`Windows / Python 3.12.9`，benchmark、baseline staging、cache save 和 report upload
+  全部成功；
+- artifact：`l4-benchmark-29923921295`；
+- artifact digest：`sha256:67e0d83759cb1f7704ce731447a8461c4dad9637806f866f1a52b264408c443b`。
+
+### 明确边界
+
+- 首次运行没有历史 hosted baseline，因此只证明预算门禁和 baseline save/upload 链路可用；
+- 第二次使用相同 `iterations=30`、`warmups=5` 参数运行后，才能证明 cache restore、
+  `--baseline` p95 比较和 10% regression 门禁。
+
+---
+
 ## [Unreleased] — 2026-07-22（文档：L4 workflow 触发权限与 hosted baseline 验收）
 
 本轮记录后续由维护者手动完成的 L4 hosted runner 测试步骤，不改变 workflow 或性能热路径。
