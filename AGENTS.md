@@ -417,10 +417,12 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
 11. **进程级缓存/全局状态需线程安全**：后台 QThread 会并发访问模块级缓存。新增全局可变状态时，应配套加锁（耗时构建/IO 放锁外，用双检锁），保持输出与语义不变。
 12. **L1 当前进度**：数据源注册表和 AI Provider 注册表已完成第二阶段基础与第一批治理测试，
     支持规格、优先级 matcher、延迟 builder、运行时注册，以及规范化 key、replace/unregister、
-    并发读写和 lazy-import 证据；必须保留 `openclaw_cs` → Cursor SDK 的专用路由，以及其余
+    并发读写、lazy-import 和 entry point 扩展发现证据；必须保留 `openclaw_cs` → Cursor SDK 的专用路由，以及其余
     模型 → OpenAI-compatible client 的兼容行为。Provider 同步仍由 `ProviderSyncService`
     负责，不得重复搬入 registry 或 client factory。未知数据源配置已在 settings 加载时安全回退到
-    `mt5` 并持久化规范化值；插件发现、正式扩展契约和 builder 锁外执行证据仍待后续收口。
+    `mt5` 并持久化规范化值；扩展 registrar 通过 `pa_agent.extensions` 的
+    `pa_agent.data_sources`/`pa_agent.ai_clients` entry point group 注册，失败隔离且不扫描任意目录；
+    外部扩展兼容观察和版本化契约策略仍待收口。
 13. **L6 当前进度**：`AppContext` 已拆出共享 core helper 和 `bootstrap_gui()`；`bootstrap()`
     委托 GUI 路径。headless 复用 core helper，必须继续保持无 Qt `EventBus` import、无数据源连接；
     GUI adapter 继续负责 `EventBus`、数据源连接/订阅，且 `event_sink` 指向 `EventBus`。第 229 轮已

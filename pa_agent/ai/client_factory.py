@@ -13,6 +13,7 @@ from pa_agent.ai.provider_registry import (
     AIClientSpec,
 )
 from pa_agent.config.settings import AIProviderSettings
+from pa_agent.extensions import discover_ai_client_extensions
 
 _REGISTRY = AIClientRegistry()
 
@@ -55,6 +56,7 @@ def _register_builtin_routes() -> None:
 
 
 _register_builtin_routes()
+discover_ai_client_extensions(_REGISTRY)
 
 
 def register_ai_client_provider(

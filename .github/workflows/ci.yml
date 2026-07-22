@@ -181,6 +181,7 @@ jobs:
           tests/unit/test_event_bus.py
           tests/unit/test_event_sink.py
           tests/unit/test_logging.py
+          tests/unit/test_extensions.py
           tests/unit/test_ruff_baseline.py
           tests/unit/test_ci_workflow_targets.py
           tests/property
@@ -314,6 +315,8 @@ jobs:
           pa_agent/gui/theme
           scripts/check_ci_workflow_targets.py
           pa_agent/config/orchestrator.py
+          pa_agent/extensions.py
+          tests/unit/test_extensions.py
           tests/__init__.py
           tests/e2e/__init__.py
           tests/fixtures/__init__.py

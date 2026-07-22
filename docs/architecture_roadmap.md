@@ -19,7 +19,7 @@
 
 | 路线 | 当前状态 | 已有基础 | 主要剩余工作 |
 |---|---|---|---|
-| L1 Provider/数据源注册表 | 基础完成，治理切片已交付 | `data/registry.py`、`ai/provider_registry.py` 已支持规格、优先级、延迟 builder 和运行时注册；未知数据源配置已安全回退；第 236 轮补齐规范化、replace/unregister、并发和 lazy-import 证据 | 插件发现方案、正式扩展契约文档、builder 锁外执行证据 |
+| L1 Provider/数据源注册表 | 治理与扩展契约已交付，进入观察期 | `data/registry.py`、`ai/provider_registry.py` 已支持规格、优先级、延迟 builder、运行时注册和 entry point 扩展发现；未知数据源配置已安全回退；第 236 轮及本轮补齐规范化、replace/unregister、并发、lazy-import、扩展失败隔离和锁外执行证据 | 观察外部扩展样例；必要时补充版本化契约和插件兼容策略 |
 | L2 Prompt 模板引擎 | 实现完成，兼容观察期 | `Stage1PromptBuilder`、`Stage2PromptBuilder`、29 个模板 manifest、`TemplateStore`、`TemplateContext`、严格变量渲染、system/Stage 1/Stage 2/continuation golden snapshots | 稳定周期后评估旧 helper、旧 loader 和兼容开关的下线 |
 | L3 Pipeline Builder | Task 10 已完成 rollout 观察与切换准备，默认 legacy，观察周期未收口 | 新增 PyQt-free `orchestrator/pipeline/`、`PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step` 和 `PersistStep`；新增 `orchestrator.pipeline_builder_enabled`（默认 `false`）及 `pa_agent/config/orchestrator.py`；flag-off 的 `submit()` 走 legacy，flag-on 委托 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep`；Task 10 已补齐完整终态矩阵和 Qt-free headless/GUI adapter equivalence 测试；默认路径仍为 legacy | 真实稳定观察周期、GUI/headless final/partial/cancel/failure 全链路 evidence；满足后才评估启用默认 flag，L3 尚未收口 |
 | L4 性能优化 | 代码优化完成，预算未收口 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁 | 固定 benchmark、预算阈值、p50/p95 报告和持续回归监控 |
@@ -158,13 +158,14 @@ Client/DataSource:
 
 ### 4.3 后续收口
 
-1. **插件发现**：评估 Python entry points 或显式 bootstrap registration，禁止扫描任意目录执行代码。
+1. **插件发现**：已采用 Python entry points；继续观察已安装扩展的兼容性，禁止扫描任意目录执行代码。
 2. **配置持久化**：自定义 kind/model 只作为字符串保存；加载时由注册表校验，未知值安全回退并记录 warning。
-3. **扩展契约**：补充 builder、matcher、settings 注入、线程安全和注销时机的开发者文档。
+3. **扩展契约**：已在 `pa_agent/extensions.py` 和项目文档中固定 registrar、builder、matcher、
+   settings 注入、线程安全和注销时机边界。
 4. **生命周期测试**：验证重复注册、replace、注销、并发读取以及 builder 不在锁内执行。
 
-第 236 轮已完成第 2、4 项的第一批代码证据，并验证运行时注册入口不需要修改
-`create_*` 条件分支；插件发现、正式扩展契约和 builder 锁外执行的可观测证据仍待后续切片。
+第 236 轮已完成第 2、4 项的第一批代码证据，本轮补齐已安装 entry point 发现、扩展失败隔离、
+正式 registrar 契约和 builder 锁外执行证据；运行时注册入口仍不需要修改 `create_*` 条件分支。
 
 ### 4.4 验收标准
 

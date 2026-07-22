@@ -11,6 +11,7 @@ from pa_agent.data.market_defaults import (
     GOLD_TV_SYMBOL,
 )
 from pa_agent.data.registry import DataSourceBuilder, DataSourceRegistry, DataSourceSpec
+from pa_agent.extensions import discover_data_source_extensions
 
 if TYPE_CHECKING:
     from pa_agent.config.settings import Settings
@@ -85,6 +86,7 @@ def _register_builtin_sources() -> None:
 
 
 _register_builtin_sources()
+discover_data_source_extensions(_REGISTRY)
 
 # Compatibility snapshot for existing GUI callers. New integrations should use
 # ``data_source_choices()`` so runtime registrations are visible dynamically.

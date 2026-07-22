@@ -18,6 +18,29 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L1：注册表扩展契约与 entry point 发现）
+
+本轮收口 L1 注册表治理的扩展边界。数据源和 AI client registry 现在可以从已安装包声明的
+Python entry point 加载 registrar，不扫描任意目录，也不把 Provider 同步、网络探测或持久化
+职责带入 registry。
+
+### 已交付
+
+- 新增 `pa_agent/extensions.py`，定义 `pa_agent.data_sources` 和 `pa_agent.ai_clients`
+  两个 entry point group，以及统一的 registrar contract、排序和加载结果。
+- `pa_agent/data/factory.py` 与 `pa_agent/ai/client_factory.py` 在内置规格注册后发现扩展；
+  外部扩展加载失败只记录 `error_type` 并隔离，不影响内置路由。
+- discovery 和 registrar 执行均发生在 registry 内部锁之外；已有 matcher、builder、settings
+  注入和 unregister 语义保持不变。
+- 新增 entry point 排序、加载失败隔离、兼容 metadata API 和安全日志测试，并纳入 CI。
+
+### 验证
+
+- Registry、factory 和 extension focused tests → **24 passed**。
+- 受影响模块 Ruff、`py_compile` 和 `git diff --check` → **通过**。
+
+---
+
 ## [Unreleased] — 2026-07-22（L3 Task 11：Pipeline enabled lifecycle logging）
 
 本轮完成 Pipeline enabled 路径的生命周期日志观测，并保持
