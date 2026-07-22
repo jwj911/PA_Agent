@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping
 from typing import Any
 
@@ -19,6 +20,20 @@ from pa_agent.orchestrator.two_stage import (
     _build_empty_record,
 )
 from pa_agent.util.threading import OrchestratorEvent
+
+logger = logging.getLogger(__name__)
+
+
+def _log(state: PipelineState, event: str, **fields: Any) -> None:
+    """Emit only allowlisted, scalar lifecycle fields for one pipeline."""
+    logger.info(
+        "pipeline.step",
+        extra={
+            "trace_id": state.trace_id,
+            "pipeline_event": event,
+            **fields,
+        },
+    )
 
 
 def _usage_snapshot(value: Any) -> dict[str, Any]:
@@ -282,10 +297,12 @@ class Stage1Step:
 
     def run(self, state: PipelineState, services: Any) -> StepResult:
         """Build, call, validate, and snapshot Stage 1 without Qt dependencies."""
+        _log(state, "preflight_start", pipeline_step=self.name)
         if state.record is None:
             state.record = _build_empty_record(state.frame, services._settings)
 
         if state.cancel_token.is_set():
+            _log(state, "preflight_result", pipeline_step=self.name, pipeline_status="cancelled")
             state.partial_reason = "user_cancelled"
             state.emit(OrchestratorEvent.Cancelled)
             _set_terminal_from_record(
@@ -298,6 +315,12 @@ class Stage1Step:
         from pa_agent.ai.decision_nodes import check_preflight_data
 
         preflight = check_preflight_data(state.frame)
+        _log(
+            state,
+            "preflight_result",
+            pipeline_step=self.name,
+            pipeline_status="passed" if preflight.ok else "insufficient_data",
+        )
         if not preflight.ok:
             state.record = state.record.model_copy(
                 update={
@@ -331,6 +354,13 @@ class Stage1Step:
             persist=False,
         )
         if not isinstance(result, tuple):
+            _log(
+                state,
+                "stage_result",
+                pipeline_step=self.name,
+                pipeline_status="failed",
+                pipeline_reason=state.partial_reason or "stage1_failed",
+            )
             _set_stage1_record_snapshot(state, result)
             _set_terminal_from_record(
                 state,
@@ -358,6 +388,14 @@ class Stage1Step:
             reasoning_effort=reasoning_effort,
             usage_total=usage_total,
         )
+        _log(
+            state,
+            "stage_result",
+            pipeline_step=self.name,
+            pipeline_status="succeeded",
+            pipeline_message_count=len(messages_s1),
+            pipeline_usage_call_count=len(usage_calls),
+        )
         return StepResult.continue_(state)
 
 
@@ -368,6 +406,7 @@ class RouteStep:
 
     def run(self, state: PipelineState, services: Any) -> StepResult:
         """Reuse the legacy route helper and expose its output in state."""
+        _log(state, "route_start", pipeline_step=self.name)
         if state.record is None or state.stage1_reply is None:
             state.mark_terminal(TerminalStatus.STAGE1_FAILED)
             return StepResult.fail(state)
@@ -381,6 +420,13 @@ class RouteStep:
             strategy_files = list(strategy_files)
             experience_entries = list(experience_entries)
         except Exception as exc:
+            _log(
+                state,
+                "route_result",
+                pipeline_step=self.name,
+                pipeline_status="failed",
+                pipeline_exception_type=type(exc).__name__,
+            )
             state.partial_reason = "route_failed"
             state.set_persistence_intent("partial")
             state.record = _record_with_route_snapshot(
@@ -404,8 +450,17 @@ class RouteStep:
             strategy_files=strategy_files,
             experience_entries=experience_entries,
         )
+        _log(
+            state,
+            "route_result",
+            pipeline_step=self.name,
+            pipeline_status="succeeded",
+            pipeline_strategy_file_count=len(strategy_files),
+            pipeline_experience_entry_count=len(experience_entries),
+        )
 
         if state.cancel_token.is_set():
+            _log(state, "route_cancelled", pipeline_step=self.name)
             state.record = _record_with_route_snapshot(
                 state,
                 strategy_files=strategy_files,
@@ -431,6 +486,7 @@ class Stage2Step:
 
     def run(self, state: PipelineState, services: Any) -> StepResult:
         """Build, call, validate, and snapshot Stage 2 without Qt dependencies."""
+        _log(state, "stage2_start", pipeline_step=self.name)
         if state.record is None or state.stage1_reply is None:
             state.mark_terminal(TerminalStatus.STAGE1_FAILED)
             return StepResult.fail(state)
@@ -454,6 +510,13 @@ class Stage2Step:
                 "structure_flip_cooldown_bars": flip_cooldown,
             }
         )
+        _log(
+            state,
+            "stage2_flags",
+            pipeline_step=self.name,
+            pipeline_enable_next_bar=enable_next_bar,
+            pipeline_structure_flip_cooldown_bars=flip_cooldown,
+        )
 
         gate_record = services._try_gate_short_circuit(
             record=state.record,
@@ -468,6 +531,12 @@ class Stage2Step:
             persist=False,
         )
         if gate_record is not None:
+            _log(
+                state,
+                "stage2_gate",
+                pipeline_step=self.name,
+                pipeline_status="short_circuit",
+            )
             state.record = gate_record
             _set_stage1_record_snapshot(state, gate_record, preserve_usage_calls=True)
             _set_stage2_record_snapshot(state, gate_record)
@@ -508,6 +577,19 @@ class Stage2Step:
             persist=False,
             s2_usage_calls_out=s2_usage_calls,
         )
+        _log(
+            state,
+            "stage2_result",
+            pipeline_step=self.name,
+            pipeline_status=(
+                "cancelled"
+                if OrchestratorEvent.Cancelled in state.events
+                else "failed"
+                if OrchestratorEvent.Stage2Failed in state.events
+                else "succeeded"
+            ),
+            pipeline_usage_call_count=len(s2_usage_calls),
+        )
         _set_stage1_record_snapshot(state, state.record, preserve_usage_calls=True)
         _set_stage2_record_snapshot(state, state.record, usage_calls=s2_usage_calls)
         if (
@@ -531,6 +613,12 @@ class PersistStep:
 
     def run(self, state: PipelineState, services: Any) -> StepResult:
         """Write exactly one full or partial record and finish the pipeline."""
+        _log(
+            state,
+            "persist_start",
+            pipeline_step=self.name,
+            pipeline_intent=state.persistence_intent.value,
+        )
         if state.record is None:
             state.partial_reason = state.partial_reason or "persist_failed"
             state.set_persistence_intent(PersistenceIntent.PARTIAL)
@@ -551,7 +639,15 @@ class PersistStep:
             state.set_persistence_intent(PersistenceIntent.FULL)
             try:
                 result = writer.save_full(record)
-            except OSError:
+            except OSError as exc:
+                _log(
+                    state,
+                    "persist_write",
+                    pipeline_step=self.name,
+                    pipeline_write_kind="full",
+                    pipeline_write_status="error",
+                    pipeline_exception_type=type(exc).__name__,
+                )
                 state.persistence_error = True
                 state.partial_reason = "disk_error"
                 state.set_persistence_intent(PersistenceIntent.PARTIAL)
@@ -567,6 +663,13 @@ class PersistStep:
                 state.mark_terminal(TerminalStatus.PERSIST_FAILED)
                 return StepResult.fail(state)
             if not _write_succeeded(writer, result):
+                _log(
+                    state,
+                    "persist_write",
+                    pipeline_step=self.name,
+                    pipeline_write_kind="full",
+                    pipeline_write_status="failed",
+                )
                 state.persistence_error = True
                 state.partial_reason = "disk_error"
                 state.set_persistence_intent(PersistenceIntent.PARTIAL)
@@ -582,6 +685,13 @@ class PersistStep:
                 state.mark_terminal(TerminalStatus.PERSIST_FAILED)
                 return StepResult.fail(state)
             state.persistence_pending = False
+            _log(
+                state,
+                "persist_write",
+                pipeline_step=self.name,
+                pipeline_write_kind="full",
+                pipeline_write_status="succeeded",
+            )
             state.emit(OrchestratorEvent.RecordSaved)
             state.mark_terminal(TerminalStatus.COMPLETED)
             return StepResult.complete(state)
@@ -592,14 +702,36 @@ class PersistStep:
         state.set_persistence_intent(PersistenceIntent.PARTIAL)
         try:
             result = writer.save_partial(record, reason)
-        except OSError:
+        except OSError as exc:
+            _log(
+                state,
+                "persist_write",
+                pipeline_step=self.name,
+                pipeline_write_kind="partial",
+                pipeline_write_status="error",
+                pipeline_exception_type=type(exc).__name__,
+            )
             state.persistence_error = True
             state.persistence_pending = False
             return StepResult.fail(state)
         state.persistence_pending = False
         if not _write_succeeded(writer, result):
+            _log(
+                state,
+                "persist_write",
+                pipeline_step=self.name,
+                pipeline_write_kind="partial",
+                pipeline_write_status="failed",
+            )
             state.persistence_error = True
             return StepResult.fail(state)
+        _log(
+            state,
+            "persist_write",
+            pipeline_step=self.name,
+            pipeline_write_kind="partial",
+            pipeline_write_status="succeeded",
+        )
         return StepResult.complete(state)
 
 

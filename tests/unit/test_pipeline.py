@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from types import SimpleNamespace
 
 import pytest
@@ -36,6 +37,29 @@ class _CompleteStep:
         return StepResult.complete(state)
 
 
+class _RaiseStep:
+    name = "raise"
+
+    def run(self, _state: PipelineState, _services: object) -> StepResult:
+        raise ValueError("PRIVATE_EXCEPTION_TEXT")
+
+
+class _InvalidResultStep:
+    name = "invalid"
+
+    def run(self, _state: PipelineState, _services: object) -> object:
+        return object()
+
+
+class _TerminalPendingStep:
+    name = "terminal_pending"
+
+    def run(self, state: PipelineState, _services: object) -> StepResult:
+        state.mark_terminal(TerminalStatus.CANCELLED)
+        state.defer_persistence()
+        return StepResult.fail(state)
+
+
 def _state() -> PipelineState:
     return PipelineState(frame=object(), cancel_token=CancelToken())
 
@@ -53,6 +77,119 @@ def test_pipeline_builder_runs_ordered_steps_and_marks_completion() -> None:
         "body:complete",
     ]
     assert result.terminal_status is TerminalStatus.COMPLETED
+
+
+def test_pipeline_builder_logs_ordered_safe_lifecycle(caplog) -> None:
+    state = _state()
+    state.stage1_messages = [{"role": "user", "content": "PRIVATE_PROMPT"}]
+    state.stage1_reply = SimpleNamespace(content="PRIVATE_REPLY", raw="PRIVATE_RAW")
+    state.settings_metadata = {"provider": {"api_key": "PRIVATE_KEY"}}
+
+    with caplog.at_level(logging.INFO, logger="pa_agent.orchestrator.pipeline.builder"):
+        result = PipelineBuilder((_ContinueStep(), _CompleteStep())).run(
+            state,
+            services=object(),
+        )
+
+    records = [record for record in caplog.records if record.name.endswith("pipeline.builder")]
+    assert [record.pipeline_event for record in records] == [
+        "start",
+        "step_start",
+        "step_result",
+        "step_start",
+        "step_result",
+        "terminal",
+        "end",
+    ]
+    assert {record.trace_id for record in records} == {result.trace_id}
+    assert all(record.pipeline_elapsed_ms >= 0 for record in records if hasattr(record, "pipeline_elapsed_ms"))
+    rendered = "\n".join(record.getMessage() + repr(record.__dict__) for record in records)
+    assert "PRIVATE_PROMPT" not in rendered
+    assert "PRIVATE_REPLY" not in rendered
+    assert "PRIVATE_RAW" not in rendered
+    assert "PRIVATE_KEY" not in rendered
+
+
+@pytest.mark.parametrize(
+    ("step", "exception_type"),
+    [
+        (_RaiseStep(), "ValueError"),
+        (_InvalidResultStep(), "PipelineExecutionError"),
+    ],
+)
+def test_pipeline_builder_logs_step_errors_and_always_ends(
+    caplog,
+    step,
+    exception_type,
+) -> None:
+    state = _state()
+
+    with (
+        caplog.at_level(logging.INFO, logger="pa_agent.orchestrator.pipeline.builder"),
+        pytest.raises((ValueError, RuntimeError)),
+    ):
+        PipelineBuilder((step,)).run(state, services=object())
+
+    records = [record for record in caplog.records if record.name.endswith("pipeline.builder")]
+    assert [record.pipeline_event for record in records] == [
+        "start",
+        "step_start",
+        "step_error",
+        "end",
+    ]
+    assert records[2].pipeline_exception_type == exception_type
+    assert records[-1].pipeline_exception_type == exception_type
+    assert {record.trace_id for record in records} == {state.trace_id}
+    rendered = "\n".join(record.getMessage() + repr(record.__dict__) for record in records)
+    assert "PRIVATE_EXCEPTION_TEXT" not in rendered
+
+
+def test_pipeline_state_logs_safe_orchestrator_events(caplog) -> None:
+    state = _state()
+    state.step_history.append("stage1")
+    state.stage1_messages = [{"role": "user", "content": "PRIVATE_PROMPT"}]
+    state.stage1_reply = SimpleNamespace(content="PRIVATE_REPLY", raw="PRIVATE_RAW")
+
+    with caplog.at_level(logging.INFO, logger="pa_agent.orchestrator.pipeline.state"):
+        state.emit(OrchestratorEvent.Stage1Retry)
+        state.emit(OrchestratorEvent.Cancelled)
+
+    records = [
+        record
+        for record in caplog.records
+        if record.name.endswith("pipeline.state") and record.pipeline_event == "orchestrator_event"
+    ]
+    assert [record.pipeline_orchestrator_event for record in records] == [
+        "Stage1Retry",
+        "Cancelled",
+    ]
+    assert {record.trace_id for record in records} == {state.trace_id}
+    assert {record.pipeline_current_step for record in records} == {"stage1"}
+    assert {record.pipeline_terminal_status for record in records} == {"running"}
+    rendered = "\n".join(record.getMessage() + repr(record.__dict__) for record in records)
+    assert "PRIVATE_PROMPT" not in rendered
+    assert "PRIVATE_REPLY" not in rendered
+    assert "PRIVATE_RAW" not in rendered
+
+
+def test_pipeline_builder_logs_terminal_step_skip(caplog) -> None:
+    state = _state()
+    state.stage1_messages = [{"role": "user", "content": "PRIVATE_PROMPT"}]
+
+    with caplog.at_level(logging.INFO, logger="pa_agent.orchestrator.pipeline.builder"):
+        result = PipelineBuilder((_TerminalPendingStep(), _ContinueStep())).run(
+            state,
+            services=object(),
+        )
+
+    records = [record for record in caplog.records if record.name.endswith("pipeline.builder")]
+    skip = next(record for record in records if record.pipeline_event == "step_skip")
+    assert skip.pipeline_step == "continue"
+    assert skip.pipeline_skip_reason == "terminal_state"
+    assert skip.pipeline_terminal_status == "cancelled"
+    assert skip.trace_id == result.trace_id
+    rendered = "\n".join(record.getMessage() + repr(record.__dict__) for record in records)
+    assert "PRIVATE_PROMPT" not in rendered
 
 
 def test_pipeline_builder_without_steps_is_explicit_failure() -> None:

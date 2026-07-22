@@ -18,6 +18,34 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L3 Task 11：Pipeline enabled lifecycle logging）
+
+本轮完成 Pipeline enabled 路径的生命周期日志观测，并保持
+`orchestrator.pipeline_builder_enabled` 默认关闭。日志以 `trace_id` 关联一次 Pipeline
+执行，使用 `pipeline.lifecycle`、`pipeline.event` 和 `pipeline.step` 三类事件记录
+Pipeline/步骤生命周期、编排事件和步骤结果，支持按 `trace_id`、事件名和 `pipeline_step`
+查询完整链路。
+
+### 已交付
+
+- **结构化字段**：覆盖 `trace_id`、`pipeline_event`、`pipeline_step`、终态/结果分类、
+  异常类型分类、耗时、跳过原因、写入类型/状态及 `safe_summary`；可区分
+  `Preflight -> Stage1 -> Route -> Stage2 -> Persist` 的开始、结果、跳过、终态和结束。
+- **安全边界**：日志只保留 allowlist 标量和安全摘要，不记录原始行情、股票/合约代码、
+  价格、prompt 或 Provider 原文、API Key、Provider Token、callbacks 或 client 对象；
+  网络/校验/gate/取消/持久化异常只记录稳定类型或分类。
+- **兼容与观察**：flag-off 继续走 legacy `submit()`，不改变既有事件顺序、retry/cancel
+  语义或 final/partial record；默认 flag 仍关闭，需真实稳定观察周期及 GUI/headless
+  final、partial、cancel、failure 全链路 evidence 后才评估启用。
+
+### 验证
+
+- Task 11 生命周期和日志安全聚焦测试 → **80 passed**。
+- Ruff、受影响模块 `py_compile` 和 `git diff --check` → **通过**。
+- 本轮已完成 Pipeline logging 业务代码、聚焦测试和项目文档/规格同步；验证通过并按流程纳入原子提交/推送。
+
+---
+
 ## [Unreleased] — 2026-07-22（L3 Task 10：rollout 观察与切换准备）
 
 本轮同步规格 Task 10 的实际工作区状态。四个真实 Pipeline 步骤已经可以通过显式开关选择，

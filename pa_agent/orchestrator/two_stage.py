@@ -26,6 +26,7 @@ STAGE2_VALIDATION_AUTO_RETRY = False
 import copy
 import dataclasses
 import logging
+import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -375,34 +376,17 @@ class TwoStageOrchestrator:
         _pred = stage2_json if isinstance(stage2_json, dict) else {}
         _nb_pred = _pred.get("next_bar_prediction")
         if not _enable_next_bar:
-            logger.info("next_bar_prediction omitted (feature disabled)")
+            logger.info("next_bar_prediction omitted")
         elif isinstance(_nb_pred, dict):
-            if _nb_pred.get("unpredictable"):
-                logger.info("next_bar_prediction direction=null probs=null/null/null unpredictable=true")
-            else:
-                _probs = _nb_pred.get("probabilities") or {}
-                logger.info(
-                    "next_bar_prediction direction=%s probs=%s/%s/%s unpredictable=false",
-                    _nb_pred.get("direction"),
-                    _probs.get("bullish"),
-                    _probs.get("bearish"),
-                    _probs.get("neutral"),
-                )
+            logger.info("next_bar_prediction present")
         elif _enable_next_bar:
-            logger.info("next_bar_prediction absent from stage2 response")
+            logger.info("next_bar_prediction absent")
 
         _nc_pred = _pred.get("next_cycle_prediction")
         if isinstance(_nc_pred, dict):
-            if _nc_pred.get("unpredictable"):
-                logger.info("next_cycle_prediction cycle=null unpredictable=true")
-            else:
-                logger.info(
-                    "next_cycle_prediction cycle=%s direction=%s unpredictable=false",
-                    _nc_pred.get("cycle"),
-                    _nc_pred.get("direction"),
-                )
+            logger.info("next_cycle_prediction present")
         else:
-            logger.info("next_cycle_prediction absent from stage2 response")
+            logger.info("next_cycle_prediction absent")
 
         # ── Step 20: Build final record ───────────────────────────────────────
         usage_total = _accumulate_usage_calls(
@@ -477,7 +461,7 @@ class TwoStageOrchestrator:
 
         stage2_json = build_stage2_gate_wait_response(stage1_json)
         on_event(OrchestratorEvent.Stage2Done)
-        logger.info("next_bar_prediction direction=null probs=null/null/null unpredictable=true (gate short-circuit)")
+        logger.info("next_bar_prediction gate_short_circuit")
         usage_total = _accumulate_usage(record.usage_total, reply_s1.usage)
         record = record.model_copy(
             update={
@@ -597,16 +581,6 @@ class TwoStageOrchestrator:
         Stage2Step can hand the assembled record to its legacy persist tail.
         """
         # ── Step 15: Call AI for Stage 2 ──────────────────────────────────────
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug("\n" + "="*80)
-            logger.debug("【Stage 2 发送的完整 Prompt】")
-            logger.debug("="*80)
-            for msg in messages_s2:
-                role = msg.get("role", "?").upper()
-                content = msg.get("content", "")
-                logger.debug("\n--- [%s] ---\n%s", role, content)
-            logger.debug("="*80 + "\n")
-
         # Notify conversation tab of the prompt being sent
         if on_stage_prompt is not None:
             s2_system = next((m.get("content", "") for m in messages_s2 if m.get("role") == "system"), "")
@@ -640,7 +614,7 @@ class TwoStageOrchestrator:
             )
         except Exception as exc:
             if self._is_network_error(exc):
-                logger.warning("Stage 2 network error: %s", exc)
+                logger.warning("Stage 2 network error type=%s", type(exc).__name__)
                 record = record.model_copy(
                     update={
                         "stage1_messages": messages_s1,
@@ -702,20 +676,6 @@ class TwoStageOrchestrator:
             return record
 
         # ── Step 17: Validate Stage 2 ─────────────────────────────────────────
-        logger.debug("\n" + "="*80)
-        logger.debug("【Stage 2 AI 完整响应】")
-        logger.debug("="*80)
-        logger.debug(reply_s2.content)
-        if reply_s2.reasoning_content:
-            logger.debug("\n--- [思考过程] ---\n%s", reply_s2.reasoning_content)
-        logger.debug(
-            "\n--- [Token 用量] prompt=%s completion=%s latency=%s ---",
-            reply_s2.usage.prompt_tokens,
-            reply_s2.usage.completion_tokens,
-            _latency_ms_label(reply_s2.latency_ms),
-        )
-        logger.debug("="*80 + "\n")
-
         def _call_s2_retry(msgs: list[dict]) -> Any:
             nonlocal s2_streamed_reasoning, s2_streamed_content
             on_event(OrchestratorEvent.Stage2Retry)
@@ -765,11 +725,7 @@ class TwoStageOrchestrator:
         if isinstance(result_s2, ValidationError):
             err = result_s2
             err_message = _enrich_validation_message(err, reply_s2, stage="stage2")
-            logger.warning(
-                "Stage 2 validation failed: category=%s message=%s",
-                err.category,
-                err_message,
-            )
+            logger.warning("Stage 2 validation failed category=%s", err.category)
             record = record.model_copy(
                 update={
                     "stage1_messages": messages_s1,
@@ -880,16 +836,6 @@ class TwoStageOrchestrator:
             messages_s1 = self._assembler.build_stage1(frame, analysis_mode=analysis_mode)
 
         # ── Step 5: Call AI for Stage 1 ───────────────────────────────────────
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug("\n" + "="*80)
-            logger.debug("【Stage 1 发送的完整 Prompt】")
-            logger.debug("="*80)
-            for msg in messages_s1:
-                role = msg.get("role", "?").upper()
-                content = msg.get("content", "")
-                logger.debug("\n--- [%s] ---\n%s", role, content)
-            logger.debug("="*80 + "\n")
-
         # Notify conversation tab of the prompt being sent
         if on_stage_prompt is not None:
             s1_system = next((m.get("content", "") for m in messages_s1 if m.get("role") == "system"), "")
@@ -924,7 +870,7 @@ class TwoStageOrchestrator:
             )
         except Exception as exc:
             if self._is_network_error(exc):
-                logger.warning("Stage 1 network error: %s", exc)
+                logger.warning("Stage 1 network error type=%s", type(exc).__name__)
                 record = record.model_copy(
                     update={
                         "stage1_messages": messages_s1,
@@ -961,20 +907,6 @@ class TwoStageOrchestrator:
             return record
 
         # ── Step 7: Validate Stage 1 ──────────────────────────────────────────
-        logger.debug("\n" + "="*80)
-        logger.debug("【Stage 1 AI 完整响应】")
-        logger.debug("="*80)
-        logger.debug(reply_s1.content)
-        if reply_s1.reasoning_content:
-            logger.debug("\n--- [思考过程] ---\n%s", reply_s1.reasoning_content)
-        logger.debug(
-            "\n--- [Token 用量] prompt=%s completion=%s latency=%s ---",
-            reply_s1.usage.prompt_tokens,
-            reply_s1.usage.completion_tokens,
-            _latency_ms_label(reply_s1.latency_ms),
-        )
-        logger.debug("="*80 + "\n")
-
         prev_s1: dict[str, Any] | None = None
         if previous_record is not None and int(incremental_new_bar_count or 0) > 0:
             prev_s1 = previous_record.stage1_diagnosis
@@ -1024,11 +956,7 @@ class TwoStageOrchestrator:
         if isinstance(result_s1, ValidationError):
             err = result_s1
             err_message = _enrich_validation_message(err, reply_s1, stage="stage1")
-            logger.warning(
-                "Stage 1 validation failed: category=%s message=%s",
-                err.category,
-                err_message,
-            )
+            logger.warning("Stage 1 validation failed category=%s", err.category)
             record = record.model_copy(
                 update={
                     "stage1_messages": messages_s1,
@@ -1232,6 +1160,7 @@ class TwoStageOrchestrator:
         on_stage2_files: Callable[[list[str]], None] | None = None,
         previous_record: AnalysisRecord | None = None,
         incremental_new_bar_count: int | None = None,
+        trace_id: str | None = None,
     ) -> Any:
         """Run the opt-in pipeline adapter and return explicit execution state.
 
@@ -1258,6 +1187,7 @@ class TwoStageOrchestrator:
             on_stage2_files=on_stage2_files,
             previous_record=previous_record,
             incremental_new_bar_count=incremental_new_bar_count,
+            trace_id=trace_id,
         )
         return PipelineBuilder((Stage1Step(), RouteStep(), Stage2Step(), PersistStep())).run(
             state,
@@ -1278,6 +1208,7 @@ class TwoStageOrchestrator:
         on_stage2_files: Callable[[list[str]], None] | None = None,
         previous_record: AnalysisRecord | None = None,
         incremental_new_bar_count: int | None = None,
+        trace_id: str | None = None,
     ) -> AnalysisRecord:
         """Return a record from the opt-in stateful pipeline adapter."""
         from pa_agent.orchestrator.pipeline import PipelineExecutionError
@@ -1294,6 +1225,7 @@ class TwoStageOrchestrator:
             on_stage2_files=on_stage2_files,
             previous_record=previous_record,
             incremental_new_bar_count=incremental_new_bar_count,
+            trace_id=trace_id,
         )
         if state.record is None:
             raise PipelineExecutionError("Pipeline completed without an analysis record")
@@ -1346,27 +1278,27 @@ class TwoStageOrchestrator:
                 ):
                     tried_workbuddy = True
                     logger.info(
-                        "%s network error (%s); applied WorkBuddy provider — retrying",
+                        "%s network error type=%s; applied WorkBuddy provider — retrying",
                         stage_label,
-                        exc,
+                        type(exc).__name__,
                     )
                 elif not tried_cursor and self._try_cursor_fallback(
                     original_model=original_model
                 ):
                     tried_cursor = True
                     logger.info(
-                        "%s network error (%s); applied Cursor provider — retrying",
+                        "%s network error type=%s; applied Cursor provider — retrying",
                         stage_label,
-                        exc,
+                        type(exc).__name__,
                     )
                 elif not tried_qclaw and self._try_qclaw_fallback(
                     original_model=original_model
                 ):
                     tried_qclaw = True
                     logger.info(
-                        "%s network error (%s); applied QClaw provider — retrying",
+                        "%s network error type=%s; applied QClaw provider — retrying",
                         stage_label,
-                        exc,
+                        type(exc).__name__,
                     )
                 else:
                     raise
@@ -1502,6 +1434,16 @@ def _submit_with_pipeline_flag(
     incremental_new_bar_count: int | None = None,
 ) -> AnalysisRecord:
     """Select the opt-in pipeline while retaining the original submit facade."""
+    pipeline_enabled = _pipeline_builder_enabled(self._settings)
+    trace_id = uuid.uuid4().hex if pipeline_enabled else None
+    logger.info(
+        "submit.wrapper",
+        extra={
+            "pipeline_enabled": pipeline_enabled,
+            "pipeline_path": "pipeline" if pipeline_enabled else "legacy",
+            **({"trace_id": trace_id} if trace_id is not None else {}),
+        },
+    )
     kwargs = {
         "frame": frame,
         "cancel_token": cancel_token,
@@ -1515,7 +1457,8 @@ def _submit_with_pipeline_flag(
         "previous_record": previous_record,
         "incremental_new_bar_count": incremental_new_bar_count,
     }
-    if _pipeline_builder_enabled(self._settings):
+    if pipeline_enabled:
+        kwargs["trace_id"] = trace_id
         return self.submit_pipeline(**kwargs)
     return _LEGACY_SUBMIT(self, **kwargs)
 

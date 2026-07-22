@@ -304,6 +304,14 @@ full/partial write、磁盘失败映射和 `RecordSaved` ordering。`LegacyPersi
 normalized JSON 值、frame bars、行情数据或密钥；mapping/object usage 只提取 token counters，
 `base_url` 只保留 `http`/`https` origin，移除凭据、path、query 和 fragment。
 
+Pipeline enabled 生命周期日志使用同一 `trace_id` 关联一次执行，事件名为
+`pipeline.lifecycle`、`pipeline.event` 和 `pipeline.step`，字段通过 allowlist 限制为
+步骤/阶段、结果或终态分类、异常类型分类、耗时、跳过原因、写入状态和 `safe_summary`。
+诊断时可按 `trace_id` 聚合，或按三个事件名过滤，再按 `pipeline_step` 查询
+`Preflight -> Stage1 -> Route -> Stage2 -> Persist`。禁止写入原始行情、股票/合约代码、
+价格、prompt/Provider 原文、API Key、Provider Token、callbacks 或 client 对象。
+Task 11 已同步生命周期日志业务代码、聚焦测试和项目文档/规格；当前提交与推送待完成。
+
 步骤协议建议：
 
 ```text
@@ -382,6 +390,9 @@ Qt signal、CLI stdout 和日志分别由入口 adapter 映射。取消令牌必
 - 四个真实步骤与 Pipeline feature flag 接线已齐，但默认 flag 仍为 `false`；至少一个真实稳定
   观察周期和 GUI/headless final/partial/cancel/failure 全链路等价仍待完成；
 - 任一阶段出现差异可按 symbol/timeframe 或配置开关回退。
+- 生命周期日志仅证明 opt-in 路径可观测，不代表默认 flag 可以开启；在真实稳定观察周期和
+  GUI/headless final、partial、cancel、failure 全链路 evidence 无未解释偏差前，必须保持
+  `orchestrator.pipeline_builder_enabled=false`。
 
 ## 7. L4：性能预算与持续验证
 

@@ -64,6 +64,23 @@ config module 已纳入 CI targets。真实稳定观察周期和 GUI/headless fi
 - L7 已具备 Python 矩阵、targeted pytest、Ruff baseline、focused Ruff/Black 和覆盖率门槛；
   全仓历史诊断仍通过基线治理，不能把 focused 门禁等同于全仓零告警。
 
+### 1.2 Pipeline enabled 生命周期日志（Task 11）
+
+Pipeline enabled 路径现在以 `trace_id` 关联一次执行，并提供三类结构化日志事件：
+`pipeline.lifecycle`、`pipeline.event` 和 `pipeline.step`。字段以 `pipeline_step`、
+结果/终态分类、异常类型分类、耗时、跳过原因、写入状态和 `safe_summary` 为主；查询时
+可先按 `trace_id` 聚合，再按上述事件名过滤，最后按 `pipeline_step` 重建
+`Preflight -> Stage1 -> Route -> Stage2 -> Persist` 生命周期。
+
+日志只使用显式 allowlist 和安全摘要，禁止原始行情、股票/合约代码、价格、prompt 或
+Provider 原文、API Key、Provider Token、callbacks 和 client 对象；网络错误、校验失败、
+gate short-circuit、取消和持久化失败只记录稳定分类或异常类型。默认
+`orchestrator.pipeline_builder_enabled=false`，flag-off 继续走 legacy `submit()`，不改变
+事件顺序、retry/cancel 语义或 final/partial record。该日志能力属于 opt-in 诊断证据，仍需
+真实稳定观察周期及 GUI/headless final、partial、cancel、failure 全链路 evidence，完成前
+不得据此启用默认 flag。Task 11 已同步生命周期日志业务代码、聚焦测试和项目文档/规格；
+验证通过并按流程纳入原子提交/推送。
+
 ---
 
 ## 2. 后端架构评估

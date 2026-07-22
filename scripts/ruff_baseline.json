@@ -1,6 +1,6 @@
 {
   "ruff_version": "ruff 0.15.13",
-  "issue_count": 3725,
+  "issue_count": 3724,
   "issues": [
     {
       "path": "pa_agent/ai/always_in_judges.py",
@@ -20777,19 +20777,10 @@
     {
       "path": "pa_agent/config/settings.py",
       "code": "E402",
-      "row": 188,
-      "column": 1,
-      "end_row": 188,
-      "end_column": 12,
-      "message": "Module level import not at top of file"
-    },
-    {
-      "path": "pa_agent/config/settings.py",
-      "code": "E402",
       "row": 189,
       "column": 1,
       "end_row": 189,
-      "end_column": 15,
+      "end_column": 12,
       "message": "Module level import not at top of file"
     },
     {
@@ -20798,7 +20789,7 @@
       "row": 190,
       "column": 1,
       "end_row": 190,
-      "end_column": 10,
+      "end_column": 15,
       "message": "Module level import not at top of file"
     },
     {
@@ -20807,303 +20798,303 @@
       "row": 191,
       "column": 1,
       "end_row": 191,
+      "end_column": 10,
+      "message": "Module level import not at top of file"
+    },
+    {
+      "path": "pa_agent/config/settings.py",
+      "code": "E402",
+      "row": 192,
+      "column": 1,
+      "end_row": 192,
       "end_column": 25,
       "message": "Module level import not at top of file"
     },
     {
       "path": "pa_agent/config/settings.py",
-      "code": "I001",
-      "row": 2,
-      "column": 1,
-      "end_row": 5,
-      "end_column": 67,
-      "message": "Import block is un-sorted or un-formatted"
-    },
-    {
-      "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 71,
+      "row": 72,
       "column": 23,
-      "end_row": 71,
+      "end_row": 72,
       "end_column": 24,
       "message": "Comment contains ambiguous `；` (FULLWIDTH SEMICOLON). Did you mean `;` (SEMICOLON)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 71,
+      "row": 72,
       "column": 30,
-      "end_row": 71,
+      "end_row": 72,
       "end_column": 31,
       "message": "Comment contains ambiguous `（` (FULLWIDTH LEFT PARENTHESIS). Did you mean `(` (LEFT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 71,
+      "row": 72,
       "column": 33,
-      "end_row": 71,
+      "end_row": 72,
       "end_column": 34,
       "message": "Comment contains ambiguous `）` (FULLWIDTH RIGHT PARENTHESIS). Did you mean `)` (RIGHT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 77,
+      "row": 78,
       "column": 23,
-      "end_row": 77,
+      "end_row": 78,
       "end_column": 24,
       "message": "Comment contains ambiguous `：` (FULLWIDTH COLON). Did you mean `:` (COLON)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 77,
+      "row": 78,
       "column": 30,
-      "end_row": 77,
+      "end_row": 78,
       "end_column": 31,
       "message": "Comment contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 77,
+      "row": 78,
       "column": 41,
-      "end_row": 77,
+      "end_row": 78,
       "end_column": 42,
       "message": "Comment contains ambiguous `（` (FULLWIDTH LEFT PARENTHESIS). Did you mean `(` (LEFT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 77,
+      "row": 78,
       "column": 52,
-      "end_row": 77,
+      "end_row": 78,
       "end_column": 53,
       "message": "Comment contains ambiguous `）` (FULLWIDTH RIGHT PARENTHESIS). Did you mean `)` (RIGHT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 80,
+      "row": 81,
       "column": 15,
-      "end_row": 80,
+      "end_row": 81,
       "end_column": 16,
       "message": "Comment contains ambiguous `：` (FULLWIDTH COLON). Did you mean `:` (COLON)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 80,
+      "row": 81,
       "column": 27,
-      "end_row": 80,
+      "end_row": 81,
       "end_column": 28,
       "message": "Comment contains ambiguous `；` (FULLWIDTH SEMICOLON). Did you mean `;` (SEMICOLON)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 82,
+      "row": 83,
       "column": 14,
-      "end_row": 82,
+      "end_row": 83,
       "end_column": 15,
       "message": "Comment contains ambiguous `：` (FULLWIDTH COLON). Did you mean `:` (COLON)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 82,
+      "row": 83,
       "column": 31,
-      "end_row": 82,
+      "end_row": 83,
       "end_column": 32,
       "message": "Comment contains ambiguous `（` (FULLWIDTH LEFT PARENTHESIS). Did you mean `(` (LEFT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 82,
+      "row": 83,
       "column": 41,
-      "end_row": 82,
+      "end_row": 83,
       "end_column": 42,
       "message": "Comment contains ambiguous `；` (FULLWIDTH SEMICOLON). Did you mean `;` (SEMICOLON)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 82,
+      "row": 83,
       "column": 47,
-      "end_row": 82,
+      "end_row": 83,
       "end_column": 48,
       "message": "Comment contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 82,
+      "row": 83,
       "column": 55,
-      "end_row": 82,
+      "end_row": 83,
       "end_column": 56,
       "message": "Comment contains ambiguous `）` (FULLWIDTH RIGHT PARENTHESIS). Did you mean `)` (RIGHT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 84,
+      "row": 85,
       "column": 36,
-      "end_row": 84,
+      "end_row": 85,
       "end_column": 37,
       "message": "Comment contains ambiguous `（` (FULLWIDTH LEFT PARENTHESIS). Did you mean `(` (LEFT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 84,
+      "row": 85,
       "column": 39,
-      "end_row": 84,
+      "end_row": 85,
       "end_column": 40,
       "message": "Comment contains ambiguous `）` (FULLWIDTH RIGHT PARENTHESIS). Did you mean `)` (RIGHT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 86,
+      "row": 87,
       "column": 23,
-      "end_row": 86,
+      "end_row": 87,
       "end_column": 24,
       "message": "Comment contains ambiguous `（` (FULLWIDTH LEFT PARENTHESIS). Did you mean `(` (LEFT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 86,
+      "row": 87,
       "column": 26,
-      "end_row": 86,
+      "end_row": 87,
       "end_column": 27,
       "message": "Comment contains ambiguous `）` (FULLWIDTH RIGHT PARENTHESIS). Did you mean `)` (RIGHT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 90,
+      "row": 91,
       "column": 14,
-      "end_row": 90,
+      "end_row": 91,
       "end_column": 15,
       "message": "Comment contains ambiguous `：` (FULLWIDTH COLON). Did you mean `:` (COLON)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 92,
+      "row": 93,
       "column": 19,
-      "end_row": 92,
+      "end_row": 93,
       "end_column": 20,
       "message": "Comment contains ambiguous `：` (FULLWIDTH COLON). Did you mean `:` (COLON)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 94,
+      "row": 95,
       "column": 17,
-      "end_row": 94,
+      "end_row": 95,
       "end_column": 18,
       "message": "Comment contains ambiguous `：` (FULLWIDTH COLON). Did you mean `:` (COLON)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 94,
+      "row": 95,
       "column": 44,
-      "end_row": 94,
+      "end_row": 95,
       "end_column": 45,
       "message": "Comment contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 94,
+      "row": 95,
       "column": 53,
-      "end_row": 94,
+      "end_row": 95,
       "end_column": 54,
       "message": "Comment contains ambiguous `（` (FULLWIDTH LEFT PARENTHESIS). Did you mean `(` (LEFT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 94,
+      "row": 95,
       "column": 65,
-      "end_row": 94,
+      "end_row": 95,
       "end_column": 66,
       "message": "Comment contains ambiguous `）` (FULLWIDTH RIGHT PARENTHESIS). Did you mean `)` (RIGHT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 96,
+      "row": 97,
       "column": 18,
-      "end_row": 96,
+      "end_row": 97,
       "end_column": 19,
       "message": "Comment contains ambiguous `；` (FULLWIDTH SEMICOLON). Did you mean `;` (SEMICOLON)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 96,
+      "row": 97,
       "column": 31,
-      "end_row": 96,
+      "end_row": 97,
       "end_column": 32,
       "message": "Comment contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 98,
+      "row": 99,
       "column": 26,
-      "end_row": 98,
+      "end_row": 99,
       "end_column": 27,
       "message": "Comment contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 98,
+      "row": 99,
       "column": 43,
-      "end_row": 98,
+      "end_row": 99,
       "end_column": 44,
       "message": "Comment contains ambiguous `（` (FULLWIDTH LEFT PARENTHESIS). Did you mean `(` (LEFT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "RUF003",
-      "row": 98,
+      "row": 99,
       "column": 47,
-      "end_row": 98,
+      "end_row": 99,
       "end_column": 48,
       "message": "Comment contains ambiguous `）` (FULLWIDTH RIGHT PARENTHESIS). Did you mean `)` (RIGHT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "SIM102",
-      "row": 317,
+      "row": 318,
       "column": 5,
-      "end_row": 318,
+      "end_row": 319,
       "end_column": 65,
       "message": "Use a single `if` statement instead of nested `if` statements"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "UP037",
-      "row": 270,
+      "row": 271,
       "column": 48,
-      "end_row": 270,
+      "end_row": 271,
       "end_column": 58,
       "message": "Remove quotes from type annotation"
     },
     {
       "path": "pa_agent/config/settings.py",
       "code": "UP037",
-      "row": 330,
+      "row": 331,
       "column": 29,
-      "end_row": 330,
+      "end_row": 331,
       "end_column": 39,
       "message": "Remove quotes from type annotation"
     },
@@ -31346,7 +31337,7 @@
       "row": 29,
       "column": 1,
       "end_row": 29,
-      "end_column": 30,
+      "end_column": 12,
       "message": "Module level import not at top of file"
     },
     {
@@ -31355,16 +31346,16 @@
       "row": 30,
       "column": 1,
       "end_row": 30,
-      "end_column": 38,
+      "end_column": 30,
       "message": "Module level import not at top of file"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "E402",
-      "row": 42,
+      "row": 31,
       "column": 1,
-      "end_row": 42,
-      "end_column": 42,
+      "end_row": 31,
+      "end_column": 38,
       "message": "Module level import not at top of file"
     },
     {
@@ -31382,7 +31373,7 @@
       "row": 44,
       "column": 1,
       "end_row": 44,
-      "end_column": 71,
+      "end_column": 42,
       "message": "Module level import not at top of file"
     },
     {
@@ -31391,7 +31382,7 @@
       "row": 45,
       "column": 1,
       "end_row": 45,
-      "end_column": 63,
+      "end_column": 71,
       "message": "Module level import not at top of file"
     },
     {
@@ -31400,7 +31391,7 @@
       "row": 46,
       "column": 1,
       "end_row": 46,
-      "end_column": 67,
+      "end_column": 63,
       "message": "Module level import not at top of file"
     },
     {
@@ -31409,258 +31400,258 @@
       "row": 47,
       "column": 1,
       "end_row": 47,
+      "end_column": 67,
+      "message": "Module level import not at top of file"
+    },
+    {
+      "path": "pa_agent/orchestrator/two_stage.py",
+      "code": "E402",
+      "row": 48,
+      "column": 1,
+      "end_row": 48,
       "end_column": 47,
       "message": "Module level import not at top of file"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
-      "code": "I001",
-      "row": 42,
-      "column": 1,
-      "end_row": 47,
-      "end_column": 47,
-      "message": "Import block is un-sorted or un-formatted"
-    },
-    {
-      "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 90,
+      "row": 91,
       "column": 45,
-      "end_row": 90,
+      "end_row": 91,
       "end_column": 46,
       "message": "String contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 91,
+      "row": 92,
       "column": 15,
-      "end_row": 91,
+      "end_row": 92,
       "end_column": 16,
       "message": "String contains ambiguous `（` (FULLWIDTH LEFT PARENTHESIS). Did you mean `(` (LEFT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 91,
+      "row": 92,
       "column": 40,
-      "end_row": 91,
+      "end_row": 92,
       "end_column": 41,
       "message": "String contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 91,
+      "row": 92,
       "column": 66,
-      "end_row": 91,
+      "end_row": 92,
       "end_column": 67,
       "message": "String contains ambiguous `）` (FULLWIDTH RIGHT PARENTHESIS). Did you mean `)` (RIGHT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 92,
+      "row": 93,
       "column": 19,
-      "end_row": 92,
+      "end_row": 93,
       "end_column": 20,
       "message": "String contains ambiguous `：` (FULLWIDTH COLON). Did you mean `:` (COLON)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 92,
+      "row": 93,
       "column": 41,
-      "end_row": 92,
+      "end_row": 93,
       "end_column": 42,
       "message": "String contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 121,
+      "row": 122,
       "column": 69,
-      "end_row": 121,
+      "end_row": 122,
       "end_column": 70,
       "message": "String contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 135,
+      "row": 136,
       "column": 43,
-      "end_row": 135,
+      "end_row": 136,
       "end_column": 44,
       "message": "String contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 140,
+      "row": 141,
       "column": 38,
-      "end_row": 140,
+      "end_row": 141,
       "end_column": 39,
       "message": "String contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 143,
+      "row": 144,
       "column": 28,
-      "end_row": 143,
+      "end_row": 144,
       "end_column": 29,
       "message": "String contains ambiguous `：` (FULLWIDTH COLON). Did you mean `:` (COLON)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 143,
+      "row": 144,
       "column": 56,
-      "end_row": 143,
+      "end_row": 144,
       "end_column": 57,
       "message": "String contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 143,
+      "row": 144,
       "column": 71,
-      "end_row": 143,
+      "end_row": 144,
       "end_column": 72,
       "message": "String contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 144,
+      "row": 145,
       "column": 26,
-      "end_row": 144,
+      "end_row": 145,
       "end_column": 27,
       "message": "String contains ambiguous `（` (FULLWIDTH LEFT PARENTHESIS). Did you mean `(` (LEFT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 144,
+      "row": 145,
       "column": 57,
-      "end_row": 144,
+      "end_row": 145,
       "end_column": 58,
       "message": "String contains ambiguous `）` (FULLWIDTH RIGHT PARENTHESIS). Did you mean `)` (RIGHT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 149,
+      "row": 150,
       "column": 28,
-      "end_row": 149,
+      "end_row": 150,
       "end_column": 29,
       "message": "String contains ambiguous `：` (FULLWIDTH COLON). Did you mean `:` (COLON)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 149,
+      "row": 150,
       "column": 42,
-      "end_row": 149,
+      "end_row": 150,
       "end_column": 43,
       "message": "String contains ambiguous `；` (FULLWIDTH SEMICOLON). Did you mean `;` (SEMICOLON)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 149,
+      "row": 150,
       "column": 77,
-      "end_row": 149,
+      "end_row": 150,
       "end_column": 78,
       "message": "String contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 471,
+      "row": 455,
       "column": 44,
-      "end_row": 471,
+      "end_row": 455,
       "end_column": 45,
       "message": "String contains ambiguous `（` (FULLWIDTH LEFT PARENTHESIS). Did you mean `(` (LEFT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 471,
+      "row": 455,
       "column": 53,
-      "end_row": 471,
+      "end_row": 455,
       "end_column": 54,
       "message": "String contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 471,
+      "row": 455,
       "column": 63,
-      "end_row": 471,
+      "end_row": 455,
       "end_column": 64,
       "message": "String contains ambiguous `）` (FULLWIDTH RIGHT PARENTHESIS). Did you mean `)` (RIGHT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 473,
+      "row": 457,
       "column": 44,
-      "end_row": 473,
+      "end_row": 457,
       "end_column": 45,
       "message": "String contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "RUF001",
-      "row": 473,
+      "row": 457,
       "column": 57,
-      "end_row": 473,
+      "end_row": 457,
       "end_column": 58,
       "message": "String contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "UP037",
-      "row": 286,
+      "row": 287,
       "column": 17,
-      "end_row": 286,
+      "end_row": 287,
       "end_column": 33,
       "message": "Remove quotes from type annotation"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "UP037",
-      "row": 287,
+      "row": 288,
       "column": 20,
-      "end_row": 287,
+      "end_row": 288,
       "end_column": 37,
       "message": "Remove quotes from type annotation"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "UP037",
-      "row": 289,
+      "row": 290,
       "column": 20,
-      "end_row": 289,
+      "end_row": 290,
       "end_column": 35,
       "message": "Remove quotes from type annotation"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "UP037",
-      "row": 290,
+      "row": 291,
       "column": 25,
-      "end_row": 290,
+      "end_row": 291,
       "end_column": 40,
       "message": "Remove quotes from type annotation"
     },
     {
       "path": "pa_agent/orchestrator/two_stage.py",
       "code": "UP037",
-      "row": 291,
+      "row": 292,
       "column": 21,
-      "end_row": 291,
+      "end_row": 292,
       "end_column": 39,
       "message": "Remove quotes from type annotation"
     },

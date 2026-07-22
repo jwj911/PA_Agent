@@ -448,6 +448,35 @@ gate short-circuit、增量分析和 GUI/headless 等价证据。
 - 本轮代理操作只更新项目文档，不修改业务代码或 `.trae/specs` 状态，不提交、不推送；
   仅运行 `git diff --check`，未运行 pytest。
 
+## 2.14 本轮完成结果（L3 Task 11：Pipeline enabled lifecycle logging）
+
+### 日志字段与查询
+
+Pipeline enabled 路径使用同一 `trace_id` 关联一次执行，事件名分为
+`pipeline.lifecycle`（builder 生命周期）、`pipeline.event`（编排事件）和
+`pipeline.step`（步骤结果）。结构化字段包括 `trace_id`、`pipeline_event`、
+`pipeline_step`、终态/结果分类、异常类型分类、耗时、跳过原因、写入类型/状态和
+`safe_summary`；可按 `trace_id` 聚合，也可按 `pipeline.lifecycle`、`pipeline.event`、
+`pipeline.step` 过滤，再按 `pipeline_step` 重建
+`Preflight -> Stage1 -> Route -> Stage2 -> Persist` 顺序。
+
+### 已交付与边界
+
+- Pipeline enabled 时记录各阶段开始、结果、跳过、终态、结束及编排事件；retry、网络错误、
+  校验失败、gate short-circuit、取消和持久化失败使用稳定的事件/状态/异常类型分类。
+- 日志字段使用显式 allowlist 和 `PipelineState.safe_summary()`；不记录原始行情、股票/合约
+  代码、价格、prompt 或 Provider 原文、API Key、Provider Token、callbacks 或 client 对象。
+- `orchestrator.pipeline_builder_enabled` 默认仍为 `false`；flag-off 继续走 legacy
+  `submit()`，事件顺序、retry/cancel 语义和 final/partial record 不变。
+- 当前日志只提供 opt-in 诊断证据，不等同于生产稳定观察。启用默认 flag 前仍需真实稳定观察
+  周期，以及 GUI/headless final、partial、cancel、failure 全链路 evidence。
+
+### 验证
+
+- 生命周期/日志安全聚焦测试 → **80 passed**；Ruff、受影响模块 `py_compile` 和
+  `git diff --check` → **通过**。
+- 本轮已同步 Pipeline logging 业务代码、聚焦测试和项目文档/规格；验证通过并按流程纳入原子提交/推送。
+
 ## 3. 每轮建议交付物
 
 ### 3.1 L6 headless runner / CLI 最小入口

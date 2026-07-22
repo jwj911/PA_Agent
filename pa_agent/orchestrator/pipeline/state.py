@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import logging
 import math
 import re
+import uuid
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -14,6 +16,8 @@ from urllib.parse import urlsplit, urlunsplit
 
 from pa_agent.records.schema import AnalysisRecord
 from pa_agent.util.threading import CancelToken, OrchestratorEvent
+
+logger = logging.getLogger(__name__)
 
 
 class TerminalStatus(StrEnum):
@@ -363,6 +367,7 @@ class PipelineState:
     persistence_error: bool = False
     events: list[OrchestratorEvent] = field(default_factory=list)
     step_history: list[str] = field(default_factory=list)
+    trace_id: str = field(default_factory=lambda: uuid.uuid4().hex)
 
     def __post_init__(self) -> None:
         """Normalize enum inputs passed by compatibility callers."""
@@ -372,6 +377,18 @@ class PipelineState:
     def emit(self, event: OrchestratorEvent) -> None:
         """Record and forward one legacy orchestrator event."""
         self.events.append(event)
+        logger.info(
+            "pipeline.event",
+            extra={
+                "trace_id": self.trace_id,
+                "pipeline_event": "orchestrator_event",
+                "pipeline_orchestrator_event": event.name,
+                "pipeline_current_step": self.step_history[-1]
+                if self.step_history
+                else None,
+                "pipeline_terminal_status": self.terminal_status.value,
+            },
+        )
         self.on_event(event)
 
     def mark_terminal(self, status: TerminalStatus | str) -> None:
@@ -529,6 +546,7 @@ class PipelineState:
         are excluded.
         """
         return {
+            "trace_id": self.trace_id,
             "terminal_status": self.terminal_status.value,
             "events": list(self.event_names),
             "step_history": list(self.step_history),

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import logging
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -10,6 +11,7 @@ import pytest
 
 from pa_agent.ai.router import route_strategy_files
 from pa_agent.config.settings import Settings
+from pa_agent.orchestrator import two_stage as two_stage_module
 from pa_agent.orchestrator.pipeline import TerminalStatus
 from pa_agent.orchestrator.two_stage import TwoStageOrchestrator
 from pa_agent.util.threading import CancelToken, OrchestratorEvent
@@ -194,6 +196,63 @@ def test_submit_default_does_not_enter_pipeline(monkeypatch, frame) -> None:
 
     assert record.exception is None
     pipeline_called.assert_not_called()
+
+
+def test_legacy_submit_wrapper_does_not_forward_trace_id(monkeypatch, frame) -> None:
+    orchestrator = _orchestrator(
+        replies=[make_reply(VALID_STAGE1), make_reply(VALID_STAGE2)],
+        settings=Settings(),
+    )
+    captured: dict[str, object] = {}
+    legacy_submit = two_stage_module._LEGACY_SUBMIT
+
+    def capture_legacy(self, **kwargs):
+        captured.update(kwargs)
+        return legacy_submit(self, **kwargs)
+
+    monkeypatch.setattr(two_stage_module, "_LEGACY_SUBMIT", capture_legacy)
+
+    record = orchestrator.submit(frame, CancelToken(), lambda _event: None)
+
+    assert record.exception is None
+    assert "trace_id" not in captured
+
+
+def test_pipeline_enabled_logs_safe_trace_lifecycle(caplog, frame) -> None:
+    orchestrator = _orchestrator(
+        replies=[make_reply(VALID_STAGE1), make_reply(VALID_STAGE2)],
+        settings=Settings(orchestrator={"pipeline_builder_enabled": True}),
+    )
+
+    with caplog.at_level(logging.INFO, logger="pa_agent.orchestrator"):
+        record = orchestrator.submit(frame, CancelToken(), lambda _event: None)
+
+    assert record.exception is None
+    wrapper = next(item for item in caplog.records if item.getMessage() == "submit.wrapper")
+    assert wrapper.pipeline_enabled is True
+    assert wrapper.pipeline_path == "pipeline"
+
+    lifecycle = [
+        item
+        for item in caplog.records
+        if item.getMessage() in {"pipeline.lifecycle", "pipeline.step"}
+    ]
+    assert lifecycle
+    assert len({item.trace_id for item in lifecycle}) == 1
+    assert wrapper.trace_id == lifecycle[0].trace_id
+    events = [item.pipeline_event for item in lifecycle]
+    assert events[0] == "start"
+    assert events[-1] == "end"
+    assert events.index("preflight_start") < events.index("route_start")
+    assert events.index("route_start") < events.index("stage2_flags")
+    assert events.index("stage2_flags") < events.index("persist_write")
+    assert events.index("terminal") < events.index("end")
+
+    rendered = "\n".join(item.getMessage() + repr(item.__dict__) for item in lifecycle)
+    assert "stage1" in rendered
+    assert "stage2" in rendered
+    assert "PRIVATE" not in rendered
+    assert "api_key" not in rendered
 
 
 @pytest.mark.parametrize(
