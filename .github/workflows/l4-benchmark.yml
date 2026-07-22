@@ -1,0 +1,53 @@
+name: L4 Synthetic Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      iterations:
+        description: Benchmark iterations per operation
+        required: false
+        default: "30"
+      warmups:
+        description: Warmup iterations per operation
+        required: false
+        default: "5"
+  schedule:
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    name: Windows / Python 3.12.9
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      L4_ITERATIONS: ${{ inputs.iterations || '30' }}
+      L4_WARMUPS: ${{ inputs.warmups || '5' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.9"
+
+      - name: Install dependencies
+        run: python -m pip install -e ".[dev]"
+
+      - name: Run L4 budget benchmark
+        run: >
+          python tools/run_l4_benchmark.py
+          --iterations $env:L4_ITERATIONS
+          --warmups $env:L4_WARMUPS
+          --output l4-benchmark-report.json
+
+      - name: Upload benchmark report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: l4-benchmark-${{ github.run_id }}
+          path: l4-benchmark-report.json
+          if-no-files-found: error
+          retention-days: 30

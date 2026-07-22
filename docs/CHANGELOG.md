@@ -18,6 +18,33 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L4：synthetic benchmark 持续回归接线）
+
+本轮把固定 L4 synthetic suite 接入 GitHub Actions 的手动/夜间预算门禁，不把本机报告
+冒充 GitHub runner 的同环境 baseline。
+
+### 已交付
+
+- 新增 `.github/workflows/l4-benchmark.yml`，在 Windows/Python 3.12.9 上支持
+  `workflow_dispatch` 和每日 schedule。
+- 每次运行固定执行 snapshot、indicator、K-line geometry 的 100/500/5000 bars suite；
+  p95 超出预算时 benchmark 命令返回失败，阻断该工作流。
+- 无论成功或失败都上传 `pa-agent.performance.v1` JSON 报告 artifact，保留 30 天；
+  手动输入可覆盖 iterations/warmups。
+
+### 明确边界
+
+- 当前 workflow 只做预算门禁和报告留存；仓库本地 baseline 与 hosted runner 环境不同，
+  不直接用于 10% regression 比较。
+- 同环境 baseline 需在固定 runner 环境维护后，再通过现有 `--baseline` 参数启用回退告警。
+
+### 验证
+
+- benchmark contract、L4 runner、CI target 和 workflow 目标路径检查 → **通过**。
+- 本轮不修改 snapshot、指标或 K-line geometry 热路径。
+
+---
+
 ## [Unreleased] — 2026-07-22（L6：跨进程 correlation replay 契约）
 
 本轮补齐 JSONL event stream 的跨进程重放边界，不调用真实 Provider、不写入行情或密钥，

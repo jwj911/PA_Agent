@@ -398,6 +398,9 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
   - 在 `QT_QPA_PLATFORM=offscreen` 下运行 targeted pytest（含覆盖率门槛）；
   - 运行非 live 非 e2e 测试；
   - 运行 `scripts/check_ruff_baseline.py`、focused Ruff 和 focused Black。
+- `.github/workflows/l4-benchmark.yml` 通过 `workflow_dispatch` 和每日 schedule 在
+  Windows/Python 3.12.9 运行 L4 synthetic p95 budget gate，并上传 JSON 报告；它不把本机
+  baseline 直接当作 hosted runner 的 10% regression 基线。
 - `tools/` 目录包含大量一次性诊断脚本（网关探测、stage2 JSON 调试、MT5 时钟偏移检测等），不属于正式发布流程。
 
 ---
@@ -488,8 +491,10 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     `tools/run_l4_benchmark.py` 提供 `pa-agent.performance.v1` 报告、p50/p95、p95 budget
     和超过 10% baseline regression 判定；固定 suite 覆盖 snapshot build、indicator、
     K-line geometry 的 100/500/5000 bars，报告只保留耗时、平台和预算状态，不写行情原文。
-    当前基线见 `docs/benchmarks/l4_synthetic_2026-07-22.json`；CI/夜间持续回归和同环境
-    baseline 维护完成前，不得据单次 benchmark 修改热路径。
+    当前基线见 `docs/benchmarks/l4_synthetic_2026-07-22.json`；`.github/workflows/l4-benchmark.yml`
+    已提供 Windows/Python 3.12.9 的手动/夜间预算门禁和 artifact 留存。仓库本地 baseline
+    不得直接用于 hosted runner 的 10% regression 比较；固定 runner baseline 维护完成前，
+    不得据单次 benchmark 修改热路径。
 20. **L2 Prompt 兼容观察当前进度**：TemplateStore、TemplateContext、严格变量渲染和
     29 个模板 golden snapshot 已完成；本轮用固定 `prompt_golden.json` 连续 5 轮比较
     TemplateStore/旧 loader 的 shared system、Stage 1、Stage 2 standalone、continuation
