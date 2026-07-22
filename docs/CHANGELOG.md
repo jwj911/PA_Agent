@@ -18,6 +18,34 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L6：显式 live headless observation harness）
+
+本轮提供真实 Provider 观察的显式入口，不读取 `config/settings.json`，不接入普通/夜间 CI，
+并将输出限制为可审计的 record/event 状态摘要。
+
+### 已交付
+
+- 新增 `tools/run_live_headless_observation.py`，必须同时提供 `--confirm-live` 和
+  `PA_AGENT_LIVE_API_KEY` 才会发起请求；base URL/model 可通过环境变量或显式参数注入。
+- 使用 `HeadlessAnalysisAdapter` 写入 `pa-agent.event.v1` JSONL 和 final/partial record，
+  之后以 `expected_correlation_id` 在同一命令中严格 replay。
+- 输出 `pa-agent.live-observation.v1` summary，只包含状态、事件名/数量、record 文件名、
+  exception type 和 replay count，不输出 API key、prompt、回复、行情或价格。
+- 新增未确认/缺少密钥的安全守卫单测，并纳入 targeted pytest/focused Ruff；不在 CI 中调用
+  live harness。
+
+### 明确边界
+
+- 本轮只交付可显式执行的真实观察入口；当前环境未提供 Provider 凭据，因此没有伪造运行结果。
+- 真实 Provider 的稳定周期、GUI/headless record/event 完整等价和人工复核仍待实际运行。
+
+### 验证
+
+- live harness 安全守卫测试 → **通过**。
+- Ruff、Ruff format、`py_compile`、CI target 和 `git diff --check` → **通过**。
+
+---
+
 ## [Unreleased] — 2026-07-22（L5：脱敏经验数据固定切分合同）
 
 本轮不生成真实经验质量结论，只补齐离线评估所需的可复现 train/evaluation split 和数据

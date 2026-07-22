@@ -439,7 +439,10 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     `pa-agent.event.v1` envelope，未知 schema 拒绝，旧缺失 schema 事件继续可回放；严格
     `replay_jsonl(..., expected_correlation_id=...)` 会在发布前校验整条跨进程流的 correlation
     一致性。默认 `analyze` 仍必须保持 provider-free dry-run；真实 Provider 环境观察、真实运行
-    record/事件证据和 record/event 完整等价仍未收敛。
+    record/事件证据和 record/event 完整等价仍未收敛。真实观察只能使用
+    `tools/run_live_headless_observation.py`，必须显式 `--confirm-live` 和
+    `PA_AGENT_LIVE_API_KEY`；脚本只输出 `pa-agent.live-observation.v1` 脱敏摘要，不得接入
+    常规/夜间 CI。
 14. **架构任务先读两份计划**：长期模块边界、迁移原则和完成定义以
     [`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md) 为准；短中期优先级、每轮建议
     交付物、验收标准和依赖顺序见 [`docs/iteration_plan.md`](./docs/iteration_plan.md)。
