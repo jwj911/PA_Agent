@@ -18,6 +18,34 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L3：flag-off/flag-on 受控 rollout 观察）
+
+本轮建立默认 Pipeline flag 关闭状态下的可重复 rollout 观察基线，不调用真实 Provider，
+不改变 `submit()` 默认行为。
+
+### 已交付
+
+- 新增 `tests/integration/test_l3_rollout_observation.py`，覆盖 final、Stage 1 network failure、
+  Stage 2 network failure、cancel、Stage 1 validation 五个终态场景。
+- 每个场景重复 3 轮，分别执行 legacy flag-off 和
+  `Stage1Step -> RouteStep -> Stage2Step -> PersistStep` flag-on 路径。
+- 对照最终 record、`OrchestratorEvent` 顺序、Stage prompt、reasoning/content、策略文件和
+  full/partial writer 边界；所有对照无差异。
+- 将受控 rollout 测试加入 CI targeted pytest。
+
+### 明确边界
+
+- 本轮只证明固定 fixture 下的受控稳定性，不宣称真实 Provider 生产观察已经完成。
+- 默认 `orchestrator.pipeline_builder_enabled` 继续为 `false`；真实稳定周期、GUI/headless
+  真实运行终态证据和默认 flag 切换仍待后续。
+
+### 验证
+
+- 5 个场景 × 3 轮 rollout observation → **通过**。
+- 受影响模块 Ruff、`py_compile`、CI target 和 `git diff --check` → **通过**。
+
+---
+
 ## [Unreleased] — 2026-07-22（L6：GUI/headless 全链路等价证据与事件 envelope v1）
 
 本轮完成 L6 的 mock/fixed-fixture 全链路等价证据，覆盖 GUI 实际 `_AnalysisWorker` 与公开

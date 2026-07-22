@@ -21,7 +21,7 @@
 |---|---|---|---|
 | L1 Provider/数据源注册表 | 治理与扩展契约已交付，进入观察期 | `data/registry.py`、`ai/provider_registry.py` 已支持规格、优先级、延迟 builder、运行时注册和 entry point 扩展发现；未知数据源配置已安全回退；第 236 轮及本轮补齐规范化、replace/unregister、并发、lazy-import、扩展失败隔离和锁外执行证据 | 观察外部扩展样例；必要时补充版本化契约和插件兼容策略 |
 | L2 Prompt 模板引擎 | 实现完成，兼容观察期 | `Stage1PromptBuilder`、`Stage2PromptBuilder`、29 个模板 manifest、`TemplateStore`、`TemplateContext`、严格变量渲染、system/Stage 1/Stage 2/continuation golden snapshots | 稳定周期后评估旧 helper、旧 loader 和兼容开关的下线 |
-| L3 Pipeline Builder | Task 10 已完成 rollout 观察与切换准备，默认 legacy，观察周期未收口 | 新增 PyQt-free `orchestrator/pipeline/`、`PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step` 和 `PersistStep`；新增 `orchestrator.pipeline_builder_enabled`（默认 `false`）及 `pa_agent/config/orchestrator.py`；flag-off 的 `submit()` 走 legacy，flag-on 委托 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep`；Task 10 已补齐完整终态矩阵和 Qt-free headless/GUI adapter equivalence 测试；默认路径仍为 legacy | 真实稳定观察周期、GUI/headless final/partial/cancel/failure 全链路 evidence；满足后才评估启用默认 flag，L3 尚未收口 |
+| L3 Pipeline Builder | 受控 fixture rollout 观察已完成，默认 legacy，真实观察周期未收口 | 新增 PyQt-free `orchestrator/pipeline/`、`PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step` 和 `PersistStep`；新增 `orchestrator.pipeline_builder_enabled`（默认 `false`）及 `pa_agent/config/orchestrator.py`；flag-off 的 `submit()` 走 legacy，flag-on 委托 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep`；Task 10 终态矩阵和本轮 5 场景×3 轮 flag-off/flag-on 对照均通过；默认路径仍为 legacy | 真实 Provider 稳定观察周期、真实运行 GUI/headless final/partial/cancel/failure evidence；满足后才评估启用默认 flag，L3 尚未收口 |
 | L4 性能优化 | 代码优化完成，预算未收口 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁 | 固定 benchmark、预算阈值、p50/p95 报告和持续回归监控 |
 | L5 经验库升级 | 排序实现完成，数据评估未收口 | 全量相关性排序 + K 线几何相似度 | 脱敏数据集、固定离线指标、特征版本化和权重校准 |
 | L6 无 GUI 运行 | headless 第一切片与公开 adapter 已交付，mock 全链路等价证据已建立，真实环境观察未收口 | `AppEvent`、`EventSink`、`CollectingEventSink`、`JsonlEventSink`、`replay_jsonl`、`pa-agent.event.v1` envelope、共享 `_build_core()`、`bootstrap_gui()`/`bootstrap_headless()`、兼容 `bootstrap()`、`HeadlessAnalysisAdapter` 和 PyQt-free `pa-agent headless`；显式 `analyze --run/--execute` 已接入两阶段 orchestrator、record 和 JSONL 事件；GUI `_AnalysisWorker` 与 headless adapter 已有 final/partial/cancel/failure fixture 对照 | 真实 Provider 环境稳定观察、真实运行 record/事件证据和跨进程 correlation 重放契约 |
@@ -48,8 +48,10 @@ record/事件证据和跨进程 correlation 重放。L3 已建立 `orchestrator/
 Task 8 已交付 `Stage2Step`，Task 9 已交付 `PersistStep` 和 opt-in 等价证据；PersistStep
 现在集中 full/partial record assembly/write，前置终态通过 `persistence_pending` 交给唯一一次
 PersistStep 写入，成功后才发出 `RecordSaved`，磁盘失败由 `last_write_succeeded` 反馈并映射为
-持久化失败。Pipeline feature flag、真实稳定观察周期和 GUI/headless 真实运行全链路等价仍未收口；
-L6 的 mock/fixed-fixture 等价证据已单独完成。
+持久化失败。本轮已用 5 个终态场景、每场景 3 轮固定 fixture 完成 flag-off/flag-on
+record、事件、prompt、流式内容、策略文件和写入边界对照；Pipeline feature flag、真实稳定
+观察周期和 GUI/headless 真实运行全链路等价仍未收口。L6 的 mock/fixed-fixture 等价证据已
+单独完成。
 L5/L4 在真实数据或固定 benchmark 建立前，不得宣称收敛或直接调整线上权重/热路径。
 
 ## 2. 目标架构
@@ -353,8 +355,10 @@ step.run(state, services) -> Continue(state) | Complete(record) | Fail(record)
    `orchestrator.pipeline_builder_enabled`（默认 `false`），为 Settings round-trip 和缺少
    `orchestrator` section 的旧配置补充 legacy 默认，接入 flag 路由，建立完整终态矩阵及
    Qt-free headless/GUI adapter equivalence 测试，并将测试/config module 纳入 CI targets。
-10. 在默认 flag 仍关闭的前提下，进行受控 flag-on rollout，积累真实稳定观察周期，并完成
-    GUI/headless final/partial/cancel/failure 全链路 evidence。
+10. **已完成受控 fixture rollout 观察**：在默认 flag 仍关闭的前提下，以 5 个终态场景、
+    每场景 3 轮比较 flag-off/flag-on 的 record、事件、prompt、流式内容、策略文件和写入边界；
+    下一步仍需真实 Provider 稳定观察周期和 GUI/headless 真实运行 final/partial/cancel/failure
+    evidence。
 11. 只有上述观察和 evidence 无未解释偏差后，才评估启用默认 flag；随后再评估删除旧
     `submit()` 内部实现，只保留 facade。
 
@@ -391,8 +395,9 @@ Qt signal、CLI stdout 和日志分别由入口 adapter 映射。取消令牌必
 - 事件顺序和事件 payload 可快照比较；
 - Pipeline 不导入 PyQt6；
 - feature flag 关闭时旧 `submit()` 行为不变；
-- 四个真实步骤与 Pipeline feature flag 接线已齐，但默认 flag 仍为 `false`；至少一个真实稳定
-  观察周期和 GUI/headless final/partial/cancel/failure 全链路等价仍待完成；
+- 四个真实步骤与 Pipeline feature flag 接线已齐；受控 fixture rollout 已覆盖 5 个终态场景
+  × 3 轮且默认 flag 仍为 `false`，至少一个真实稳定观察周期和 GUI/headless 真实运行
+  final/partial/cancel/failure 全链路等价仍待完成；
 - 任一阶段出现差异可按 symbol/timeframe 或配置开关回退。
 - 生命周期日志仅证明 opt-in 路径可观测，不代表默认 flag 可以开启；在真实稳定观察周期和
   GUI/headless final、partial、cancel、failure 全链路 evidence 无未解释偏差前，必须保持

@@ -460,8 +460,10 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     full/partial record assembly/write，前置终态通过 `persistence_pending` 防止重复保存，使用
     `PendingWriter.last_write_succeeded` 识别磁盘失败，full 写入成功后才发出 `RecordSaved`，
     partial 或磁盘失败不发成功事件。默认 `submit()` 和 GUI/headless 调用路径仍保持 legacy；
-    本轮只完成 rollout 观察与切换准备，后续需真实稳定观察周期和 GUI/headless final/partial/
-    cancel/failure 全链路 evidence 后才评估启用默认 flag。
+    本轮已用 5 个终态场景 × 3 轮固定 fixture 完成 flag-off/flag-on 的 record、事件、prompt、
+    流式内容、策略文件和写入边界对照；这只是受控 rollout evidence，不是生产稳定观察。
+    后续需真实 Provider 稳定观察周期和 GUI/headless 真实运行 final/partial/cancel/failure
+    evidence 后才评估启用默认 flag。
 17. **L3 Pipeline 生命周期日志**：Pipeline enabled 路径以同一 `trace_id` 关联一次执行，
     使用 `pipeline.lifecycle`、`pipeline.event`、`pipeline.step` 和 `pipeline.timing` 四类结构化事件；主要字段
     为 `pipeline_step`、结果/终态分类、异常类型分类、耗时、跳过原因、写入状态和

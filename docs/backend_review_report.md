@@ -53,8 +53,10 @@ happy/retry/network/validation/cancel/incremental、RouteStep 的 callable/objec
 顺序/经验限制/空经验库/`current_bars`/Stage 2 前取消/`route_failed`、Stage2Step 的
 continuation/flags/gate/流式/retry/network/validation/cancel/partial record，以及 PersistStep
 的 full/partial/insufficient-data/disk failure/重复保存防护均已有测试证据；Task 10 的测试和
-config module 已纳入 CI targets。真实稳定观察周期和 GUI/headless final/partial/cancel/failure
-全链路 evidence 仍待完成，之后才评估启用默认 flag。
+  config module 已纳入 CI targets。本轮又完成 5 个终态场景 × 3 轮 flag-off/flag-on 固定
+  fixture rollout 对照，覆盖 record、事件、prompt、流式内容、策略文件和 writer 边界；真实
+  Provider 稳定观察周期和 GUI/headless 真实运行 final/partial/cancel/failure evidence 仍待
+  完成，之后才评估启用默认 flag。
 - L5 已接入 K 线几何相似度，但真实脱敏数据集和离线指标尚未具备，不应调整线上权重。
 - L6 已完成 `AppEvent`/`EventSink`、`bootstrap_headless()`、共享 core/GUI bootstrap 边界，
   第 229 轮新增 PyQt-free CLI 最小切片，第 234 轮新增 JSONL event sink/replay，第 237 轮又
