@@ -36,12 +36,39 @@ jobs:
       - name: Install dependencies
         run: python -m pip install -e ".[dev]"
 
+      - name: Restore last successful same-environment baseline
+        uses: actions/cache/restore@v4
+        with:
+          path: l4-baseline.json
+          key: l4-baseline-windows-py312-i${{ inputs.iterations || '30' }}-w${{ inputs.warmups || '5' }}-${{ github.run_id }}
+          restore-keys: |
+            l4-baseline-windows-py312-i${{ inputs.iterations || '30' }}-w${{ inputs.warmups || '5' }}-
+
       - name: Run L4 budget benchmark
-        run: >
-          python tools/run_l4_benchmark.py
-          --iterations $env:L4_ITERATIONS
-          --warmups $env:L4_WARMUPS
-          --output l4-benchmark-report.json
+        shell: pwsh
+        run: |
+          $arguments = @(
+            "tools/run_l4_benchmark.py",
+            "--iterations", $env:L4_ITERATIONS,
+            "--warmups", $env:L4_WARMUPS,
+            "--output", "l4-benchmark-report.json"
+          )
+          if (Test-Path "l4-baseline.json") {
+            $arguments += @("--baseline", "l4-baseline.json")
+          }
+          python @arguments
+
+      - name: Stage successful baseline
+        if: ${{ success() }}
+        shell: pwsh
+        run: Copy-Item l4-benchmark-report.json l4-baseline.json
+
+      - name: Save successful same-environment baseline
+        if: ${{ success() }}
+        uses: actions/cache/save@v4
+        with:
+          path: l4-baseline.json
+          key: l4-baseline-windows-py312-i${{ inputs.iterations || '30' }}-w${{ inputs.warmups || '5' }}-${{ github.run_id }}
 
       - name: Upload benchmark report
         if: always()

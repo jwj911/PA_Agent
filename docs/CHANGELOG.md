@@ -18,6 +18,31 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L4：hosted runner baseline cache）
+
+本轮继续收口 L4 持续回归：使用 GitHub Actions cache 保存固定 Windows/Python/iterations/
+warmups 组合下最近一次成功 benchmark 报告，不把本机报告用于 hosted runner 比较。
+
+### 已交付
+
+- `.github/workflows/l4-benchmark.yml` 恢复最近一次成功的同环境 baseline；若存在则自动传给
+  `tools/run_l4_benchmark.py --baseline`，超过 10% p95 regression 或预算失败时阻断当前运行。
+- baseline key 按 Windows/Python、iterations 和 warmups 分区；失败运行不会覆盖最近一次成功
+  baseline，首次无缓存运行只执行预算门禁。
+- 成功运行后保存新的 `l4-baseline.json`，同时继续上传当前 `pa-agent.performance.v1`
+  artifact。
+
+### 明确边界
+
+- baseline 依赖 hosted runner label 和 Python 3.12.9 的稳定环境；runner image 变化时应人工
+  审核并刷新缓存，不将缓存结果解释为跨机器性能结论。
+
+### 验证
+
+- benchmark CLI、L4 contract tests、CI target、Ruff baseline 和 workflow 文本检查 → **通过**。
+
+---
+
 ## [Unreleased] — 2026-07-22（L3：live harness Pipeline opt-in）
 
 本轮不改变 `pipeline_builder_enabled` 默认值，只让显式 live observation harness 可以在授权
