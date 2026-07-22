@@ -485,8 +485,10 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     真实检索质量结论。`pa_agent.records.experience_eval` 提供
     `pa-agent.experience-eval.v1` dataset envelope、`kline-geometry.v1` feature version、
     opaque instrument id 数据合同和离线 `Recall@K`/`NDCG@K`/fallback/stability scorer；
-    评估数据不得包含价格、K 线原文、截图路径、密钥或本地绝对路径。真实脱敏数据集、
-    固定切分、人工标注和线上权重校准仍待完成，不得顺手修改 `ExperienceReader` 线上排序。
+    新增 `pa-agent.experience-split.v1` / `instrument-hash.v1` instrument-grouped 固定切分、
+    dataset digest 和泄漏门禁。评估数据不得包含价格、K 线原文、截图路径、密钥或本地绝对
+    路径。真实脱敏数据集、人工标注、指标报告和线上权重校准仍待完成，不得顺手修改
+    `ExperienceReader` 线上排序。
 19. **L4 性能基准当前进度**：`pa_agent.perf.benchmark` 和
     `tools/run_l4_benchmark.py` 提供 `pa-agent.performance.v1` 报告、p50/p95、p95 budget
     和超过 10% baseline regression 判定；固定 suite 覆盖 snapshot build、indicator、

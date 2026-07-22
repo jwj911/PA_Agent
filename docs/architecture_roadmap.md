@@ -23,7 +23,7 @@
 | L2 Prompt 模板引擎 | 5 轮固定 fixture 兼容观察已通过，仍保留回滚路径 | `Stage1PromptBuilder`、`Stage2PromptBuilder`、29 个模板 manifest、`TemplateStore`、`TemplateContext`、严格变量渲染、system/Stage 1/Stage 2/continuation golden snapshots；本轮重复比较 TemplateStore/旧 loader 的 system、Stage 1、Stage 2 和 continuation 输出 | 继续记录稳定周期，之后评估旧 helper、旧 loader 和兼容开关的下线 |
 | L3 Pipeline Builder | 受控 fixture rollout 观察已完成，默认 legacy，真实观察周期未收口 | 新增 PyQt-free `orchestrator/pipeline/`、`PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step` 和 `PersistStep`；新增 `orchestrator.pipeline_builder_enabled`（默认 `false`）及 `pa_agent/config/orchestrator.py`；flag-off 的 `submit()` 走 legacy，flag-on 委托 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep`；Task 10 终态矩阵和本轮 5 场景×3 轮 flag-off/flag-on 对照均通过；默认路径仍为 legacy | 真实 Provider 稳定观察周期、真实运行 GUI/headless final/partial/cancel/failure evidence；满足后才评估启用默认 flag，L3 尚未收口 |
 | L4 性能优化 | synthetic benchmark 已接入手动/夜间预算门禁，持续 baseline 未收口 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；新增 `pa-agent.performance.v1` runner、p50/p95 报告、100/500/5000 bars 基准和 `.github/workflows/l4-benchmark.yml` | 在固定 runner 环境维护 baseline，并启用同环境超过 10% 回退告警 |
-| L5 经验库升级 | 离线评估合同/scorer 已交付，真实数据评估未收口 | 全量相关性排序 + K 线几何相似度；新增版本化脱敏评估 dataset 和 `Recall@K`/`NDCG@K`/fallback/stability scorer；不改变线上排序 | 真实脱敏数据集、固定 train/evaluation 切分、人工标注和权重校准 |
+| L5 经验库升级 | 评估合同、scorer 和 instrument-grouped 固定切分已交付，真实数据评估未收口 | 全量相关性排序 + K 线几何相似度；新增 `pa-agent.experience-eval.v1`、`pa-agent.experience-split.v1`、`instrument-hash.v1`、dataset digest 和 `Recall@K`/`NDCG@K`/fallback/stability scorer；不改变线上排序 | 真实脱敏数据集、人工标注、指标报告和权重校准 |
 | L6 无 GUI 运行 | mock 全链路等价和跨进程 event replay 契约已建立，真实环境观察未收口 | `AppEvent`、`EventSink`、`CollectingEventSink`、`JsonlEventSink`、`replay_jsonl`、`pa-agent.event.v1` envelope、严格 `expected_correlation_id` replay、共享 `_build_core()`、`bootstrap_gui()`/`bootstrap_headless()`、兼容 `bootstrap()`、`HeadlessAnalysisAdapter` 和 PyQt-free `pa-agent headless`；显式 `analyze --run/--execute` 已接入两阶段 orchestrator、record 和 JSONL 事件；GUI `_AnalysisWorker` 与 headless adapter 已有 final/partial/cancel/failure fixture 对照 | 真实 Provider 环境稳定观察、真实运行 record/事件证据和 record/event 完整等价 |
 
 当前经验目录主要是空目录占位，因而 L5 的 scorer 目前只能由合成 fixture 验证，不能据此
@@ -456,7 +456,9 @@ snapshot build、indicator 和 K-line geometry 的 100/500/5000 bars，预算报
 本轮新增 `pa_agent.records.experience_eval`，定义
 `pa-agent.experience-eval.v1` dataset envelope 和 `kline-geometry.v1` feature version。
 评估输入只保留 opaque instrument id、周期/方向/形态、候选数量和人工标注的相关案例 id；
-不携带价格、K 线原文、截图路径、密钥或本地绝对路径。`evaluate_rankings()` 输出宏平均
+不携带价格、K 线原文、截图路径、密钥或本地绝对路径。新增
+`pa-agent.experience-split.v1` / `instrument-hash.v1`，按 opaque instrument group 做稳定
+hash split，并以 dataset digest 防止 split 错用于其他数据集；`evaluate_rankings()` 输出宏平均
 `Recall@K`、`NDCG@K`、similarity fallback rate、top-K ranking stability 和 score distribution。
 
 ### 8.2 下一阶段前置条件
@@ -467,7 +469,8 @@ snapshot build、indicator 和 K-line geometry 的 100/500/5000 bars，预算报
 - feature extraction version；
 - `success`/`failure`、symbol、timeframe、cycle、direction、patterns 的完整元数据；
 - 脱敏后可用于离线测试的案例导出；
-- 固定 train/evaluation 切分，避免同一结构泄漏到评估集。
+- 使用 `build_fixed_split()` 生成固定 train/evaluation 切分，避免同一 instrument group
+  泄漏到评估集；真实数据仍需人工检查更高层结构泄漏。
 
 ### 8.3 离线指标
 
@@ -641,7 +644,8 @@ pa-agent headless analyze --input snapshot.json --run --records-dir records/ --e
 ### Phase 5：L5 数据评估
 
 - 已建立版本化脱敏评估合同和离线 scorer；
-- 下一步导出真实脱敏经验数据并建立固定 train/evaluation benchmark；
+- 已建立 `pa-agent.experience-split.v1` instrument-grouped 固定切分和 dataset digest；
+- 下一步导出真实脱敏经验数据、人工标注并建立固定 train/evaluation benchmark；
 - 仅在指标改善且稳定性可接受时调整线上权重。
 
 ### Phase 6：L4 预算收口

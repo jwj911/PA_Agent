@@ -11,11 +11,16 @@ import pytest
 from pa_agent.records.experience_eval import (
     EXPERIENCE_EVAL_SCHEMA,
     EXPERIENCE_FEATURE_VERSION,
+    EXPERIENCE_SPLIT_SCHEMA,
     ExperienceEvalCase,
     ExperienceEvalDataset,
+    apply_fixed_split,
+    build_fixed_split,
     dump_dataset,
+    dump_split,
     evaluate_rankings,
     load_dataset,
+    load_split,
 )
 
 
@@ -85,9 +90,7 @@ def test_evaluate_rankings_reports_metrics_and_stability() -> None:
     assert metrics.query_count == 3
     assert metrics.recall_at_k == pytest.approx(5 / 6)
     ideal_two = 1 + 1 / math.log2(3)
-    assert metrics.ndcg_at_k == pytest.approx(
-        (1 / ideal_two + 1 / math.log2(3) + 1.0) / 3
-    )
+    assert metrics.ndcg_at_k == pytest.approx((1 / ideal_two + 1 / math.log2(3) + 1.0) / 3)
     assert metrics.fallback_rate == pytest.approx(1 / 3)
     assert metrics.ranking_stability == pytest.approx(5 / 6)
     assert metrics.score_distribution["count"] == 7.0
@@ -139,3 +142,74 @@ def test_empty_dataset_and_invalid_k_are_explicit() -> None:
     assert metrics.score_distribution == {"count": 0.0}
     with pytest.raises(ValueError, match="positive"):
         evaluate_rankings(empty, {}, k=0)
+
+
+def test_fixed_split_is_deterministic_and_keeps_instruments_together(tmp_path: Path) -> None:
+    base = _dataset()
+    extra = ExperienceEvalCase(
+        case_id="query-a2",
+        instrument_id="instrument-001",
+        timeframe="1h",
+        cycle_position="micro_channel",
+        direction="bull",
+        patterns=("wedge",),
+        relevant_ids=("case-a3",),
+        candidate_count=1,
+    )
+    dataset = ExperienceEvalDataset(
+        feature_version=EXPERIENCE_FEATURE_VERSION,
+        cases=(*base.cases, extra),
+    )
+
+    split = build_fixed_split(dataset, evaluation_fraction=0.5)
+    reversed_split = build_fixed_split(
+        ExperienceEvalDataset(
+            feature_version=dataset.feature_version,
+            cases=tuple(reversed(dataset.cases)),
+        ),
+        evaluation_fraction=0.5,
+    )
+    train, evaluation = apply_fixed_split(dataset, split)
+
+    assert split.schema == EXPERIENCE_SPLIT_SCHEMA
+    assert split.dataset_digest == reversed_split.dataset_digest
+    assert split.train_group_ids == reversed_split.train_group_ids
+    assert split.evaluation_group_ids == reversed_split.evaluation_group_ids
+    assert set(split.train_case_ids).isdisjoint(split.evaluation_case_ids)
+    assert {case.instrument_id for case in train.cases}.isdisjoint(
+        case.instrument_id for case in evaluation.cases
+    )
+    assert {case.case_id for case in train.cases} | {case.case_id for case in evaluation.cases} == {
+        case.case_id for case in dataset.cases
+    }
+
+    path = tmp_path / "split.json"
+    dump_split(path, split)
+    assert load_split(path) == split
+    assert "price" not in path.read_text(encoding="utf-8")
+
+
+def test_fixed_split_rejects_single_group_and_digest_mismatch() -> None:
+    dataset = _dataset()
+    single_group = ExperienceEvalDataset(
+        feature_version=dataset.feature_version,
+        cases=tuple(
+            ExperienceEvalCase(
+                case_id=f"single-{index}",
+                instrument_id="one-instrument",
+                timeframe="5m",
+                cycle_position="micro_channel",
+                direction="bull",
+                patterns=(),
+                relevant_ids=(f"case-{index}",),
+                candidate_count=1,
+            )
+            for index in range(2)
+        ),
+    )
+    with pytest.raises(ValueError, match="at least two instrument groups"):
+        build_fixed_split(single_group)
+
+    split = build_fixed_split(dataset)
+    with pytest.raises(ValueError, match="dataset digest"):
+        apply_fixed_split(single_group, split)

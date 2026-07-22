@@ -18,6 +18,33 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（L5：脱敏经验数据固定切分合同）
+
+本轮不生成真实经验质量结论，只补齐离线评估所需的可复现 train/evaluation split 和数据
+泄漏门禁，不修改线上 `ExperienceReader` 排序。
+
+### 已交付
+
+- `pa_agent.records.experience_eval` 新增 `pa-agent.experience-split.v1` 和
+  `instrument-hash.v1` 固定切分合同。
+- `build_fixed_split()` 按 opaque `instrument_id` 分组并用稳定 hash 选择 evaluation groups；
+  同一 instrument 不会跨 train/evaluation，dataset digest 防止 split 误用于其他数据集。
+- `apply_fixed_split()`、`dump_split()`、`load_split()` 增加切分覆盖、组隔离、schema/version 和
+  digest 校验；case 顺序变化不影响 digest。
+- 新增固定切分、单 instrument 拒绝、digest mismatch、round-trip 和脱敏字段测试。
+
+### 明确边界
+
+- 当前经验目录仍无真实案例；本轮不提供人工标签、真实 Recall/NDCG 或线上权重结论。
+- 不写入价格、K 线数组、截图路径、密钥或本地绝对路径。
+
+### 验证
+
+- experience evaluator/reader 回归 → **通过**。
+- Ruff、Ruff format、`py_compile` 和 `git diff --check` → **通过**。
+
+---
+
 ## [Unreleased] — 2026-07-22（L4：synthetic benchmark 持续回归接线）
 
 本轮把固定 L4 synthetic suite 接入 GitHub Actions 的手动/夜间预算门禁，不把本机报告
