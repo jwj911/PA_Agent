@@ -18,6 +18,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-22（文档：L4 workflow 触发权限与 hosted baseline 验收）
+
+本轮记录后续由维护者手动完成的 L4 hosted runner 测试步骤，不改变 workflow 或性能热路径。
+
+### 已记录
+
+- `.github/workflows/l4-benchmark.yml` 的网页入口要求仓库 Write 权限；CLI/API 入口使用仅限
+  `PA_Agent` 的 Fine-grained PAT，并授予 Repository `Actions: Read and write`；
+- 首次以 `iterations=30`、`warmups=5` 运行，建立 Windows/Python 3.12.9 hosted baseline；
+- 第二次使用相同参数运行，验证最近成功 baseline restore、`--baseline` p95 比较、10%
+  regression 门禁和 `pa-agent.performance.v1` JSON artifact；
+- PAT、Provider key、benchmark 敏感配置不写入仓库、日志或聊天；当前 workflow 的最小
+  `contents: read` 权限不因手动触发而扩大。
+
+### 当前边界
+
+- 本地尚未具备 GitHub Actions 触发凭据，当前没有 hosted run；本条只登记后续执行清单，
+  不宣称 L4 hosted baseline 已收口。
+
+---
+
 ## [Unreleased] — 2026-07-22（L6：live observation artifact validator）
 
 本轮补充真实观察结果的离线审计工具，不调用 Provider、不读取密钥，也不改变 headless 执行

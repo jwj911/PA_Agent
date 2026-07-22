@@ -660,6 +660,12 @@ pa-agent headless analyze --input snapshot.json --run --records-dir records/ --e
 - 已新增 `.github/workflows/l4-benchmark.yml`，接入手动/夜间预算门禁和报告 artifact；
 - workflow 已按 runner/Python/iterations/warmups 缓存最近一次成功 baseline；首次 Actions 运行
   后维护并审核 runner image 变化；
+- 下一轮由具备仓库 Write 权限的账号手动触发 `.github/workflows/l4-benchmark.yml`：网页入口
+  不需本地 token；CLI/API 入口使用仅限 `PA_Agent` 的 Fine-grained PAT，Repository
+  `Actions: Read and write`。首次以 `iterations=30`、`warmups=5` 建立 baseline，第二次同参
+  数运行验证 restore、`--baseline` p95 比较和 10% regression 门禁；
+- PAT、Provider key 和 benchmark 原始敏感配置不得写入仓库或日志；触发权限配置不等于扩大
+  workflow 内的 `GITHUB_TOKEN` 权限，当前 `contents: read` 保持最小范围；
 - 只对有数据证明的热点继续优化；
 - 形成性能回归报告。
 

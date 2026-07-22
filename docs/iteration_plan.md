@@ -766,6 +766,36 @@ split 报告和线上权重校准。
 收尾边界：validator 只证明 artifact 自洽，不能替代真实 Provider 稳定周期或 GUI/headless
 完整等价证据。
 
+## 2.29 下一轮待执行（L4：workflow dispatch 权限与 hosted baseline 验收）
+
+本轮只记录外部执行步骤，不把权限配置或 hosted runner 结果误标为已完成：
+
+- 仓库 `jwj911/PA_Agent` 的 workflow 文件为 `.github/workflows/l4-benchmark.yml`，分支为
+  `main`，已声明 `workflow_dispatch` 和每日 schedule；
+- 网页手动运行要求账号拥有仓库 Write 权限；CLI/API 触发建议使用仅授权
+  `PA_Agent` 的 Fine-grained PAT，并只授予 Repository `Actions: Read and write`；
+- 不把 PAT、Provider key 或其输出写入仓库、日志或聊天；workflow 内现有
+  `permissions: contents: read` 不因“触发 workflow”而扩大为全局写权限；
+- 首次以 `iterations=30`、`warmups=5` 运行，只验证预算门禁并建立 hosted baseline；
+- 第二次使用相同参数运行，验证最近成功 baseline restore、`--baseline` p95 比较和超过 10%
+  regression 门禁；同时下载并审核 `pa-agent.performance.v1` JSON artifact；
+- 只有 Actions 成功运行、artifact 存在、runner/Python 环境记录清晰且第二次比较证据完整后，
+  才能把 L4 hosted baseline 标记为收口。
+
+推荐执行入口：
+
+```powershell
+gh workflow run l4-benchmark.yml `
+  --repo jwj911/PA_Agent `
+  --ref main `
+  -f iterations=30 `
+  -f warmups=5
+gh run list --repo jwj911/PA_Agent --workflow l4-benchmark.yml --limit 5
+```
+
+收尾边界：当前工作区没有 GitHub Actions 触发凭据，且尚无 hosted run；本节仅作为后续
+授权环境的执行清单，不替代真实 runner 证据。
+
 ## 3. 每轮建议交付物
 
 ### 3.1 L6 headless runner / CLI 最小入口
