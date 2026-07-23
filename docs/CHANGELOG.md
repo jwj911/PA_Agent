@@ -18,6 +18,33 @@
 
 ---
 
+## [Unreleased] — 2026-07-23（L4：v2 hosted baseline 收口）
+
+`l4.synthetic.v2` 推送后已完成两次相同参数的 GitHub Actions 运行，收口 hosted baseline
+restore、p95 对照和 10% regression 门禁。
+
+### 运行证据
+
+- run `29975410917` 在 `main@5763906` 首次建立 v2 baseline，结论 `success`；artifact
+  `l4-benchmark-29975410917`，digest
+  `sha256:a182352d1def41fc72d3edd2bc8b5cae73f78f6c7a9d9c4428c03863c4fb1e0d`。
+- run `29975592352` 使用相同 `iterations=30`、`warmups=5`，成功恢复 cache key
+  `l4-baseline-v2-windows-py312-i30-w5-29975410917`，九项均完成 baseline p95 对照并通过；
+  最大正回退为 `snapshot_build_5000` 的 `+5.12%`，低于 10% 门禁。
+- 第二次 artifact 为 `l4-benchmark-29975592352`，digest
+  `sha256:b64202051579c1770f9f55ae235e425e40538cf21819545671e9ffc5e47192e2`。
+- 两次运行均使用 Provisioner `20260707.563`、Windows image `20260714.173.1` 和
+  Python 3.12.9；baseline staging、cache save 和 report upload 全部成功。
+
+### 收口结论
+
+- L4 固定 synthetic suite 的 hosted baseline、同环境 restore、绝对预算、10% p95 regression、
+  失败不覆盖成功 baseline 和 artifact 留存均已有真实 Actions 证据。
+- 后续每日 schedule 继续作为持续观察，不因单次波动修改热路径；runner image 或 benchmark
+  version 变化时必须重新建立对应 baseline。
+
+---
+
 ## [Unreleased] — 2026-07-23（L4：亚毫秒基准稳健采样 v2）
 
 本轮执行 L4 hosted baseline 对照后发现，原 v1 对亚毫秒操作逐次计时会把 runner 调度抖动

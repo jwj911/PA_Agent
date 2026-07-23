@@ -22,7 +22,7 @@
 | L1 Provider/数据源注册表 | 外部扩展兼容观察已通过，仍保留 legacy registrar | `data/registry.py`、`ai/provider_registry.py` 已支持规格、优先级、延迟 builder、运行时注册和 entry point 扩展发现；未知数据源配置已安全回退；第 236 轮及本轮补齐规范化、replace/unregister、并发、lazy-import、扩展失败隔离、锁外执行和 `pa-agent.registry-extension.v1` 版本化 registrar 证据 | 继续观察已安装扩展；形成 legacy registrar/版本合同的长期兼容与下线策略 |
 | L2 Prompt 模板引擎 | 5 轮固定 fixture 兼容观察已通过，仍保留回滚路径 | `Stage1PromptBuilder`、`Stage2PromptBuilder`、29 个模板 manifest、`TemplateStore`、`TemplateContext`、严格变量渲染、system/Stage 1/Stage 2/continuation golden snapshots；本轮重复比较 TemplateStore/旧 loader 的 system、Stage 1、Stage 2 和 continuation 输出 | 继续记录稳定周期，之后评估旧 helper、旧 loader 和兼容开关的下线 |
 | L3 Pipeline Builder | 受控 fixture rollout 和显式 live legacy/Pipeline 入口已建立，默认 legacy，真实观察周期未收口 | 新增 PyQt-free `orchestrator/pipeline/`、`PipelineState`、`TerminalStatus`、`PersistenceIntent`、`PipelineStep`、`StepResult`、`PipelineBuilder`、`Stage1Step`、`RouteStep`、`Stage2Step` 和 `PersistStep`；新增 `orchestrator.pipeline_builder_enabled`（默认 `false`）及 `pa_agent/config/orchestrator.py`；flag-off 的 `submit()` 走 legacy，flag-on 委托 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep`；Task 10 终态矩阵、本轮 5 场景×3 轮对照和 live harness opt-in 均通过；默认路径仍为 legacy | 在有凭据环境分别运行 legacy/Pipeline，完成真实稳定观察和 GUI/headless final/partial/cancel/failure evidence；满足后才评估启用默认 flag，L3 尚未收口 |
-| L4 性能优化 | v1 hosted 门禁已验证并暴露亚毫秒采样抖动；v2 稳健采样已本地通过，hosted 对照待收口 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；`pa-agent.performance.v1` 报告、`l4.synthetic.v2` 批量折算采样、p50/p95、100/500/5000 bars 基准、版本隔离 baseline cache 和 artifact | 在 hosted runner 先建立 v2 baseline，再同参数运行一次验证 restore、p95 对照和 10% 门禁 |
+| L4 性能优化 | v2 hosted baseline 与同环境 10% p95 对照已收口，进入每日持续观察 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；`pa-agent.performance.v1` 报告、`l4.synthetic.v2` 批量折算采样、p50/p95、100/500/5000 bars 基准、版本隔离 baseline cache 和 artifact；run `29975410917`/`29975592352` 完成建基线与 restore 对照 | 维护每日 schedule；runner image、benchmark version 或采样合同变化时重建 baseline |
 | L5 经验库升级 | 评估合同、scorer 和 instrument-grouped 固定切分已交付，真实数据评估未收口 | 全量相关性排序 + K 线几何相似度；新增 `pa-agent.experience-eval.v1`、`pa-agent.experience-split.v1`、`instrument-hash.v1`、dataset digest 和 `Recall@K`/`NDCG@K`/fallback/stability scorer；不改变线上排序 | 真实脱敏数据集、人工标注、指标报告和权重校准 |
 | L6 无 GUI 运行 | mock 全链路等价、跨进程 replay、显式 live harness 和 artifact validator 已建立，真实环境观察未收口 | `AppEvent`、`EventSink`、`CollectingEventSink`、`JsonlEventSink`、`replay_jsonl`、严格 `expected_correlation_id` replay、共享 `_build_core()`、`bootstrap_gui()`/`bootstrap_headless()`、兼容 `bootstrap()`、`HeadlessAnalysisAdapter`、`pa-agent.event.v1` 和 PyQt-free `pa-agent headless`；显式 `analyze --run/--execute` 已接入两阶段 orchestrator、record 和 JSONL 事件；新增 `tools/run_live_headless_observation.py`/`tools/validate_live_observation.py`；GUI `_AnalysisWorker` 与 headless adapter 已有 final/partial/cancel/failure fixture 对照 | 在有凭据环境运行真实 Provider 稳定周期，使用 validator 审计并收集 record/event 完整等价证据 |
 
@@ -439,8 +439,9 @@ indicator 和 K-line geometry 的 100/500/5000 bars。v1 hosted run `29930306551
 三次 runner image 完全相同，确认逐次计时受调度抖动放大。`l4.synthetic.v2` 因此按操作成本
 批量执行后折算单次耗时，报告增加 `sample_repeats`，10% 回归阈值和绝对预算保持不变；
 本地报告为 `docs/benchmarks/l4_synthetic_v2_2026-07-23.json`。workflow 使用独立
-`l4-baseline-v2-*` cache，避免混用 v1 baseline；下一步仍需 hosted v2 首次建基线和第二次同参
-对照。
+`l4-baseline-v2-*` cache，避免混用 v1 baseline。run `29975410917` 已建立 v2 hosted baseline，
+run `29975592352` 成功恢复对应 cache 并完成九项 p95 对照；最大正回退为 `+5.12%`，低于
+10% 门禁。L4 进入每日持续观察，runner image、benchmark version 或采样合同变化时重建 baseline。
 
 ## 8. L5：经验库评估与版本化
 
@@ -663,18 +664,17 @@ pa-agent headless analyze --input snapshot.json --run --records-dir records/ --e
 - 已新增 `.github/workflows/l4-benchmark.yml`，接入手动/夜间预算门禁和报告 artifact；
 - v1 首次 run `29923921295` 已保存 hosted baseline；run `29930306551`/`29974597115`
   均恢复该 baseline 并正确阻断，失败未覆盖成功 baseline，且 runner image 保持一致；
-- 由于 v1 的失败项在不同亚毫秒操作间漂移，workflow 已切换独立 v2 cache；下一轮先建立
-  hosted v2 baseline，再同参数运行一次完成对照；
-- 下一轮由具备仓库 Write 权限的账号手动触发 `.github/workflows/l4-benchmark.yml`：网页入口
-  不需本地 token；CLI/API 入口使用仅限 `PA_Agent` 的 Fine-grained PAT，Repository
-  `Actions: Read and write`。首次以 `iterations=30`、`warmups=5` 建立 baseline，第二次同参
-  数运行验证 restore、`--baseline` p95 比较和 10% regression 门禁；
+- 由于 v1 的失败项在不同亚毫秒操作间漂移，workflow 已切换独立 v2 cache；run
+  `29975410917`/`29975592352` 已完成 v2 建基线与同参数 restore 对照，九项全部通过；
+- v2 两轮均由具备仓库 Write 权限的账号手动触发，使用 `iterations=30`、`warmups=5`；
+  后续网页入口不需本地 token，CLI/API 入口继续使用仅限 `PA_Agent` 且 Repository
+  `Actions: Read and write` 的 Fine-grained PAT；
 - v1 证据证明 restore、10% 阻断、失败 artifact 和失败不覆盖 baseline 均有效，但不把受
   亚毫秒抖动影响的结果作为 v2 性能结论；
 - PAT、Provider key 和 benchmark 原始敏感配置不得写入仓库或日志；触发权限配置不等于扩大
   workflow 内的 `GITHUB_TOKEN` 权限，当前 `contents: read` 保持最小范围；
 - 只对有数据证明的热点继续优化；
-- 形成性能回归报告。
+- 每日 schedule 持续观察；runner image、benchmark version 或采样合同变化时重建 baseline。
 
 L1、L4、L5 的收口工作可以并行，但 L6 应先于 L3；L2 可以与 L6 后半段并行，
 不建议在 Pipeline 状态模型尚未稳定时进行大规模 Prompt 重写。

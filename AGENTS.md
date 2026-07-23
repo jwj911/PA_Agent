@@ -504,12 +504,14 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     三次 runner image 相同，确认逐次计时不够稳健。当前 `l4.synthetic.v2` 按操作成本批量执行后
     折算单次耗时，10% 阈值与绝对预算不变；本地报告见
     `docs/benchmarks/l4_synthetic_v2_2026-07-23.json`。`.github/workflows/l4-benchmark.yml`
-    已切换到 `l4-baseline-v2-*` cache，禁止混用 v1 baseline；仍需首次 hosted v2 建基线和第二次
-    同参数对照。后续手动触发要求仓库 Write 权限；Fine-grained PAT 仅选择
+    已切换到 `l4-baseline-v2-*` cache，禁止混用 v1 baseline。v2 hosted run `29975410917`
+    已建立新 baseline，run `29975592352` 成功恢复该 cache 并完成九项 p95 对照；最大正回退
+    `+5.12%`，低于 10%，L4 hosted 收口。后续手动触发要求仓库 Write 权限；Fine-grained PAT
+    仅选择
     `PA_Agent` 并授予 Repository `Actions: Read and write`，或直接使用 GitHub Actions
-    网页的 **Run workflow**。v2 首次以 `iterations=30`、`warmups=5` 建立 baseline，第二次
-    同参数运行验证 restore、p95 比较和 10% regression 门禁；PAT、Provider key 和 benchmark
-    敏感配置不得写入仓库、日志或聊天。
+    网页的 **Run workflow**。每日 schedule 继续观察；runner image、benchmark version 或采样
+    合同变化时重新建立 baseline。PAT、Provider key 和 benchmark 敏感配置不得写入仓库、日志
+    或聊天。
 20. **L2 Prompt 兼容观察当前进度**：TemplateStore、TemplateContext、严格变量渲染和
     29 个模板 golden snapshot 已完成；本轮用固定 `prompt_golden.json` 连续 5 轮比较
     TemplateStore/旧 loader 的 shared system、Stage 1、Stage 2 standalone、continuation
