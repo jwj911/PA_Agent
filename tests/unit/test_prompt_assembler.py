@@ -524,11 +524,11 @@ def test_real_stage1_stage2_boundary_contracts(real_assembler: PromptAssembler):
     assert '"decision_trace"' in stage2_user
     assert '"terminal": {' in stage2_user
     assert "当 order_type 为“不下单”时" in stage2_user
-    assert (
+    no_order_null_rule = (
         "entry_price、take_profit_price、take_profit_price_2、"
         "stop_loss_price、order_direction 必须全部为 null"
-        in stage2_user
     )
+    assert no_order_null_rule in stage2_user
 
 
 def test_real_stage2_prompt_keeps_spike_climax_contract(real_assembler: PromptAssembler):

@@ -24,6 +24,8 @@
   state/steps、Headless/CLI、L3/L6 观察测试、Prompt 和兼容策略测试。
 - 格式化后相关 L3/L6/CLI/Prompt 回归 **112 passed**；Ruff baseline 保持 3,724 条，
   无规则或行为变化。
+- 首次远端复核只剩 `test_prompt_assembler.py` 的长隐式拼接断言；改为命名规则字符串后再断言，
+  同时满足 Black 和 100 字符 Ruff，断言内容不变。
 - 本机 Black 24.10.0 仍存在已知无输出挂起，最终格式验收以 GitHub Windows/Python
   3.11/3.12 的固定版本步骤为准。
 
