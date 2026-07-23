@@ -18,7 +18,7 @@
 | L2 Prompt 模板引擎 | 5 轮固定 fixture 兼容观察已通过，仍保留回滚路径 | `TemplateStore`、29 个模板 manifest、system/Stage 1/Stage 2/continuation 迁移、`TemplateContext`、严格变量渲染、golden snapshots 和整组回退；本轮重复比较 TemplateStore/旧 loader 的 system、Stage 1、Stage 2 和 continuation 输出 | 继续记录稳定周期后评估移除重复 helper、兼容开关和旧 loader |
 | L3 Pipeline Builder | 受控 fixture rollout、显式 live legacy/Pipeline 入口和成对 artifact 比较合同已建立，默认 legacy，真实观察周期未收口 | 完整四步 Pipeline、默认关闭的 flag、Task 10 终态矩阵、5 场景×3 轮对照、live harness opt-in 和 `compare_live_observations.py` | 在有凭据环境取得至少一个 `valid=true` pair 并完成稳定观察，之后才评估默认 flag |
 | L4 性能预算 | v2 hosted baseline、restore、九项 p95 对照和 10% 门禁已收口，进入每日观察 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；`pa-agent.performance.v1` 报告、`l4.synthetic.v2` 批量折算采样、p50/p95、100/500/5000 bars 基准、版本隔离 baseline cache；run `29975410917`/`29975592352` 已通过 | 维护每日 schedule；runner image、benchmark version 或采样合同变化时重建 baseline |
-| L5 经验库升级 | 评估合同、scorer 和 instrument-grouped 固定切分已交付，真实数据评估未收口 | 全量相关性排序和 K 线几何相似度已接入；新增 `pa-agent.experience-eval.v1`、`pa-agent.experience-split.v1`、`instrument-hash.v1`、dataset digest、`Recall@K`/`NDCG@K`/fallback/stability scorer，不改变线上排序 | 真实脱敏数据集、人工标注、指标报告和权重校准 |
+| L5 经验库升级 | evaluator、固定切分、opaque 导出/人工标注/报告管道已交付，真实数据评估未收口 | 全量相关性排序、K 线相似度、版本化 dataset/split/report、HMAC opaque catalog、标签门禁和 leave-one-out legacy/similarity 对照；不改变线上排序 | 按 runbook 导入真实案例、人工标注并生成指标报告；证据充分后才评估权重 |
 | L6 Headless/编排 | mock 全链路等价、跨进程 replay、显式 live harness、单体/成对 artifact validator 已建立，真实环境观察未收口 | Headless adapter、PyQt-free CLI、strict replay、GUI/headless 全终态 fixture、`run_live_headless_observation.py`、`validate_live_observation.py` 和 `compare_live_observations.py` | 按 `docs/live_observation_runbook.md` 取得真实 record/event pair 和稳定观察证据 |
 
 L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、数据源连接和订阅；
@@ -33,7 +33,7 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 |---|---|---|---|
 | P0 | L6 | fixed-fixture 全终态等价、strict replay、live harness、单体 validator 和成对 shape-only validator 已交付 | 真实 Provider 只允许显式执行；按 runbook 取得至少一个 `valid=true` pair 和稳定观察 |
 | P1 | L3 | 完整四步 Pipeline、默认关闭 flag、Task 10 矩阵、受控 rollout 和成对比较合同已交付 | 真实 pair 无控制流/结构偏差后才评估启用默认 flag |
-| P1 | L5 | scorer、数据合同和 instrument-grouped 固定切分已建立，但经验目录仍无真实案例 | 真实脱敏数据集、人工标注、可重复的 `Recall@K`、`NDCG@K`、fallback rate、稳定性报告和权重校准 |
+| P1 | L5 | 数据合同、固定切分和安全评估管道已建立，但经验目录仍无真实案例 | 运行真实 opaque 导出、人工标注，生成可重复的 Recall/NDCG/fallback/stability 报告 |
 | 已收口 | L4 | v1 负向证据证明 restore/阻断/失败保护；v2 run `29975410917`/`29975592352` 完成建基线和同环境对照 | 每日 schedule 持续观察；环境或合同变化时重建 baseline |
 | P2 | L1 | registry 基础、未知数据源配置回退、生命周期/并发证据、entry point 扩展契约和 5 轮外部风格样例观察已完成 | 继续观察已安装扩展并形成 legacy registrar/版本合同的长期兼容与下线策略 |
 | P2 | L2 | 5 轮固定 fixture 新旧路径等价已通过，但 `use_template_store` 与旧 loader 仍需保留 | 继续稳定周期内重放并形成兼容入口下线计划 |
@@ -702,8 +702,22 @@ target 和 `git diff --check` 通过。
 验证：experience evaluator/reader 测试 **11 passed**；Ruff、Ruff format、`py_compile` 和
 `git diff --check` 通过。
 
-收尾边界：经验目录仍无真实案例，本轮不宣称检索质量改善；仍需脱敏导出、人工标签、固定
-split 报告和线上权重校准。
+收尾边界：经验目录仍无真实案例，本轮不宣称检索质量改善；仍需用真实案例执行 opaque 导出、
+人工标签、固定 split 报告和后续权重校准。
+
+## 2.24.1 本轮完成结果（L5：真实经验评估数据管道）
+
+- 新增 HMAC opaque case/instrument ID 导出，不暴露 symbol、价格、K 线、路径、密钥或 salt；
+- 人工模板固定 catalog digest、candidate IDs 和 `reviewed`/`relevant_ids` 门禁；
+- 评估阶段按 instrument group 固定切分，以 leave-one-out 生成 legacy/similarity 排名并输出
+  `pa-agent.experience-eval-report.v1`；
+- CLI salt 只读 `PA_AGENT_EXPERIENCE_EVAL_SALT`，产物写入 Git 忽略的 `artifacts/`；
+- 完整流程见 `docs/experience_evaluation_runbook.md`。
+
+验证：pipeline/evaluator/reader 定向 pytest **16 passed**；Ruff、format、`py_compile`、CI
+target 和差异检查通过。
+
+收尾边界：当前没有真实经验 JSON，本轮只完成可执行管道；仍需人工数据和指标，不修改线上排序。
 
 ## 2.25 本轮完成结果（L6：显式 live headless observation harness）
 
@@ -1012,11 +1026,11 @@ adapter 对照测试；后续交付物：
 - 离线 scorer，输出 `Recall@K`、`NDCG@K`、legacy fallback rate、score distribution 和
   ranking stability；
 - scorer 及 dataset round-trip 的固定单测。
+- HMAC opaque catalog、人工标注门禁、leave-one-out legacy/similarity 排名和版本化报告 CLI。
 
 仍需交付：
 
-- 导出满足合同的真实脱敏经验案例，并补齐 opaque instrument id、timeframe、cycle、direction、
-  patterns、success/failure 等必要元数据和人工相关性标签。
+- 按 `docs/experience_evaluation_runbook.md` 导入真实案例并完成人工相关性标签。
 - 生成固定 split 下的真实指标报告，并在证据充分后评估线上权重。
 - 生成旧排序规则和候选新规则的并排报告，并进行人工抽样评审。
 

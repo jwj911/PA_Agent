@@ -18,6 +18,37 @@
 
 ---
 
+## [Unreleased] — 2026-07-23（L5：真实经验脱敏导出与评估报告管道）
+
+本轮补齐真实经验案例进入既有 evaluator 前的导出、人工标注和报告生成链路；不读取当前空目录
+伪造指标，也不修改线上 `ExperienceReader` 排序。
+
+### 已交付
+
+- 新增 `pa_agent.records.experience_eval_pipeline`：使用会话环境变量中的 salt 通过 HMAC 生成
+  opaque case/instrument ID，导出 `pa-agent.experience-annotation.v1` 人工标注模板。
+- 模板只含 timeframe、cycle、direction、patterns、outcome、candidate IDs/count 和 fallback
+  标志；不含 symbol、价格、K 线原文、本地路径、API Key、salt 或 Provider 内容。
+- 标注导入严格校验 catalog digest、全量覆盖、`reviewed=true`、元数据不可篡改和
+  `relevant_ids` 只能来自同 cycle candidate。
+- 实现 leave-one-out legacy/similarity 排序，复用 instrument-grouped fixed split 和既有
+  evaluator，输出 `pa-agent.experience-eval-report.v1` 的 Recall/NDCG/fallback/stability、
+  score distribution、计数和指标差值；报告固定 `online_sorting_changed=false`。
+- 新增 `tools/run_experience_evaluation.py` 的 `export-labels`/`evaluate` 命令，salt 只从
+  `PA_AGENT_EXPERIENCE_EVAL_SALT` 读取；`.gitignore` 新增 `artifacts/`。
+- 新增 `docs/experience_evaluation_runbook.md` 和脱敏、标签门禁、固定 split、CLI 测试，并
+  纳入 CI targeted pytest/Focused Ruff。
+
+### 验证与边界
+
+- experience pipeline/evaluator/reader 定向 pytest **16 passed**；Focused Ruff（含 I001）、
+  Ruff format、`py_compile`、CI target 和 `git diff --check` → **通过**。
+- 当前 `experience/` 仍只有 `.gitkeep`，没有真实案例；本轮完成的是可执行数据管道，不宣称
+  真实检索质量或权重改善。
+- 真实案例、人工标签和报告必须留在 `artifacts/`，不得提交；指标充分前不得调整线上权重。
+
+---
+
 ## [Unreleased] — 2026-07-23（L6/L3：真实观察成对验证合同）
 
 本轮在不调用真实 Provider 的前提下，补齐 legacy/Pipeline 两次真实观察产物之间的可审计比较

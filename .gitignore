@@ -40,6 +40,8 @@ experience/**/*
 trade_records/*
 !trade_records/.gitkeep
 
+artifacts/
+
 # ── 本地临时 / 解包产物（WorkBuddy、网关调试等）──────────────────────────────
 _tmp_wb_asar/
 _tmp_auth.js

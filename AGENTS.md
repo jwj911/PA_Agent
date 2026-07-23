@@ -31,6 +31,8 @@
   `architecture_roadmap` 为准的前提下，拆解后续若干轮交付物、验收标准和依赖顺序。
 - L6/L3 真实观察手册：[`docs/live_observation_runbook.md`](./docs/live_observation_runbook.md)，
   规定 legacy/Pipeline 显式运行、单体校验、成对结构校验和凭据清理步骤。
+- L5 离线评估手册：[`docs/experience_evaluation_runbook.md`](./docs/experience_evaluation_runbook.md)，
+  规定真实经验案例的 opaque 导出、人工标注、固定 split 和指标报告步骤。
 
 ---
 
@@ -498,8 +500,11 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     opaque instrument id 数据合同和离线 `Recall@K`/`NDCG@K`/fallback/stability scorer；
     新增 `pa-agent.experience-split.v1` / `instrument-hash.v1` instrument-grouped 固定切分、
     dataset digest 和泄漏门禁。评估数据不得包含价格、K 线原文、截图路径、密钥或本地绝对
-    路径。真实脱敏数据集、人工标注、指标报告和线上权重校准仍待完成，不得顺手修改
-    `ExperienceReader` 线上排序。
+    路径。`experience_eval_pipeline.py` 和 `tools/run_experience_evaluation.py` 已提供基于
+    `PA_AGENT_EXPERIENCE_EVAL_SALT` 的 HMAC opaque catalog、人工标注门禁、leave-one-out
+    legacy/similarity 对照和版本化报告；产物只能写入 Git 忽略的 `artifacts/`，完整步骤见
+    `docs/experience_evaluation_runbook.md`。当前经验目录仍只有占位文件，真实脱敏数据集、
+    人工标注、指标报告和线上权重校准仍待完成，不得顺手修改 `ExperienceReader` 线上排序。
 19. **L4 性能基准当前进度**：`pa_agent.perf.benchmark` 和
     `tools/run_l4_benchmark.py` 提供 `pa-agent.performance.v1` 报告、p50/p95、p95 budget
     和超过 10% baseline regression 判定；固定 suite 覆盖 snapshot build、indicator、
