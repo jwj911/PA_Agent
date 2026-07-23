@@ -18,6 +18,24 @@
 
 ---
 
+## [Unreleased] — 2026-07-23（L6：真实 Provider 成功主路径验收）
+
+- 从当前 Windows 账户的 DPAPI 本地配置加载 Provider 凭据，仅在单个受控进程中临时设置
+  `PA_AGENT_LIVE_API_KEY`、base URL 和 model；未写入用户级或机器级环境变量，结束后已清理。
+- legacy `legacy-live-20260723144709` 与 Pipeline `pipeline-live-20260723144709` 均真实调用
+  Provider 并完成：`status=completed`、无 exception、写入 record，事件序列均为
+  `Stage1Started -> Stage1Done -> Stage2Started -> Stage2Done -> RecordSaved`。
+- 两个 `pa-agent.live-observation-validation.v1` 和一个
+  `pa-agent.live-observation-pair-validation.v1` 均为 `valid=true`；record 顶层/meta 字段、
+  消息角色、阶段 payload presence、exception shape 和 usage 字段一致。
+- 6 个本地产物文件的 API Key 原文字节扫描为 0 命中；原始 summary/event/record 仅保存在
+  Git 忽略的 `artifacts/live-observation/`，未提交。
+- L6 真实成功主路径据此收口并进入持续观察。该单个 pair 只作为 L3 首轮真实 rollout 证据；
+  默认 `orchestrator.pipeline_builder_enabled` 继续保持 `false`，重复稳定观察完成前不切换。
+- 同步更新 `AGENTS.md`、架构路线图、执行计划和 live observation runbook。
+
+---
+
 ## [Unreleased] — 2026-07-23（最终收口审计与远端 CI）
 
 - GitHub Actions CI run `29978639108` 在 `main@f589c5f` 成功完成 Windows/Python 3.11 与

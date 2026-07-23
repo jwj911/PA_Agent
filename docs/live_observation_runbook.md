@@ -87,6 +87,8 @@ py -3.12 tools/compare_live_observations.py `
 ## 5. 验收与清理
 
 - 至少完成一个 legacy/Pipeline `valid=true` pair，作为真实成功主路径证据；
+- 默认 Pipeline 切换要求高于单个成功 pair：须按相同 Provider/model/shape-only 合同重复完整
+  pair，观察无未解释的终态、事件或 record 结构偏差；不得选择性丢弃失败 pair；
 - final/partial/cancel/failure 的控制流等价继续由固定 fixture 测试覆盖，不能用单次 live 成功
   替代失败路径矩阵；
 - 人工复核仅看脱敏 validation 输出、GitHub/本地退出码和文件边界，不打开或提交原始记录正文；
@@ -97,3 +99,18 @@ Remove-Item Env:PA_AGENT_LIVE_API_KEY -ErrorAction SilentlyContinue
 Remove-Item Env:PA_AGENT_LIVE_BASE_URL -ErrorAction SilentlyContinue
 Remove-Item Env:PA_AGENT_LIVE_MODEL -ErrorAction SilentlyContinue
 ```
+
+## 6. 已验收基线
+
+2026-07-23 已完成首个真实成功 pair：
+
+- correlation id：`legacy-live-20260723144709` /
+  `pipeline-live-20260723144709`；
+- 两个单体 `pa-agent.live-observation-validation.v1` 均为 `valid=true`；
+- 成对 `pa-agent.live-observation-pair-validation.v1` 为 `valid=true`；
+- 两条路径均 `status=completed`、无 exception、写入 record，并产生相同 5 事件序列；
+- shape-only record 合同一致；6 个本地产物文件中 API Key 原文字节扫描为 0 命中；
+- process/user/machine 环境变量均已清理，原始 artifact 未提交。
+
+该基线证明 L6 真实成功主路径和首个 L3 opt-in pair；不证明 L3 已完成重复稳定观察，也不改变
+`orchestrator.pipeline_builder_enabled=false` 的默认值。

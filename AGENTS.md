@@ -452,15 +452,20 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     record、milestone/status、prompt 和流式内容；JSONL 新事件必须写入
     `pa-agent.event.v1` envelope，未知 schema 拒绝，旧缺失 schema 事件继续可回放；严格
     `replay_jsonl(..., expected_correlation_id=...)` 会在发布前校验整条跨进程流的 correlation
-    一致性。默认 `analyze` 仍必须保持 provider-free dry-run；真实 Provider 环境观察、真实运行
-    record/事件证据和 record/event 完整等价仍未收敛。真实观察只能使用
+    一致性。默认 `analyze` 仍必须保持 provider-free dry-run。2026-07-23 已完成首个真实
+    legacy/Pipeline 成功 pair：两次单体校验和成对校验均为 `valid=true`，两条路径均按相同
+    5 事件序列完成、写入 record，shape-only record 合同一致；6 个本地产物文件的明文密钥
+    扫描为 0 命中，环境变量已清理。该结果收口 L6 真实成功主路径，但不替代 fixed-fixture
+    partial/cancel/failure 矩阵，也不代表 L3 默认 Pipeline 可以开启。真实观察只能使用
     `tools/run_live_headless_observation.py`，必须显式 `--confirm-live` 和
     `PA_AGENT_LIVE_API_KEY`；脚本只输出 `pa-agent.live-observation.v1` 脱敏摘要，不得接入
     常规/夜间 CI。运行后使用 `tools/validate_live_observation.py` 审计 summary、event、
     correlation 和 record 文件自洽性；再使用 `tools/compare_live_observations.py` 比较
     legacy/Pipeline 的终态、事件序列、记录写入和 shape-only record 合同。成对输出不得包含
     Prompt、回复、行情、价格、symbol、时间戳或 token 数值；完整步骤见
-    `docs/live_observation_runbook.md`。validator 不替代真实 Provider 或 GUI/headless 等价证据。
+    `docs/live_observation_runbook.md`。原始 summary/event/record 只能保存在 Git 忽略的
+    `artifacts/`，不得提交；文档只记录脱敏 validator 结论。Provider、事件或记录合同变化时
+    必须重跑；单个 validator 结果不替代 fixed-fixture GUI/headless 全终态等价证据。
 14. **架构任务先读两份计划**：长期模块边界、迁移原则和完成定义以
     [`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md) 为准；短中期优先级、每轮建议
     交付物、验收标准和依赖顺序见 [`docs/iteration_plan.md`](./docs/iteration_plan.md)。
@@ -487,9 +492,10 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     `PendingWriter.last_write_succeeded` 识别磁盘失败，full 写入成功后才发出 `RecordSaved`，
     partial 或磁盘失败不发成功事件。默认 `submit()` 和 GUI/headless 调用路径仍保持 legacy；
     本轮已用 5 个终态场景 × 3 轮固定 fixture 完成 flag-off/flag-on 的 record、事件、prompt、
-    流式内容、策略文件和写入边界对照；这只是受控 rollout evidence，不是生产稳定观察。
-    后续需真实 Provider 稳定观察周期和 GUI/headless 真实运行 final/partial/cancel/failure
-    evidence 后才评估启用默认 flag。
+    流式内容、策略文件和写入边界对照；2026-07-23 又取得首个真实 Provider 成功 pair，
+    无终态、事件序列、record 写入或 shape-only 结构偏差。单次成功仍不等于生产稳定观察；
+    后续需按同一合同重复真实 pair，结合既有 GUI/headless final/partial/cancel/failure
+    fixture evidence 无未解释偏差后才评估启用默认 flag。
     显式 `tools/run_live_headless_observation.py --pipeline-builder-enabled` 只对本次运行打开
     Pipeline；未传参数保持 legacy，普通/夜间 CI 不得触发该脚本。
 17. **L3 Pipeline 生命周期日志**：Pipeline enabled 路径以同一 `trace_id` 关联一次执行，

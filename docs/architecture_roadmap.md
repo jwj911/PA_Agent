@@ -5,7 +5,8 @@
 > 适用分支：`main`
 > 关联路线：[`docs/backend_review_report.md`](./backend_review_report.md)
 > 短中期执行计划：[`docs/iteration_plan.md`](./iteration_plan.md)
-> 最近验收：GitHub Actions run `29978639108`，Windows/Python 3.11/3.12 全门禁通过。
+> 最近验收：GitHub Actions run `29979028929`，`main@599c3ed` 的
+> Windows/Python 3.11/3.12 全门禁通过。
 
 本文档把长期路线图 L1-L6 细化为可分批迁移的架构计划。目标是降低模块之间的隐式耦合，
 让 GUI、无 GUI 运行、测试和未来的服务端入口共享同一套应用核心，同时保持当前两阶段分析
@@ -22,10 +23,10 @@
 |---|---|---|---|
 | L1 Provider/数据源注册表 | 扩展兼容观察与下线策略/CI 门禁已收口；legacy registrar 按政策 retain | registry、entry point、v1 registrar、失败隔离、并发/lazy-import 和固定样例观察已完成；`compatibility_policy.json` 强制保留未声明版本 callable | 观察真实安装扩展；最早 0.3.0 且具备 v0.2.0 tag、inventory 和迁移报告后才评估删除 |
 | L2 Prompt 模板引擎 | 5 轮等价观察与下线策略/CI 门禁已收口；旧 loader/fallback 按政策 retain | TemplateStore、TemplateContext、29 个 manifest、system/Stage 1/Stage 2/continuation、golden snapshot 和回退观察已完成 | 最早 0.3.0 且具备 v0.2.0 tag、fallback 零命中和 golden 报告后才评估删除 |
-| L3 Pipeline Builder | 受控 fixture rollout、显式 live legacy/Pipeline 入口和成对 artifact 比较合同已建立，默认 legacy，真实观察周期未收口 | 新增完整四步 Pipeline、默认关闭的 rollout flag、Task 10 终态矩阵、5 场景×3 轮对照、live harness opt-in 和 `compare_live_observations.py` | 在有凭据环境取得至少一个 `valid=true` 的 legacy/Pipeline pair 并完成稳定观察；满足后才评估启用默认 flag |
+| L3 Pipeline Builder | 首个真实 legacy/Pipeline pair 已通过，默认 legacy，重复稳定观察与默认切换未收口 | 完整四步 Pipeline、默认关闭的 rollout flag、Task 10 终态矩阵、5 场景×3 轮 fixture 对照；2026-07-23 首个真实 pair 的两次单体校验和成对校验均为 `valid=true` | 按同一合同继续重复观察；结合全终态 fixture 证据无未解释偏差后，才评估启用默认 flag |
 | L4 性能优化 | v2 hosted baseline 与同环境 10% p95 对照已收口，进入每日持续观察 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；`pa-agent.performance.v1` 报告、`l4.synthetic.v2` 批量折算采样、p50/p95、100/500/5000 bars 基准、版本隔离 baseline cache 和 artifact；run `29975410917`/`29975592352` 完成建基线与 restore 对照 | 维护每日 schedule；runner image、benchmark version 或采样合同变化时重建 baseline |
 | L5 经验库升级 | 评估合同、固定切分、opaque 导出/人工标注/报告管道已交付，真实数据评估未收口 | 全量相关性排序 + K 线相似度；版本化 dataset/split/report；HMAC opaque catalog、标签门禁和 leave-one-out legacy/similarity 对照；不改变线上排序 | 按 `docs/experience_evaluation_runbook.md` 导入真实案例、人工标注并生成指标报告；证据充分后才评估权重 |
-| L6 无 GUI 运行 | mock 全链路等价、跨进程 replay、显式 live harness、单体/成对 artifact validator 已建立，真实环境观察未收口 | `AppEvent`/`EventSink`、严格 correlation replay、共享 core/gui bootstrap、`HeadlessAnalysisAdapter`、PyQt-free CLI、`run_live_headless_observation.py`、`validate_live_observation.py` 和 `compare_live_observations.py`；GUI/headless 已有全终态 fixture 对照 | 按 `docs/live_observation_runbook.md` 在有凭据环境取得真实 record/event pair 和稳定观察证据 |
+| L6 无 GUI 运行 | fixed-fixture 全终态等价、跨进程 replay 和真实 Provider 成功主路径已收口，进入持续观察 | `AppEvent`/`EventSink`、严格 correlation replay、共享 core/gui bootstrap、`HeadlessAnalysisAdapter`、PyQt-free CLI；2026-07-23 真实 legacy/Pipeline pair 均完成 5 事件、record 写入和 shape-only 等价校验 | Provider、事件或记录合同变化时按 `docs/live_observation_runbook.md` 重跑；单次 live 成功不替代固定 fixture 失败路径矩阵 |
 
 当前经验目录主要是空目录占位，因而 L5 的 scorer 目前只能由合成 fixture 验证，不能据此
 判断真实交易结构的检索质量；本轮只交付数据合同和指标实现，不改变线上权重。L5 后续工作
@@ -34,27 +35,32 @@
 ### 1.1 当前收尾判定
 
 L1/L2 的实现、固定观察和下线策略门禁已收口，兼容入口按 `retain` 政策保留；L4 hosted
-baseline/10% 对照已收口并进入每日观察。当前尚未满足外部证据条件的顺序为：
+baseline/10% 对照已收口并进入每日观察；L6 已取得真实成功主路径证据。当前尚未满足外部
+证据条件的顺序为：
 
-1. **L6**：在有凭据环境生成真实 legacy/Pipeline record/event pair；
-2. **L3**：使用该 pair 完成真实 rollout 观察，再评估默认 flag；
-3. **L5**：在有真实案例后完成人工标注和固定 split 指标报告。
+1. **L3**：在首个真实 pair 基础上继续重复稳定观察，再评估默认 flag；
+2. **L5**：在有真实案例后完成人工标注和固定 split 指标报告。
 
 其中 L1 已具备第二阶段注册表基础，未知数据源配置回退、生命周期/并发证据和 entry point 扩展契约
 已完成，不再阻塞 L6；后续只观察外部扩展兼容性。L6 的 mock/fixed-fixture record 等价、
-`pa-agent.event.v1` envelope 和严格跨进程 correlation replay 契约已建立，但仍需真实 Provider
-runner 环境验证、真实运行 record/事件证据和 record/event 完整等价。单次 artifact 可由
-`validate_live_observation.py` 审计，legacy/Pipeline pair 可由 `compare_live_observations.py`
-比较终态、事件和 shape-only record 合同；两次独立模型正文不作为等价条件。L3 已建立
+`pa-agent.event.v1` envelope 和严格跨进程 correlation replay 契约已建立。2026-07-23 使用
+会话级凭据执行真实 legacy/Pipeline pair：两个 `pa-agent.live-observation-validation.v1`
+结果及 `pa-agent.live-observation-pair-validation.v1` 结果均为 `valid=true`，两条路径均
+实际调用 Provider、按相同 5 事件序列完成并写入 record；6 个本地产物文件的明文密钥扫描为
+0 命中。原始 summary/event/record 继续保存在 Git 忽略的 `artifacts/`，不提交。单次 artifact
+由 `validate_live_observation.py` 审计，legacy/Pipeline pair 由
+`compare_live_observations.py` 比较终态、事件和 shape-only record 合同；两次独立模型正文
+不作为等价条件。该证据满足 L6 runbook 的真实成功主路径要求，但不替代固定 fixture 的
+partial/cancel/failure 矩阵，也不自动满足 L3 默认切换所需的重复稳定观察。L3 已建立
 `orchestrator/pipeline/` 状态/步骤
 协议并完成 Task 5 的 state foundation；Task 6 已交付 `Stage1Step`，Task 7 已交付 `RouteStep`，
 Task 8 已交付 `Stage2Step`，Task 9 已交付 `PersistStep` 和 opt-in 等价证据；PersistStep
 现在集中 full/partial record assembly/write，前置终态通过 `persistence_pending` 交给唯一一次
 PersistStep 写入，成功后才发出 `RecordSaved`，磁盘失败由 `last_write_succeeded` 反馈并映射为
 持久化失败。本轮已用 5 个终态场景、每场景 3 轮固定 fixture 完成 flag-off/flag-on
-record、事件、prompt、流式内容、策略文件和写入边界对照；Pipeline feature flag、真实稳定
-观察周期和 GUI/headless 真实运行全链路等价仍未收口。L6 的 mock/fixed-fixture 等价证据已
-单独完成。
+record、事件、prompt、流式内容、策略文件和写入边界对照，并完成首个真实成功 pair；
+Pipeline feature flag 的重复稳定观察与默认切换仍未收口。L6 的 mock/fixed-fixture 全终态
+等价和真实成功主路径证据均已完成。
 L5 在真实数据和人工指标建立前不得调整线上权重；L4 只在持续基准证明回退时修改热路径。
 
 ## 2. 目标架构
@@ -372,8 +378,8 @@ step.run(state, services) -> Continue(state) | Complete(record) | Fail(record)
    Qt-free headless/GUI adapter equivalence 测试，并将测试/config module 纳入 CI targets。
 10. **已完成受控 fixture rollout 观察**：在默认 flag 仍关闭的前提下，以 5 个终态场景、
     每场景 3 轮比较 flag-off/flag-on 的 record、事件、prompt、流式内容、策略文件和写入边界；
-    下一步仍需真实 Provider 稳定观察周期和 GUI/headless 真实运行 final/partial/cancel/failure
-    evidence。
+    2026-07-23 首个真实 Provider pair 也已通过；下一步按相同合同重复观察，GUI/headless
+    final/partial/cancel/failure evidence 继续由固定 fixture 矩阵覆盖。
 11. 只有上述观察和 evidence 无未解释偏差后，才评估启用默认 flag；随后再评估删除旧
     `submit()` 内部实现，只保留 facade。
 
@@ -523,10 +529,10 @@ AI client、Prompt、Validator、记录、经验库和 ledger 等核心服务；
 `EventBus` import、无数据源连接。第 229 轮已新增 PyQt-free CLI 最小入口和同 snapshot 的
 Stage 1 prompt 等价测试，第 234 轮已新增 PyQt-free JSONL event sink/replay，第 237 轮新增
 显式 `--run/--execute` 的两阶段 runner、final/partial record 持久化和 correlation 事件输出；
-本轮新增公开 `HeadlessAnalysisAdapter` 的阶段回调合同、GUI `_AnalysisWorker` 与 headless
+后续新增公开 `HeadlessAnalysisAdapter` 的阶段回调合同、GUI `_AnalysisWorker` 与 headless
 adapter 的 final/partial/cancel/failure fixture 对照测试，以及 `pa-agent.event.v1` JSONL
-envelope 版本校验；真实 Provider 环境验证、真实运行 record/事件证据和跨进程 correlation
-重放仍未建立。
+envelope 版本校验；跨进程 correlation 重放合同已建立，2026-07-23 又完成首个真实
+legacy/Pipeline 成功 pair。
 
 ### 9.2 目标端口
 
@@ -632,8 +638,8 @@ pa-agent headless analyze --input snapshot.json --run --records-dir records/ --e
   跨进程 replay contract；新增显式 `tools/run_live_headless_observation.py`，只读环境变量
   凭据并输出脱敏 summary；`tools/validate_live_observation.py` 可离线核对 summary/event/
   record 自洽性；`tools/compare_live_observations.py` 可对 legacy/Pipeline 两次产物做控制流和
-  记录结构比较。完整执行顺序见 `docs/live_observation_runbook.md`；下一步在有授权凭据环境
-  取得至少一个真实 `valid=true` pair 并进行稳定观察。
+  记录结构比较。完整执行顺序见 `docs/live_observation_runbook.md`；2026-07-23 首个真实
+  `valid=true` pair 已通过，后续在合同变化时重跑。
 
 ### Phase 3：L2 Prompt engine
 
@@ -658,8 +664,8 @@ pa-agent headless analyze --input snapshot.json --run --records-dir records/ --e
   failure 全链路 evidence；
 - 显式 `tools/run_live_headless_observation.py --pipeline-builder-enabled` 只对本次有授权运行
   打开 Pipeline，未传参数保持 legacy；
-- 默认 flag 仍关闭；后续先进行受控 flag-on rollout 并观察至少一个真实稳定周期，待 GUI/headless
-  全链路 evidence 无未解释偏差后，再评估默认路径切换和旧路径下线。
+- 默认 flag 仍关闭；首个真实 pair 已通过，后续按相同合同重复观察，结合 GUI/headless
+  全终态 fixture evidence 无未解释偏差后，再评估默认路径切换和旧路径下线。
 
 ### Phase 5：L5 数据评估
 
@@ -764,6 +770,6 @@ L1-L6 只有同时满足以下条件，才标记为完成：
 Task 6 完成 `Stage1Step`，Task 7 完成 `RouteStep`，Task 8 完成 `Stage2Step`，Task 9 完成
 `PersistStep`，Task 10 完成 rollout flag 接线、终态矩阵和 Qt-free adapter equivalence；
 L6 已补齐 mock/fixed-fixture GUI/headless 全终态等价和 `pa-agent.event.v1` envelope 版本契约；
-`AppContext.build_core()` 公共入口和 legacy/Pipeline 成对 artifact 合同也已交付。当前下一步
-只剩真实 Provider 环境观察；L3 默认 flag 仍关闭，后续需真实稳定周期。L5 等待真实经验数据；
-L1/L2 按兼容策略 retain，L4 每日观察。
+`AppContext.build_core()` 公共入口、legacy/Pipeline 成对 artifact 合同和首个真实成功 pair
+也已交付。当前下一步是 L3 重复稳定观察；默认 flag 仍关闭。L5 等待真实经验数据；L1/L2
+按兼容策略 retain，L4 每日观察。
