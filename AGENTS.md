@@ -33,6 +33,8 @@
   规定 legacy/Pipeline 显式运行、单体校验、成对结构校验和凭据清理步骤。
 - L5 离线评估手册：[`docs/experience_evaluation_runbook.md`](./docs/experience_evaluation_runbook.md)，
   规定真实经验案例的 opaque 导出、人工标注、固定 split 和指标报告步骤。
+- L1/L2 下线策略：[`docs/compatibility_removal_policy.md`](./docs/compatibility_removal_policy.md)，
+  配合 `config/compatibility_policy.json` 和 CI 门禁管理 retain/deprecated/remove。
 
 ---
 
@@ -431,6 +433,8 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     `pa_agent.data_sources`/`pa_agent.ai_clients` entry point group 注册，失败隔离且不扫描任意目录；
     本轮固定 `pa-agent.registry-extension.v1` 和可选
     `__pa_agent_extension_version__` 声明，未声明版本的旧 callable registrar 继续兼容。
+    `l1_legacy_registrar` 当前政策为 `retain`；最早 `0.3.0` 才可在已有 `v0.2.0` 弃用 tag 和
+    完整扩展 inventory/迁移证据后评估删除，不得绕过兼容策略 CI。
 13. **L6 当前进度**：`AppContext` 已拆出共享 core helper 和 `bootstrap_gui()`；`bootstrap()`
     委托 GUI 路径。headless 复用 core helper，必须继续保持无 Qt `EventBus` import、无数据源连接；
     GUI adapter 继续负责 `EventBus`、数据源连接/订阅，且 `event_sink` 指向 `EventBus`。第 229 轮已
@@ -526,6 +530,9 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     29 个模板 golden snapshot 已完成；本轮用固定 `prompt_golden.json` 连续 5 轮比较
     TemplateStore/旧 loader 的 shared system、Stage 1、Stage 2 standalone、continuation
     standalone/prefix-chain，并覆盖 conservative/balanced stance，结果保持字节等价。
+    `l2_legacy_prompt_loader` 当前政策为 `retain`；`use_template_store=False`、旧 `_load()` 和
+    整组 fallback 最早 `0.3.0` 才可在已有 `v0.2.0` 弃用 tag、fallback 零命中和 golden
+    等价证据后评估删除。规则由 `scripts/check_compatibility_policy.py` 在 CI 强制执行。
     `use_template_store=False`、旧 `_load()` 和兼容回滚路径在完整稳定周期结束前不得删除，
     不得顺手重写 `prompt_engineering/` 中文文本。
 21. **L1 外部扩展兼容观察当前进度**：外部风格 data source/AI client registrar 已完成 5 轮

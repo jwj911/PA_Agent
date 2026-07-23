@@ -1,0 +1,60 @@
+{
+  "schema": "pa-agent.compatibility-policy.v1",
+  "current_release": "0.1.0",
+  "surfaces": {
+    "l1_legacy_registrar": {
+      "status": "retain",
+      "deprecated_since": null,
+      "earliest_removal_release": "0.3.0",
+      "required_deprecation_release": "0.2.0",
+      "required_symbols": [
+        {
+          "path": "pa_agent/extensions.py",
+          "contains": "if version is None:"
+        },
+        {
+          "path": "tests/unit/test_extensions.py",
+          "contains": "legacy_callable_stays_compatible"
+        },
+        {
+          "path": "tests/integration/test_l1_extension_compatibility_observation.py",
+          "contains": "_legacy_ai_client_registrar"
+        }
+      ],
+      "removal_evidence": [
+        "installed-extension-inventory",
+        "deprecation-release-tag",
+        "versioned-registrar-migration-report"
+      ]
+    },
+    "l2_legacy_prompt_loader": {
+      "status": "retain",
+      "deprecated_since": null,
+      "earliest_removal_release": "0.3.0",
+      "required_deprecation_release": "0.2.0",
+      "required_symbols": [
+        {
+          "path": "pa_agent/ai/prompt_assembler.py",
+          "contains": "use_template_store: bool = True"
+        },
+        {
+          "path": "pa_agent/ai/prompt_assembler.py",
+          "contains": "def _load(self, filename: str) -> str:"
+        },
+        {
+          "path": "pa_agent/ai/prompting/compatibility.py",
+          "contains": "falling back to legacy loader"
+        },
+        {
+          "path": "tests/integration/test_l2_template_compatibility_observation.py",
+          "contains": "use_template_store=False"
+        }
+      ],
+      "removal_evidence": [
+        "deprecation-release-tag",
+        "template-fallback-zero-hit-report",
+        "prompt-golden-equivalence-report"
+      ]
+    }
+  }
+}

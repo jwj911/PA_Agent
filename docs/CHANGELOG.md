@@ -18,6 +18,34 @@
 
 ---
 
+## [Unreleased] — 2026-07-23（L1/L2：兼容入口下线策略与 CI 门禁）
+
+本轮把 L1 legacy registrar 和 L2 legacy Prompt loader 从模糊的“继续观察”收敛为机器可执行的
+retain/deprecated/remove 策略；当前项目仍为 `0.1.0` 且无发布 tag，因此两个入口继续保留。
+
+### 已交付
+
+- 新增 `config/compatibility_policy.json`，将 `l1_legacy_registrar` 和
+  `l2_legacy_prompt_loader` 标记为 `retain`；最低弃用版本 `0.2.0`，最早移除版本 `0.3.0`。
+- 新增 `scripts/check_compatibility_policy.py`，校验 project/package/policy 版本一致、
+  retain/deprecated 兼容源码和观察测试仍存在；`remove` 状态必须满足最早版本、`v0.2.0` tag
+  和 surface 专属 evidence JSON。
+- L1 evidence 要求 installed extension inventory、弃用 tag 和 versioned registrar 迁移报告；
+  L2 要求弃用 tag、TemplateStore fallback 零命中和 Prompt golden 等价报告。
+- 新增 `docs/compatibility_removal_policy.md`，记录状态机、证据文件名、变更流程和禁止绕过规则。
+- CI 新增独立 `Check compatibility removal policy` 步骤，并把检查器/单测加入 targeted pytest/
+  Focused Ruff。
+
+### 验证与边界
+
+- compatibility policy/L1/L2 observation 定向 pytest **13 passed**；策略 CLI、Focused Ruff
+  （含 I001）、Ruff format、`py_compile`、CI target 和 `git diff --check` → **通过**。
+- 本轮不删除任何兼容入口；`use_template_store=False`、旧 `_load()`/fallback 和未声明版本的
+  legacy registrar 继续工作。
+- `0.3.0` 只是最早评估点，证据或发布 tag 不完整时必须继续 retain。
+
+---
+
 ## [Unreleased] — 2026-07-23（L5：真实经验脱敏导出与评估报告管道）
 
 本轮补齐真实经验案例进入既有 evaluator 前的导出、人工标注和报告生成链路；不读取当前空目录

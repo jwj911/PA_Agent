@@ -31,6 +31,9 @@ jobs:
       - name: Check CI workflow target lists
         run: python scripts/check_ci_workflow_targets.py
 
+      - name: Check compatibility removal policy
+        run: python scripts/check_compatibility_policy.py
+
       - name: Run targeted tests
         env:
           QT_QPA_PLATFORM: offscreen
@@ -181,6 +184,7 @@ jobs:
           tests/unit/test_experience_reader.py
           tests/unit/test_experience_eval.py
           tests/unit/test_experience_eval_pipeline.py
+          tests/unit/test_compatibility_policy.py
           tests/unit/test_demo_record_loader.py
           tests/unit/test_demo_replayer.py
           tests/unit/test_event_bus.py
@@ -327,6 +331,7 @@ jobs:
           pa_agent/indicators
           pa_agent/gui/theme
           scripts/check_ci_workflow_targets.py
+          scripts/check_compatibility_policy.py
           tools/run_l4_benchmark.py
           tools/run_live_headless_observation.py
           tools/validate_live_observation.py
@@ -491,6 +496,7 @@ jobs:
           tests/unit/test_experience_reader.py
           tests/unit/test_experience_eval.py
           tests/unit/test_experience_eval_pipeline.py
+          tests/unit/test_compatibility_policy.py
           tests/unit/test_demo_record_loader.py
           tests/unit/test_demo_replayer.py
           tests/unit/test_event_bus.py

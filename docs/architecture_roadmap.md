@@ -19,8 +19,8 @@
 
 | 路线 | 当前状态 | 已有基础 | 主要剩余工作 |
 |---|---|---|---|
-| L1 Provider/数据源注册表 | 外部扩展兼容观察已通过，仍保留 legacy registrar | `data/registry.py`、`ai/provider_registry.py` 已支持规格、优先级、延迟 builder、运行时注册和 entry point 扩展发现；未知数据源配置已安全回退；第 236 轮及本轮补齐规范化、replace/unregister、并发、lazy-import、扩展失败隔离、锁外执行和 `pa-agent.registry-extension.v1` 版本化 registrar 证据 | 继续观察已安装扩展；形成 legacy registrar/版本合同的长期兼容与下线策略 |
-| L2 Prompt 模板引擎 | 5 轮固定 fixture 兼容观察已通过，仍保留回滚路径 | `Stage1PromptBuilder`、`Stage2PromptBuilder`、29 个模板 manifest、`TemplateStore`、`TemplateContext`、严格变量渲染、system/Stage 1/Stage 2/continuation golden snapshots；本轮重复比较 TemplateStore/旧 loader 的 system、Stage 1、Stage 2 和 continuation 输出 | 继续记录稳定周期，之后评估旧 helper、旧 loader 和兼容开关的下线 |
+| L1 Provider/数据源注册表 | 扩展兼容观察与下线策略/CI 门禁已收口；legacy registrar 按政策 retain | registry、entry point、v1 registrar、失败隔离、并发/lazy-import 和固定样例观察已完成；`compatibility_policy.json` 强制保留未声明版本 callable | 观察真实安装扩展；最早 0.3.0 且具备 v0.2.0 tag、inventory 和迁移报告后才评估删除 |
+| L2 Prompt 模板引擎 | 5 轮等价观察与下线策略/CI 门禁已收口；旧 loader/fallback 按政策 retain | TemplateStore、TemplateContext、29 个 manifest、system/Stage 1/Stage 2/continuation、golden snapshot 和回退观察已完成 | 最早 0.3.0 且具备 v0.2.0 tag、fallback 零命中和 golden 报告后才评估删除 |
 | L3 Pipeline Builder | 受控 fixture rollout、显式 live legacy/Pipeline 入口和成对 artifact 比较合同已建立，默认 legacy，真实观察周期未收口 | 新增完整四步 Pipeline、默认关闭的 rollout flag、Task 10 终态矩阵、5 场景×3 轮对照、live harness opt-in 和 `compare_live_observations.py` | 在有凭据环境取得至少一个 `valid=true` 的 legacy/Pipeline pair 并完成稳定观察；满足后才评估启用默认 flag |
 | L4 性能优化 | v2 hosted baseline 与同环境 10% p95 对照已收口，进入每日持续观察 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；`pa-agent.performance.v1` 报告、`l4.synthetic.v2` 批量折算采样、p50/p95、100/500/5000 bars 基准、版本隔离 baseline cache 和 artifact；run `29975410917`/`29975592352` 完成建基线与 restore 对照 | 维护每日 schedule；runner image、benchmark version 或采样合同变化时重建 baseline |
 | L5 经验库升级 | 评估合同、固定切分、opaque 导出/人工标注/报告管道已交付，真实数据评估未收口 | 全量相关性排序 + K 线相似度；版本化 dataset/split/report；HMAC opaque catalog、标签门禁和 leave-one-out legacy/similarity 对照；不改变线上排序 | 按 `docs/experience_evaluation_runbook.md` 导入真实案例、人工标注并生成指标报告；证据充分后才评估权重 |
@@ -177,6 +177,9 @@ Client/DataSource:
 正式 registrar 契约和 builder 锁外执行证据；本轮又以 5 轮外部风格样例确认 versioned/legacy
 registrar、settings 注入、matcher 和 builder 的兼容边界；运行时注册入口仍
 不需要修改 `create_*` 条件分支。
+下线策略由 `config/compatibility_policy.json` 和 `scripts/check_compatibility_policy.py`
+强制执行：当前 `retain`，最早 `0.3.0` 且具备 `v0.2.0` 弃用 tag、安装扩展 inventory 和迁移
+报告后才可评估删除 legacy callable。
 
 ### 4.4 验收标准
 
@@ -274,6 +277,8 @@ Stage 1、Stage 2 和 continuation，不替换任何中文策略文本。Templat
 - 模板目录损坏不会影响旧路径启动；
 - 兼容观察期内旧/新 loader 可按固定 fixture 重放并回滚；本轮已完成 5 轮观察，尚未达到
   删除旧入口的发布/回滚条件。
+- 下线策略当前为 `retain`；最早 `0.3.0` 且具备 `v0.2.0` tag、fallback 零命中和 Prompt
+  golden 等价报告后才可评估删除，CI 会阻止提前移除。
 
 ## 6. L3：Pipeline Builder / State Machine
 
