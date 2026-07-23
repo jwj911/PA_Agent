@@ -1,11 +1,11 @@
 # L1-L6 架构升级路线图
 
 > 状态：规划基线
-> 更新时间：2026-07-23
+> 更新时间：2026-07-24
 > 适用分支：`main`
 > 关联路线：[`docs/backend_review_report.md`](./backend_review_report.md)
 > 短中期执行计划：[`docs/iteration_plan.md`](./iteration_plan.md)
-> 最近验收：GitHub Actions run `29979028929`，`main@599c3ed` 的
+> 最近验收：GitHub Actions run `30027709935`，`main@b278b58` 的
 > Windows/Python 3.11/3.12 全门禁通过。
 
 本文档把长期路线图 L1-L6 细化为可分批迁移的架构计划。目标是降低模块之间的隐式耦合，

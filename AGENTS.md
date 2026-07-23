@@ -486,8 +486,9 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     2026-07-23/24 连续完成 3 个独立真实 legacy/Pipeline pair，共 6 次 Provider 执行；
     6 个单体 validator 和 3 个 pair comparator 全部 `valid=true`，累计 18 个 artifact 文件的
     明文密钥扫描为 0 命中。稳定观察通过后，新默认已切换为 `true`；`submit()` flag-off 走
-    保留的 legacy 回滚实现，flag-on 委托完整
-    `Stage1Step -> RouteStep -> Stage2Step -> PersistStep` Pipeline。Task 10 还补充完整终态
+    保留的 legacy 回滚实现，flag-on 委托
+    `Stage1Step -> RouteStep -> Stage2Step -> PersistStep` Pipeline。GitHub Actions run
+    `30027709935` 已在 Windows/Python 3.11/3.12 双矩阵验证默认切换提交。Task 10 还补充完整终态
     矩阵、Qt-free headless/GUI adapter equivalence 测试，并将
     `tests/integration/test_task10_pipeline_rollout.py` 纳入 CI targeted pytest、
     `pa_agent/config/orchestrator.py` 纳入 focused Ruff/config target。PersistStep 集中

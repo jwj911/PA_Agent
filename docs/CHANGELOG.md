@@ -35,8 +35,10 @@
   `submit_pipeline()` 路由；同步 `settings.example.json`、配置说明、AGENTS 和路线文档。
 - 验证：设置迁移/rollout **38 passed**，Pipeline state/step **50 passed**，Ruff baseline
   保持 **3,724** 条，新增 Focused Ruff 路径通过。完整本地 non-live/non-e2e 执行到 100%
-  无 pytest failure，但进程最终被沙箱的第三方 NVIDIA 时间戳访问限制中止；全量验收等待
-  GitHub Actions Windows/Python 3.11/3.12。
+  无 pytest failure，但进程最终被沙箱的第三方 NVIDIA 时间戳访问限制中止。
+- GitHub Actions CI run `30027709935` 在 `main@b278b58` 完成最终权威验收：
+  Windows/Python 3.11 与 3.12 均 `success`，覆盖完整 non-live/non-e2e、Ruff baseline、
+  Focused Ruff/Black、compatibility policy 和目标测试。
 
 ---
 

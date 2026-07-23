@@ -1,11 +1,11 @@
 # L1-L6 后续迭代执行计划
 
 > 状态：短中期执行计划
-> 更新时间：2026-07-23
+> 更新时间：2026-07-24
 > 适用范围：后续若干轮原子迭代
 > 长期边界：以 [`docs/architecture_roadmap.md`](./architecture_roadmap.md) 为准
 
-> 最近验收：GitHub Actions run `29979028929` 在 `main@599c3ed` 的
+> 最近验收：GitHub Actions run `30027709935` 在 `main@b278b58` 的
 > Windows/Python 3.11/3.12 双矩阵全部通过。
 > 当前代码/合同侧迭代、L6 真实成功主路径和 L3 三轮稳定观察/默认切换已完成；未收尾项为
 > L5 真实数据证据。
