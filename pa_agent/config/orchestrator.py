@@ -10,5 +10,5 @@ class OrchestratorSettings(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    #: Keep the explicit PipelineBuilder migration opt-in until equivalence is proven.
-    pipeline_builder_enabled: bool = False
+    #: New installations use PipelineBuilder after the validated rollout.
+    pipeline_builder_enabled: bool = True

@@ -138,7 +138,7 @@ def test_headless_gui_submit_and_direct_pipeline_are_equivalent_without_qt(frame
     legacy_record = _headless_adapter(
         _orchestrator(
             replies=[make_reply(VALID_STAGE1), make_reply(VALID_STAGE2)],
-            settings=Settings(),
+            settings=Settings(orchestrator={"pipeline_builder_enabled": False}),
         ),
         frame,
         events=legacy_events,
@@ -183,25 +183,26 @@ def test_headless_gui_submit_and_direct_pipeline_are_equivalent_without_qt(frame
     assert pipeline_state.step_history == ["stage1", "route", "stage2", "persist"]
 
 
-def test_submit_default_does_not_enter_pipeline(monkeypatch, frame) -> None:
-    """The rollout switch remains off for Settings created without the section."""
+def test_submit_default_enters_pipeline(monkeypatch, frame) -> None:
+    """Fresh Settings route submit through the validated Pipeline default."""
     orchestrator = _orchestrator(
         replies=[make_reply(VALID_STAGE1), make_reply(VALID_STAGE2)],
         settings=Settings(),
     )
-    pipeline_called = MagicMock(side_effect=AssertionError("pipeline must stay opt-in"))
+    pipeline_called = MagicMock(wraps=orchestrator.submit_pipeline)
     monkeypatch.setattr(orchestrator, "submit_pipeline", pipeline_called)
 
     record = orchestrator.submit(frame, CancelToken(), lambda _event: None)
 
     assert record.exception is None
-    pipeline_called.assert_not_called()
+    pipeline_called.assert_called_once()
+    assert pipeline_called.call_args.kwargs["trace_id"]
 
 
 def test_legacy_submit_wrapper_does_not_forward_trace_id(monkeypatch, frame) -> None:
     orchestrator = _orchestrator(
         replies=[make_reply(VALID_STAGE1), make_reply(VALID_STAGE2)],
-        settings=Settings(),
+        settings=Settings(orchestrator={"pipeline_builder_enabled": False}),
     )
     captured: dict[str, object] = {}
     legacy_submit = two_stage_module._LEGACY_SUBMIT

@@ -1408,7 +1408,7 @@ class TwoStageOrchestrator:
 
 
 def _pipeline_builder_enabled(settings: Any) -> bool:
-    """Return the explicit opt-in flag without changing legacy defaults."""
+    """Resolve Pipeline routing while keeping incomplete legacy objects safe."""
     orchestrator_settings = getattr(settings, "orchestrator", None)
     if hasattr(orchestrator_settings, "get"):
         return bool(orchestrator_settings.get("pipeline_builder_enabled", False))
@@ -1433,7 +1433,7 @@ def _submit_with_pipeline_flag(
     previous_record: AnalysisRecord | None = None,
     incremental_new_bar_count: int | None = None,
 ) -> AnalysisRecord:
-    """Select the opt-in pipeline while retaining the original submit facade."""
+    """Select Pipeline or the retained legacy rollback implementation."""
     pipeline_enabled = _pipeline_builder_enabled(self._settings)
     trace_id = uuid.uuid4().hex if pipeline_enabled else None
     logger.info(

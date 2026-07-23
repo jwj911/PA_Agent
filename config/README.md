@@ -26,7 +26,7 @@
 
 ## `settings.json` 字段说明
 
-配置分为四个顶层组：`provider`、`general`、`prompt`、`validation`。
+配置包含 `provider`、`general`、`prompt`、`validation`、`orchestrator` 等顶层组。
 
 ### provider — AI 提供商
 
@@ -86,6 +86,12 @@
 | `validation.retry_max` | int | `3` | 格式错误（category a）最大重试次数（0–5） |
 | `validation.retry_max_semantic` | int | `1` | 语义错误（category c）最大重试次数（0–3） |
 | `validation.retry_stage2` | bool | `true` | 阶段二校验失败时是否重试 |
+
+### orchestrator — 编排路径
+
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `orchestrator.pipeline_builder_enabled` | bool | `true` | 使用 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep` Pipeline。三轮真实 legacy/Pipeline 成对观察通过后成为默认；缺少该字段的旧配置也采用新默认。显式设为 `false` 可回滚到保留的 legacy `submit()` 实现 |
 
 ## 安全提醒
 

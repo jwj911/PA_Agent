@@ -18,6 +18,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-24（L3：三轮真实稳定观察与默认 Pipeline）
+
+- 在首个真实 pair 基础上继续完成 pair 02
+  (`legacy/pipeline-live-20260723223943`) 和 pair 03
+  (`legacy/pipeline-live-20260724002527`)；3 个独立 pair、6 次真实 Provider 执行均
+  `status=completed`、无 exception、写入 record。
+- 6 个 `pa-agent.live-observation-validation.v1` 与 3 个
+  `pa-agent.live-observation-pair-validation.v1` 全部 `valid=true`；每次均为相同 5 事件序列，
+  shape-only record 合同一致。
+- 累计 18 个 Git 忽略的 artifact 文件中 API Key 原文字节扫描为 0 命中；每轮结束后
+  process/user/machine scope 均无 `PA_AGENT_LIVE_API_KEY`。
+- `OrchestratorSettings.pipeline_builder_enabled` 默认由 `false` 切换为 `true`；新配置和缺少
+  rollout 字段的旧配置均采用 Pipeline，显式 `false` 保留完整 legacy 回滚。
+- 更新设置 round-trip 和 Task 10 测试，覆盖新默认、旧配置缺字段、显式 true/false 以及默认
+  `submit_pipeline()` 路由；同步 `settings.example.json`、配置说明、AGENTS 和路线文档。
+- 验证：设置迁移/rollout **38 passed**，Pipeline state/step **50 passed**，Ruff baseline
+  保持 **3,724** 条，新增 Focused Ruff 路径通过。完整本地 non-live/non-e2e 执行到 100%
+  无 pytest failure，但进程最终被沙箱的第三方 NVIDIA 时间戳访问限制中止；全量验收等待
+  GitHub Actions Windows/Python 3.11/3.12。
+
+---
+
 ## [Unreleased] — 2026-07-23（L6：真实 Provider 成功主路径验收）
 
 - 从当前 Windows 账户的 DPAPI 本地配置加载 Provider 凭据，仅在单个受控进程中临时设置

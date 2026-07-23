@@ -23,7 +23,7 @@ def test_defaults(tmp_path):
     assert s.general.decision_stance == "balanced"
     assert s.general.decision_flow_auto_play is True
     assert s.general.auto_resume_chart_after_analysis is False
-    assert s.orchestrator.pipeline_builder_enabled is False
+    assert s.orchestrator.pipeline_builder_enabled is True
     assert p.exists(), "defaults should be written to disk"
 
 
@@ -165,7 +165,7 @@ def test_tushare_round_trip(tmp_path):
 
 
 def test_orchestrator_pipeline_flag_round_trip(tmp_path):
-    """The explicit pipeline rollout flag persists without changing defaults."""
+    """An explicit Pipeline setting persists across save and load."""
     p = tmp_path / "settings.json"
     original = Settings(orchestrator={"pipeline_builder_enabled": True})
 
@@ -178,15 +178,39 @@ def test_orchestrator_pipeline_flag_round_trip(tmp_path):
     }
 
 
-def test_old_settings_without_orchestrator_section_use_legacy_default(tmp_path):
-    """Settings written before the rollout section remain on the legacy path."""
+def test_explicit_legacy_pipeline_flag_round_trip(tmp_path):
+    """An existing user can retain the legacy rollback path explicitly."""
+    p = tmp_path / "settings.json"
+    original = Settings(orchestrator={"pipeline_builder_enabled": False})
+
+    save_settings(original, p)
+    loaded = load_settings(p)
+
+    assert loaded.orchestrator.pipeline_builder_enabled is False
+    assert json.loads(p.read_text(encoding="utf-8"))["orchestrator"] == {
+        "pipeline_builder_enabled": False
+    }
+
+
+def test_old_settings_without_orchestrator_section_use_pipeline_default(tmp_path):
+    """Pre-rollout settings adopt the validated Pipeline default."""
     p = tmp_path / "settings.json"
     p.write_text(json.dumps({"provider": {"model": "old-model"}}), encoding="utf-8")
 
     loaded = load_settings(p)
 
     assert loaded.provider.model == "old-model"
-    assert loaded.orchestrator.pipeline_builder_enabled is False
+    assert loaded.orchestrator.pipeline_builder_enabled is True
+
+
+def test_old_settings_without_pipeline_field_use_pipeline_default(tmp_path):
+    """A pre-switch orchestrator section also adopts the new default."""
+    p = tmp_path / "settings.json"
+    p.write_text(json.dumps({"orchestrator": {}}), encoding="utf-8")
+
+    loaded = load_settings(p)
+
+    assert loaded.orchestrator.pipeline_builder_enabled is True
 
 
 def test_pushplus_auto_disabled_when_enabled_without_token(tmp_path):

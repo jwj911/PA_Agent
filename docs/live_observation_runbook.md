@@ -7,7 +7,8 @@
 
 - 仅在受控终端会话设置 `PA_AGENT_LIVE_API_KEY`；
 - 可选设置 `PA_AGENT_LIVE_BASE_URL` 和 `PA_AGENT_LIVE_MODEL`；
-- 保持 `orchestrator.pipeline_builder_enabled` 默认值为 `false`；
+- 不修改持久化配置；harness 未传 flag 时显式运行 legacy，传
+  `--pipeline-builder-enabled` 时显式运行 Pipeline，与应用默认值无关；
 - legacy 与 Pipeline 使用不同的 correlation id 和输出目录；
 - `artifacts/` 已被 `.gitignore` 排除。
 
@@ -102,15 +103,19 @@ Remove-Item Env:PA_AGENT_LIVE_MODEL -ErrorAction SilentlyContinue
 
 ## 6. 已验收基线
 
-2026-07-23 已完成首个真实成功 pair：
+2026-07-23/24 已完成三个连续真实成功 pair：
 
 - correlation id：`legacy-live-20260723144709` /
   `pipeline-live-20260723144709`；
-- 两个单体 `pa-agent.live-observation-validation.v1` 均为 `valid=true`；
-- 成对 `pa-agent.live-observation-pair-validation.v1` 为 `valid=true`；
-- 两条路径均 `status=completed`、无 exception、写入 record，并产生相同 5 事件序列；
-- shape-only record 合同一致；6 个本地产物文件中 API Key 原文字节扫描为 0 命中；
+- correlation id：`legacy-live-20260723223943` /
+  `pipeline-live-20260723223943`；
+- correlation id：`legacy-live-20260724002527` /
+  `pipeline-live-20260724002527`；
+- 6 个单体 `pa-agent.live-observation-validation.v1` 均为 `valid=true`；
+- 3 个成对 `pa-agent.live-observation-pair-validation.v1` 均为 `valid=true`；
+- 六条路径均 `status=completed`、无 exception、写入 record，并产生相同 5 事件序列；
+- shape-only record 合同一致；18 个本地产物文件中 API Key 原文字节扫描为 0 命中；
 - process/user/machine 环境变量均已清理，原始 artifact 未提交。
 
-该基线证明 L6 真实成功主路径和首个 L3 opt-in pair；不证明 L3 已完成重复稳定观察，也不改变
-`orchestrator.pipeline_builder_enabled=false` 的默认值。
+该基线证明 L6 真实成功主路径和 L3 三轮稳定观察。结合 fixed-fixture 全终态矩阵，
+`orchestrator.pipeline_builder_enabled` 已默认 `true`；显式 `false` 保留 legacy 回滚。

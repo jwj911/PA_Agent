@@ -38,6 +38,9 @@
     "strict_bar_by_bar_features": true,
     "disable_truncation_repair": true
   },
+  "orchestrator": {
+    "pipeline_builder_enabled": true
+  },
   "feishu": {
     "enabled": true,
     "webhook_url": "",

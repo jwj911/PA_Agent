@@ -150,7 +150,7 @@ price_action_agent/
 - **`pa_agent/config/`**：配置与路径。
   - `settings.py`：Pydantic v2 配置模型与读写；支持旧字段迁移。
   - `orchestrator.py`：PyQt-free Pipeline rollout 配置；`orchestrator.pipeline_builder_enabled`
-    默认 `false`，旧配置缺少该 section 时保持 legacy 默认。
+    默认 `true`，旧配置缺少该 section/字段时也采用 Pipeline；显式 `false` 保留 legacy 回滚。
   - `paths.py`：集中管理项目根目录、配置、日志、记录、prompt 目录等路径常量。
 
 - **`pa_agent/data/`**：市场数据层。
@@ -482,20 +482,23 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     callbacks、Provider client、prompt/reply 正文、行情数据、密钥和 URL path/query/fragment
     不进入的安全摘要。Task 6 已交付真实 `Stage1Step`，Task 7 已交付真实 `RouteStep`，Task 8
     已交付真实 `Stage2Step`，Task 9 已交付真实 `PersistStep`；Task 10 新增
-    `orchestrator.pipeline_builder_enabled`（默认 `false`）和 Settings round-trip/旧配置
-    legacy 默认测试。`submit()` flag-off 走 legacy，flag-on 委托完整
+    `orchestrator.pipeline_builder_enabled` 和 Settings round-trip/旧配置迁移测试。
+    2026-07-23/24 连续完成 3 个独立真实 legacy/Pipeline pair，共 6 次 Provider 执行；
+    6 个单体 validator 和 3 个 pair comparator 全部 `valid=true`，累计 18 个 artifact 文件的
+    明文密钥扫描为 0 命中。稳定观察通过后，新默认已切换为 `true`；`submit()` flag-off 走
+    保留的 legacy 回滚实现，flag-on 委托完整
     `Stage1Step -> RouteStep -> Stage2Step -> PersistStep` Pipeline。Task 10 还补充完整终态
     矩阵、Qt-free headless/GUI adapter equivalence 测试，并将
     `tests/integration/test_task10_pipeline_rollout.py` 纳入 CI targeted pytest、
     `pa_agent/config/orchestrator.py` 纳入 focused Ruff/config target。PersistStep 集中
     full/partial record assembly/write，前置终态通过 `persistence_pending` 防止重复保存，使用
     `PendingWriter.last_write_succeeded` 识别磁盘失败，full 写入成功后才发出 `RecordSaved`，
-    partial 或磁盘失败不发成功事件。默认 `submit()` 和 GUI/headless 调用路径仍保持 legacy；
+    partial 或磁盘失败不发成功事件。默认 `submit()` 和 GUI/headless 调用路径现使用 Pipeline；
     本轮已用 5 个终态场景 × 3 轮固定 fixture 完成 flag-off/flag-on 的 record、事件、prompt、
     流式内容、策略文件和写入边界对照；2026-07-23 又取得首个真实 Provider 成功 pair，
-    无终态、事件序列、record 写入或 shape-only 结构偏差。单次成功仍不等于生产稳定观察；
-    后续需按同一合同重复真实 pair，结合既有 GUI/headless final/partial/cancel/failure
-    fixture evidence 无未解释偏差后才评估启用默认 flag。
+    无终态、事件序列、record 写入或 shape-only 结构偏差；后续两轮重复 pair 也通过。既有
+    GUI/headless final/partial/cancel/failure fixture evidence 与三轮真实成功主路径共同支持
+    默认切换。若出现偏差，显式设置 `pipeline_builder_enabled=false` 回滚，不删除 legacy facade。
     显式 `tools/run_live_headless_observation.py --pipeline-builder-enabled` 只对本次运行打开
     Pipeline；未传参数保持 legacy，普通/夜间 CI 不得触发该脚本。
 17. **L3 Pipeline 生命周期日志**：Pipeline enabled 路径以同一 `trace_id` 关联一次执行，
@@ -506,10 +509,10 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     `pipeline.timing` 在 Stage 2 启动前记录 Stage 1/Route 边界耗时。日志只允许
     allowlist 安全字段，不得写入原始行情、股票/合约代码、价格、prompt/Provider 原文、
     API Key、Provider Token、callbacks 或 client。`orchestrator.pipeline_builder_enabled`
-    默认仍为 `false`，flag-off 必须保持 legacy `submit()`、事件顺序、retry/cancel 语义和
-    final/partial record 不变；真实稳定观察周期及 GUI/headless final/partial/cancel/failure
-    全链路 evidence 完成前，不得启用默认 flag。本轮已同步业务代码、聚焦测试和项目文档/
-    规格，并已纳入原子提交/推送。
+    默认为 `true`；显式 flag-off 必须保持 legacy `submit()`、事件顺序、retry/cancel 语义和
+    final/partial record 不变。默认切换后继续按 `trace_id` 观察，任何未解释偏差都先回滚
+    `false`，不得删除 legacy facade。本轮已同步业务代码、聚焦测试和项目文档/规格，并纳入
+    原子提交/推送。
 18. **L5 经验库评估当前进度**：经验目录当前只有占位文件，禁止把合成 fixture 的指标当作
     真实检索质量结论。`pa_agent.records.experience_eval` 提供
     `pa-agent.experience-eval.v1` dataset envelope、`kline-geometry.v1` feature version、
