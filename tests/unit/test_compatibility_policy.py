@@ -44,9 +44,9 @@ def test_current_policy_retains_required_l1_l2_surfaces() -> None:
 
 def test_retain_policy_rejects_a_missing_compatibility_marker() -> None:
     policy = _policy()
-    policy["surfaces"]["l1_legacy_registrar"]["required_symbols"][0]["contains"] = (
-        "marker-that-does-not-exist"
-    )
+    policy["surfaces"]["l1_legacy_registrar"]["required_symbols"][0][
+        "contains"
+    ] = "marker-that-does-not-exist"
 
     errors = check_compatibility_policy(ROOT, policy, release_tags=set())
 

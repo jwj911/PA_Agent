@@ -18,6 +18,17 @@
 
 ---
 
+## [Unreleased] — 2026-07-23（CI：Focused Black 存量格式收口）
+
+- 按远端固定 Black 24.10.0 报告机械格式化 11 个既有 Focused Black 目标，覆盖 Pipeline
+  state/steps、Headless/CLI、L3/L6 观察测试、Prompt 和兼容策略测试。
+- 格式化后相关 L3/L6/CLI/Prompt 回归 **112 passed**；Ruff baseline 保持 3,724 条，
+  无规则或行为变化。
+- 本机 Black 24.10.0 仍存在已知无输出挂起，最终格式验收以 GitHub Windows/Python
+  3.11/3.12 的固定版本步骤为准。
+
+---
+
 ## [Unreleased] — 2026-07-23（CI：Ruff baseline Windows UTF-8 解码）
 
 - `scripts/check_ruff_baseline.py` 的 Ruff version/JSON subprocess 显式使用 UTF-8 strict 解码，

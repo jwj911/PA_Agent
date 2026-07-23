@@ -145,9 +145,7 @@ def test_gui_and_headless_match_full_chain_for_each_terminal_case(qtbot, frame, 
         frame,
         cancel_token=headless_token,
         on_event=headless_events.append,
-        on_stage_prompt=lambda stage, system, user: headless_prompts.append(
-            (stage, system, user)
-        ),
+        on_stage_prompt=lambda stage, system, user: headless_prompts.append((stage, system, user)),
         on_stage1_reasoning=lambda chunk: headless_reasoning.append(("stage1", chunk)),
         on_stage1_content=lambda chunk: headless_content.append(("stage1", chunk)),
         on_stage2_reasoning=lambda chunk: headless_reasoning.append(("stage2", chunk)),

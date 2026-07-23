@@ -330,9 +330,7 @@ def _public_record_exception(
         return None
     # Raw provider text is retained in the persisted record but is not echoed
     # by the CLI result, keeping stdout suitable for automation and logs.
-    public_exception = {
-        key: value for key, value in exception.items() if key != "raw_text"
-    }
+    public_exception = {key: value for key, value in exception.items() if key != "raw_text"}
     if "message" in public_exception:
         public_exception["message"] = _masked_error_text(
             public_exception["message"],
@@ -439,8 +437,7 @@ def _run_analyze(
             ctx = AppContext.bootstrap_headless(**bootstrap_kwargs)
         except Exception as exc:
             raise CliError(
-                "headless core 装配失败: "
-                f"{_masked_error_text(exc, settings)}",
+                "headless core 装配失败: " f"{_masked_error_text(exc, settings)}",
                 code=EXIT_PROVIDER_ERROR,
             ) from exc
 
@@ -457,9 +454,7 @@ def _run_analyze(
         except Exception as exc:
             record = _persist_runner_error(ctx, frame, exc)
             event_names.append("RunnerFailed")
-            event_sink.publish(
-                AppEvent.orchestrator("RunnerFailed", correlation_id=correlation_id)
-            )
+            event_sink.publish(AppEvent.orchestrator("RunnerFailed", correlation_id=correlation_id))
 
         record_path = _record_path(ctx, record)
         exit_code = _record_exit_code(record, event_names)
@@ -524,7 +519,6 @@ def _analyze(args: argparse.Namespace) -> int:
             frame=frame,
             settings=settings,
         )
-
 
     try:
         ctx = AppContext.bootstrap_headless(

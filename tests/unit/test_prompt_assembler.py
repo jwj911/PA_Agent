@@ -120,7 +120,9 @@ def _stage2_spike_user_prompt(assembler: PromptAssembler) -> str:
         stage1_json,
         SPIKE_CONTRACT_STRATEGY_FILES,
         [],
-    )[1]["content"]
+    )[
+        1
+    ]["content"]
 
 
 def test_stage1_system_prompt_order(assembler: PromptAssembler):
@@ -381,9 +383,9 @@ def test_stage2_system_prompt_order(assembler: PromptAssembler):
     assert pos_persona >= 0
     assert 0 <= pos_persona < pos_binary_sys
 
-    assert "[CONTENT OF 二元决策.txt]" not in user, (
-        "Full binary tree file is not duplicated in stage 2 user turn"
-    )
+    assert (
+        "[CONTENT OF 二元决策.txt]" not in user
+    ), "Full binary tree file is not duplicated in stage 2 user turn"
     assert "[CONTENT OF 二元决策.txt]" in system
     pos_strategy = user.find("上涨通道分析识别")
     pos_bar_by_bar = user.find("逐棒分析检查单")
@@ -523,7 +525,8 @@ def test_real_stage1_stage2_boundary_contracts(real_assembler: PromptAssembler):
     assert '"terminal": {' in stage2_user
     assert "当 order_type 为“不下单”时" in stage2_user
     assert (
-        "entry_price、take_profit_price、take_profit_price_2、stop_loss_price、order_direction 必须全部为 null"
+        "entry_price、take_profit_price、take_profit_price_2、"
+        "stop_loss_price、order_direction 必须全部为 null"
         in stage2_user
     )
 
@@ -731,7 +734,8 @@ def test_incremental_stage1_prompt_includes_previous_record_and_new_bars(
 
     messages = assembler.build_incremental_stage1(frame, previous, 2)
 
-    # 4-message continuation structure: system, user(prev S1), assistant(prev S1 reply), user(incremental)
+    # 4-message continuation structure: system, previous user/assistant,
+    # then the incremental user message.
     assert [m["role"] for m in messages] == ["system", "user", "assistant", "user"]
     # Message [1] is previous full Stage 1 user prompt, refreshed with market features
     assert "程序结构辅助特征" in messages[1]["content"]

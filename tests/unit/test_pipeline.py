@@ -105,8 +105,7 @@ def test_pipeline_builder_logs_ordered_safe_lifecycle(caplog) -> None:
     records = [
         record
         for record in caplog.records
-        if record.name.endswith("pipeline.builder")
-        and record.getMessage() == "pipeline.lifecycle"
+        if record.name.endswith("pipeline.builder") and record.getMessage() == "pipeline.lifecycle"
     ]
     assert [record.pipeline_event for record in records] == [
         "start",
@@ -118,7 +117,11 @@ def test_pipeline_builder_logs_ordered_safe_lifecycle(caplog) -> None:
         "end",
     ]
     assert {record.trace_id for record in records} == {result.trace_id}
-    assert all(record.pipeline_elapsed_ms >= 0 for record in records if hasattr(record, "pipeline_elapsed_ms"))
+    assert all(
+        record.pipeline_elapsed_ms >= 0
+        for record in records
+        if hasattr(record, "pipeline_elapsed_ms")
+    )
     rendered = "\n".join(record.getMessage() + repr(record.__dict__) for record in records)
     assert "PRIVATE_PROMPT" not in rendered
     assert "PRIVATE_REPLY" not in rendered
@@ -147,9 +150,7 @@ def test_pipeline_builder_logs_stage_boundary_timing(caplog) -> None:
         if record.pipeline_event == "step_duration"
     }
     boundary = next(
-        record
-        for record in timing_records
-        if record.pipeline_event == "stage_boundary"
+        record for record in timing_records if record.pipeline_event == "stage_boundary"
     )
 
     assert set(durations) == {"stage1", "route", "stage2", "persist"}
@@ -158,7 +159,10 @@ def test_pipeline_builder_logs_stage_boundary_timing(caplog) -> None:
     assert boundary.pipeline_route_elapsed_ms >= 0
     assert durations["stage1"].pipeline_stage_elapsed_ms >= 0
     assert durations["stage2"].pipeline_stage_elapsed_ms >= 0
-    assert all(record.pipeline_elapsed_ms >= record.pipeline_step_elapsed_ms for record in durations.values())
+    assert all(
+        record.pipeline_elapsed_ms >= record.pipeline_step_elapsed_ms
+        for record in durations.values()
+    )
     assert {record.trace_id for record in timing_records} == {result.trace_id}
 
 

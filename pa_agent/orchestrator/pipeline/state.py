@@ -383,9 +383,7 @@ class PipelineState:
                 "trace_id": self.trace_id,
                 "pipeline_event": "orchestrator_event",
                 "pipeline_orchestrator_event": event.name,
-                "pipeline_current_step": self.step_history[-1]
-                if self.step_history
-                else None,
+                "pipeline_current_step": self.step_history[-1] if self.step_history else None,
                 "pipeline_terminal_status": self.terminal_status.value,
             },
         )

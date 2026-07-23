@@ -21,11 +21,7 @@ DEPRECATED_STAGE1_GATE_FILE = "二元决策_闸门.txt"
 
 
 def _strategy_registry_values() -> set[str]:
-    return {
-        value
-        for name, value in vars(sf).items()
-        if name.isupper() and isinstance(value, str)
-    }
+    return {value for name, value in vars(sf).items() if name.isupper() and isinstance(value, str)}
 
 
 def test_stage1_txt_files() -> None:

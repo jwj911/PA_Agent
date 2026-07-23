@@ -272,7 +272,9 @@ def test_analyze_run_persists_final_record_and_jsonl_events(
     assert record_payload["stage2_decision"] is not None
     assert record_payload["exception"] is None
 
-    event_lines = [json.loads(line) for line in events_path.read_text(encoding="utf-8").splitlines()]
+    event_lines = [
+        json.loads(line) for line in events_path.read_text(encoding="utf-8").splitlines()
+    ]
     assert [event["payload"]["event"] for event in event_lines] == result["events"]
     assert {event["correlation_id"] for event in event_lines} == {"run-final"}
 

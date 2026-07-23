@@ -75,11 +75,7 @@ def _make_orchestrator(
     exp_reader.read_for_stage2.return_value = []
     settings = Settings(
         orchestrator={"pipeline_builder_enabled": pipeline_enabled},
-        validation=(
-            {"retry_enabled": False}
-            if case == "stage1_validation"
-            else {}
-        ),
+        validation=({"retry_enabled": False} if case == "stage1_validation" else {}),
     )
     return TwoStageOrchestrator(
         client=client,

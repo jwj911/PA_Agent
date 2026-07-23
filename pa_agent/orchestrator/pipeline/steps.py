@@ -584,9 +584,7 @@ class Stage2Step:
             pipeline_status=(
                 "cancelled"
                 if OrchestratorEvent.Cancelled in state.events
-                else "failed"
-                if OrchestratorEvent.Stage2Failed in state.events
-                else "succeeded"
+                else "failed" if OrchestratorEvent.Stage2Failed in state.events else "succeeded"
             ),
             pipeline_usage_call_count=len(s2_usage_calls),
         )

@@ -105,7 +105,11 @@ class HeadlessAnalysisAdapter:
             "on_stage2_files": on_stage2_files,
         }
         submit_kwargs.update(
-            {name: callback for name, callback in optional_callbacks.items() if callback is not None}
+            {
+                name: callback
+                for name, callback in optional_callbacks.items()
+                if callback is not None
+            }
         )
         record = orchestrator.submit(**submit_kwargs)
         return HeadlessAnalysisResult(
