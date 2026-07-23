@@ -18,6 +18,42 @@
 
 ---
 
+## [Unreleased] — 2026-07-23（L4：亚毫秒基准稳健采样 v2）
+
+本轮执行 L4 hosted baseline 对照后发现，原 v1 对亚毫秒操作逐次计时会把 runner 调度抖动
+放大为超过 10% 的比例回退；本轮修正采样合同，不放宽 10% 门禁或绝对预算。
+
+### Hosted 诊断证据
+
+- run `29930306551` 与 `29974597115` 均成功恢复首次 run `29923921295` 的同环境 baseline，
+  并在 benchmark 失败后跳过 baseline save、保留失败报告 artifact；
+- 三次运行均使用 Provisioner `20260707.563`、Windows image `20260714.173.1` 和
+  Python 3.12.9，排除 runner image 漂移；
+- run #2 仅 `indicators_100` 从 `0.095195 ms` 到 `0.118195 ms`（+24.16%）失败，
+  run #3 则仅 `snapshot_build_100` 从 `0.577550 ms` 到 `0.682310 ms`（+18.14%）失败，
+  其余项目改善或通过。失败项在不同亚毫秒操作间漂移，不能解释为单一热路径回退。
+
+### 已交付
+
+- benchmark version 升级为 `l4.synthetic.v2`；每个 p95 样本可执行 `sample_repeats` 次操作后
+  折算单次耗时，报告显式记录重复次数。
+- 固定 suite 按操作成本配置批量次数，使短操作每个样本累计约 10 ms，降低计时器和调度抖动；
+  默认 `run_benchmark()` 仍保持一次调用，兼容其他调用方。
+- baseline loader 拒绝 schema/version 不匹配的报告；workflow cache key 切换到
+  `l4-baseline-v2-*`，不把 v1 baseline 用于 v2 对照。
+- 新增本地 v2 报告 `docs/benchmarks/l4_synthetic_v2_2026-07-23.json`；九项固定基准在
+  30 次采样、5 次预热下全部通过现有绝对预算。
+
+### 验证与边界
+
+- benchmark contract tests、Focused Ruff（含 I001）、Ruff format、`py_compile`、
+  CI target 和 `git diff --check` → **通过**。
+- 10% regression 阈值和现有 p95 绝对预算均未放宽。
+- v2 尚需在 hosted runner 首次建立新 baseline，再用相同参数执行第二次对照；本地通过不替代
+  hosted 收口证据。
+
+---
+
 ## [Unreleased] — 2026-07-22（L4：首次 hosted runner baseline）
 
 本轮由授权仓库账号通过 `workflow_dispatch` 执行首次 L4 hosted benchmark，验证固定

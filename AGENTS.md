@@ -498,17 +498,18 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
 19. **L4 性能基准当前进度**：`pa_agent.perf.benchmark` 和
     `tools/run_l4_benchmark.py` 提供 `pa-agent.performance.v1` 报告、p50/p95、p95 budget
     和超过 10% baseline regression 判定；固定 suite 覆盖 snapshot build、indicator、
-    K-line geometry 的 100/500/5000 bars，报告只保留耗时、平台和预算状态，不写行情原文。
-    当前基线见 `docs/benchmarks/l4_synthetic_2026-07-22.json`；`.github/workflows/l4-benchmark.yml`
-    已提供 Windows/Python 3.12.9 的手动/夜间预算门禁、按 iterations/warmups 分区的最近成功
-    baseline cache 和 artifact 留存。仓库本地 baseline 不得直接用于 hosted runner 的 10%
-    regression 比较；首次 Actions 运行已在 run `29923921295` 成功产生 baseline 和
-    `l4-benchmark-29923921295` artifact，但仍须审核 runner image 变化，不得据单次 benchmark
-    修改热路径。后续手动触发要求仓库 Write 权限；Fine-grained PAT 仅选择
+    K-line geometry 的 100/500/5000 bars，报告只保留耗时、平台、预算状态和每个样本的
+    `sample_repeats`，不写行情原文。v1 hosted run `29930306551`/`29974597115` 均成功恢复
+    run `29923921295` 的 baseline 并正确阻断超过 10% 的结果，但失败项在不同亚毫秒操作间漂移；
+    三次 runner image 相同，确认逐次计时不够稳健。当前 `l4.synthetic.v2` 按操作成本批量执行后
+    折算单次耗时，10% 阈值与绝对预算不变；本地报告见
+    `docs/benchmarks/l4_synthetic_v2_2026-07-23.json`。`.github/workflows/l4-benchmark.yml`
+    已切换到 `l4-baseline-v2-*` cache，禁止混用 v1 baseline；仍需首次 hosted v2 建基线和第二次
+    同参数对照。后续手动触发要求仓库 Write 权限；Fine-grained PAT 仅选择
     `PA_Agent` 并授予 Repository `Actions: Read and write`，或直接使用 GitHub Actions
-    网页的 **Run workflow**。首次以 `iterations=30`、`warmups=5` 建立 baseline，第二次同参数
-    运行验证 restore、p95 比较和 10% regression 门禁；首轮无历史 baseline，不能单独证明
-    regression 对照；PAT、Provider key 和 benchmark 敏感配置不得写入仓库、日志或聊天。
+    网页的 **Run workflow**。v2 首次以 `iterations=30`、`warmups=5` 建立 baseline，第二次
+    同参数运行验证 restore、p95 比较和 10% regression 门禁；PAT、Provider key 和 benchmark
+    敏感配置不得写入仓库、日志或聊天。
 20. **L2 Prompt 兼容观察当前进度**：TemplateStore、TemplateContext、严格变量渲染和
     29 个模板 golden snapshot 已完成；本轮用固定 `prompt_golden.json` 连续 5 轮比较
     TemplateStore/旧 loader 的 shared system、Stage 1、Stage 2 standalone、continuation

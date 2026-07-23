@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 PERFORMANCE_REPORT_SCHEMA = "pa-agent.performance.v1"
+PERFORMANCE_BENCHMARK_VERSION = "l4.synthetic.v2"
 DEFAULT_MAX_REGRESSION_PCT = 10.0
 
 
@@ -22,6 +23,7 @@ class BenchmarkResult:
 
     name: str
     iterations: int
+    sample_repeats: int
     p50_ms: float
     p95_ms: float
     min_ms: float
@@ -46,7 +48,7 @@ class BenchmarkReport:
     warmups: int
     results: tuple[BenchmarkResult, ...]
     schema: str = PERFORMANCE_REPORT_SCHEMA
-    benchmark_version: str = "l4.synthetic.v1"
+    benchmark_version: str = PERFORMANCE_BENCHMARK_VERSION
     python_version: str = sys.version.split()[0]
     platform_name: str = platform.platform()
 
@@ -83,6 +85,7 @@ def run_benchmark(
     *,
     iterations: int = 30,
     warmups: int = 5,
+    sample_repeats: int = 1,
     budget_p95_ms: float | None = None,
     baseline_p95_ms: float | None = None,
     max_regression_pct: float = DEFAULT_MAX_REGRESSION_PCT,
@@ -93,6 +96,8 @@ def run_benchmark(
         raise ValueError("iterations must be positive")
     if warmups < 0:
         raise ValueError("warmups must be non-negative")
+    if sample_repeats <= 0:
+        raise ValueError("sample_repeats must be positive")
     if budget_p95_ms is not None and budget_p95_ms < 0:
         raise ValueError("budget_p95_ms must be non-negative")
     if baseline_p95_ms is not None and baseline_p95_ms <= 0:
@@ -101,13 +106,16 @@ def run_benchmark(
         raise ValueError("max_regression_pct must be non-negative")
 
     for _ in range(warmups):
-        operation()
+        for _repeat in range(sample_repeats):
+            operation()
 
     samples: list[float] = []
     for _ in range(iterations):
         started_ns = clock_ns()
-        operation()
-        samples.append(max(0.0, (clock_ns() - started_ns) / 1_000_000.0))
+        for _repeat in range(sample_repeats):
+            operation()
+        elapsed_ms = (clock_ns() - started_ns) / 1_000_000.0
+        samples.append(max(0.0, elapsed_ms / sample_repeats))
 
     p50_ms = percentile(samples, 0.50)
     p95_ms = percentile(samples, 0.95)
@@ -122,6 +130,7 @@ def run_benchmark(
     return BenchmarkResult(
         name=name,
         iterations=iterations,
+        sample_repeats=sample_repeats,
         p50_ms=p50_ms,
         p95_ms=p95_ms,
         min_ms=min(samples),
@@ -140,6 +149,7 @@ def run_suite(
     *,
     iterations: int = 30,
     warmups: int = 5,
+    sample_repeats: Mapping[str, int] | None = None,
     budgets_p95_ms: Mapping[str, float] | None = None,
     baselines_p95_ms: Mapping[str, float] | None = None,
     max_regression_pct: float = DEFAULT_MAX_REGRESSION_PCT,
@@ -151,6 +161,7 @@ def run_suite(
             operation,
             iterations=iterations,
             warmups=warmups,
+            sample_repeats=(sample_repeats or {}).get(name, 1),
             budget_p95_ms=(budgets_p95_ms or {}).get(name),
             baseline_p95_ms=(baselines_p95_ms or {}).get(name),
             max_regression_pct=max_regression_pct,
@@ -195,6 +206,7 @@ def percentile(values: list[float], quantile: float) -> float:
 
 __all__ = [
     "DEFAULT_MAX_REGRESSION_PCT",
+    "PERFORMANCE_BENCHMARK_VERSION",
     "PERFORMANCE_REPORT_SCHEMA",
     "BenchmarkReport",
     "BenchmarkResult",

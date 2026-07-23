@@ -40,9 +40,9 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: l4-baseline.json
-          key: l4-baseline-windows-py312-i${{ inputs.iterations || '30' }}-w${{ inputs.warmups || '5' }}-${{ github.run_id }}
+          key: l4-baseline-v2-windows-py312-i${{ inputs.iterations || '30' }}-w${{ inputs.warmups || '5' }}-${{ github.run_id }}
           restore-keys: |
-            l4-baseline-windows-py312-i${{ inputs.iterations || '30' }}-w${{ inputs.warmups || '5' }}-
+            l4-baseline-v2-windows-py312-i${{ inputs.iterations || '30' }}-w${{ inputs.warmups || '5' }}-
 
       - name: Run L4 budget benchmark
         shell: pwsh
@@ -68,7 +68,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: l4-baseline.json
-          key: l4-baseline-windows-py312-i${{ inputs.iterations || '30' }}-w${{ inputs.warmups || '5' }}-${{ github.run_id }}
+          key: l4-baseline-v2-windows-py312-i${{ inputs.iterations || '30' }}-w${{ inputs.warmups || '5' }}-${{ github.run_id }}
 
       - name: Upload benchmark report
         if: always()

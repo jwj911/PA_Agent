@@ -15,7 +15,12 @@ if str(ROOT) not in sys.path:
 from pa_agent.ai.kline_features import compute_kline_geometry_features  # noqa: E402
 from pa_agent.data.base import KlineBar, KlineFrame  # noqa: E402
 from pa_agent.data.snapshot import build_analysis_frame, compute_indicators  # noqa: E402
-from pa_agent.perf.benchmark import run_suite, write_report  # noqa: E402
+from pa_agent.perf.benchmark import (  # noqa: E402
+    PERFORMANCE_BENCHMARK_VERSION,
+    PERFORMANCE_REPORT_SCHEMA,
+    run_suite,
+    write_report,
+)
 
 _SIZES = (100, 500, 5000)
 _P95_BUDGETS_MS = {
@@ -28,6 +33,17 @@ _P95_BUDGETS_MS = {
     "geometry_100": 20.0,
     "geometry_500": 100.0,
     "geometry_5000": 1000.0,
+}
+_SAMPLE_REPEATS = {
+    "snapshot_build_100": 20,
+    "indicators_100": 100,
+    "geometry_100": 10,
+    "snapshot_build_500": 5,
+    "indicators_500": 25,
+    "geometry_500": 2,
+    "snapshot_build_5000": 1,
+    "indicators_5000": 3,
+    "geometry_5000": 1,
 }
 
 
@@ -82,6 +98,10 @@ def _load_baselines(path: Path | None) -> dict[str, float]:
     if path is None:
         return {}
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if payload.get("schema") != PERFORMANCE_REPORT_SCHEMA:
+        raise ValueError("unsupported benchmark baseline schema")
+    if payload.get("benchmark_version") != PERFORMANCE_BENCHMARK_VERSION:
+        raise ValueError("benchmark baseline version does not match current suite")
     results = payload.get("results", [])
     if not isinstance(results, list):
         raise ValueError("benchmark baseline results must be an array")
@@ -105,6 +125,7 @@ def main(argv: list[str] | None = None) -> int:
         _operations(),
         iterations=args.iterations,
         warmups=args.warmups,
+        sample_repeats=_SAMPLE_REPEATS,
         budgets_p95_ms=_P95_BUDGETS_MS,
         baselines_p95_ms=_load_baselines(args.baseline),
     )
