@@ -118,7 +118,7 @@ from pa_agent.app_context import AppContext
 from pa_agent.config.settings import Settings
 from pa_agent.util.event_sink import CollectingEventSink
 
-ctx = AppContext._build_core(
+ctx = AppContext.build_core(
     settings=Settings(),
     event_sink=CollectingEventSink(),
     records_pending_dir=Path(r"{tmp_path}"),
@@ -150,7 +150,7 @@ def test_headless_and_gui_core_build_same_stage1_prompt(tmp_path: Path) -> None:
     )
     assert frame is not None
 
-    headless = AppContext._build_core(
+    headless = AppContext.build_core(
         settings=settings,
         event_sink=CollectingEventSink(),
         records_pending_dir=tmp_path / "headless",
@@ -158,7 +158,7 @@ def test_headless_and_gui_core_build_same_stage1_prompt(tmp_path: Path) -> None:
         configure_logs=False,
         apply_kline_adjust=False,
     )
-    gui_core = AppContext._build_core(
+    gui_core = AppContext.build_core(
         settings=settings,
         event_sink=_FakeEventBus(),
         event_bus=_FakeEventBus(),
@@ -172,6 +172,24 @@ def test_headless_and_gui_core_build_same_stage1_prompt(tmp_path: Path) -> None:
     assert headless.assembler is not None
     assert gui_core.assembler is not None
     assert headless.assembler.build_stage1(frame) == gui_core.assembler.build_stage1(frame)
+
+
+def test_private_build_core_alias_delegates_to_public_entry(
+    monkeypatch,
+) -> None:
+    expected = AppContext()
+    captured: dict[str, object] = {}
+
+    def fake_build_core(cls, **kwargs):
+        captured.update(kwargs)
+        return expected
+
+    monkeypatch.setattr(AppContext, "build_core", classmethod(fake_build_core))
+
+    actual = AppContext._build_core(configure_logs=False)
+
+    assert actual is expected
+    assert captured == {"configure_logs": False}
 
 
 def test_bootstrap_preserves_gui_event_bus_data_source_and_event_sink(

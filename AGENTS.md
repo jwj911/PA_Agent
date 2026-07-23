@@ -316,6 +316,8 @@ pytest -m live
 - CI（`.github/workflows/ci.yml`）在 Windows + Python 3.11/3.12 矩阵下执行安装/import 验证、
   CI 目标清单检查、`QT_QPA_PLATFORM=offscreen` 目标测试（带覆盖率）、非 live 非 e2e 回归、
   Ruff baseline、focused Ruff 和 focused Black 检查。
+- Ruff baseline 子进程输出必须显式按 UTF-8 解码；诊断包含中文，不能依赖 Windows 默认
+  cp1252。
 - 测试不得假设 checkout 根目录名固定为 `price_action_agent`；GitHub Actions 当前使用
   `PA_Agent`。仓库根应通过标志文件/目录关系判断。
 - 提交前建议至少运行与改动相关的目标测试；较大改动应补跑 `pytest -m "not e2e"`。
@@ -438,7 +440,9 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     `l1_legacy_registrar` 当前政策为 `retain`；最早 `0.3.0` 才可在已有 `v0.2.0` 弃用 tag 和
     完整扩展 inventory/迁移证据后评估删除，不得绕过兼容策略 CI。
 13. **L6 当前进度**：`AppContext` 已拆出共享 core helper 和 `bootstrap_gui()`；`bootstrap()`
-    委托 GUI 路径。headless 复用 core helper，必须继续保持无 Qt `EventBus` import、无数据源连接；
+    委托 GUI 路径。`AppContext.build_core()` 是公开 PyQt-free 共享服务构造入口，
+    `_build_core()` 仅保留兼容委托；headless 复用 core helper，必须继续保持无 Qt `EventBus`
+    import、无数据源连接；
     GUI adapter 继续负责 `EventBus`、数据源连接/订阅，且 `event_sink` 指向 `EventBus`。第 229 轮已
     新增 `pa_agent.cli` 和 `pa-agent headless` 最小入口，第 234 轮已新增 PyQt-free JSONL
     `JsonlEventSink`/`replay_jsonl`，第 237 轮新增显式 `analyze --run/--execute` 两阶段 runner、

@@ -85,7 +85,7 @@ class AppContext:
         return logging.getLogger("pa_agent")
 
     @classmethod
-    def _build_core(
+    def build_core(
         cls,
         *,
         settings: Settings | None = None,
@@ -101,6 +101,7 @@ class AppContext:
         client: Any | None = None,
         apply_kline_adjust: bool = True,
     ) -> AppContext:
+        """Build shared application services without GUI-specific side effects."""
         from pa_agent.ai.client_factory import create_ai_client
         from pa_agent.ai.json_validator import JsonValidator
         from pa_agent.ai.prompt_assembler import PromptAssembler
@@ -119,9 +120,7 @@ class AppContext:
         app_logger = cls._configure_app_logging(settings, configure_logs=configure_logs)
         sink = event_sink if event_sink is not None else NullEventSink()
         resolved_prompt_dir = prompt_dir if prompt_dir is not None else PROMPT_DIR
-        resolved_experience_dir = (
-            experience_dir if experience_dir is not None else EXPERIENCE_DIR
-        )
+        resolved_experience_dir = experience_dir if experience_dir is not None else EXPERIENCE_DIR
         resolved_records_pending_dir = (
             records_pending_dir if records_pending_dir is not None else RECORDS_PENDING_DIR
         )
@@ -132,7 +131,9 @@ class AppContext:
             apply_kline_adjust_from_settings(settings)
 
         resolved_client = (
-            client if client is not None else create_ai_client(settings.provider, logger_=app_logger)
+            client
+            if client is not None
+            else create_ai_client(settings.provider, logger_=app_logger)
         )
         exp_reader = ExperienceReader(experience_dir=resolved_experience_dir, logger=app_logger)
         assembler = PromptAssembler(
@@ -165,6 +166,11 @@ class AppContext:
             exp_reader=exp_reader,
             ledger=ledger,
         )
+
+    @classmethod
+    def _build_core(cls, **kwargs: Any) -> AppContext:
+        """Compatibility alias for the pre-public shared core helper."""
+        return cls.build_core(**kwargs)
 
     @staticmethod
     def _connect_gui_data_source(
@@ -218,7 +224,7 @@ class AppContext:
         event_bus = EventBus()
         data_source = cls._connect_gui_data_source(settings=settings, logger=app_logger)
 
-        return cls._build_core(
+        return cls.build_core(
             settings=settings,
             settings_path=settings_path,
             event_sink=event_bus,
@@ -254,7 +260,7 @@ class AppContext:
         ``settings`` is omitted, the configured settings file is loaded and special
         provider routes are synced, matching GUI bootstrap behavior.
         """
-        return cls._build_core(
+        return cls.build_core(
             settings=settings,
             settings_path=settings_path,
             event_sink=event_sink,

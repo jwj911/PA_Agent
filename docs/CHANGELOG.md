@@ -18,6 +18,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-23（CI：Ruff baseline Windows UTF-8 解码）
+
+- `scripts/check_ruff_baseline.py` 的 Ruff version/JSON subprocess 显式使用 UTF-8 strict 解码，
+  避免 GitHub Windows 默认 cp1252 遇到中文诊断字节时抛 `UnicodeDecodeError`。
+- 新增中文 Ruff JSON 回归测试，断言 subprocess 固定传入 `encoding="utf-8"` 和
+  `errors="strict"`。
+- 该修复不更新或放宽 3,724 条批准诊断，只修复跨环境读取方式。
+
+---
+
+## [Unreleased] — 2026-07-23（L6：公开 AppContext core 构造入口）
+
+- `AppContext.build_core()` 公开共享、PyQt-free 的核心服务构造边界；GUI/headless bootstrap
+  均通过该入口装配。
+- `_build_core()` 保留为兼容委托，避免既有内部/测试调用立即失效。
+- GUI 数据源连接继续封装在 `bootstrap_gui()`，`build_core()` 不创建 Qt `EventBus`、不连接
+  数据源。
+- 更新 AppContext 聚焦测试、AGENTS、路线图和执行计划；L6 本地 API 边界收口后只剩真实
+  Provider pair 外部证据。
+
+---
+
 ## [Unreleased] — 2026-07-23（CI：公开导出与 checkout 路径合同修复）
 
 远端 Windows/Python 3.11/3.12 targeted pytest 暴露两项存量测试漂移；本轮仅修复测试合同，

@@ -78,6 +78,8 @@ def ruff_version() -> str:
         [sys.executable, "-m", "ruff", "--version"],
         cwd=ROOT,
         text=True,
+        encoding="utf-8",
+        errors="strict",
         capture_output=True,
         check=False,
     )
@@ -92,6 +94,8 @@ def collect_ruff_issues() -> set[RuffIssue]:
         [sys.executable, "-m", "ruff", "check", ".", "--output-format=json"],
         cwd=ROOT,
         text=True,
+        encoding="utf-8",
+        errors="strict",
         capture_output=True,
         check=False,
     )

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -61,3 +63,37 @@ def test_write_and_load_baseline_round_trip(tmp_path, ruff_baseline_module) -> N
 
     assert version == "ruff 0.15.13"
     assert issues == {issue}
+
+
+def test_collect_ruff_issues_decodes_json_as_utf8(
+    monkeypatch,
+    ruff_baseline_module,
+) -> None:
+    calls: list[dict] = []
+
+    def fake_run(*_args, **kwargs):
+        calls.append(kwargs)
+        return SimpleNamespace(
+            returncode=1,
+            stdout=json.dumps(
+                [_raw_issue(row=9, message="中文诊断")],
+                ensure_ascii=False,
+            ),
+            stderr="",
+        )
+
+    monkeypatch.setattr(ruff_baseline_module.subprocess, "run", fake_run)
+
+    issues = ruff_baseline_module.collect_ruff_issues()
+
+    assert {issue.message for issue in issues} == {"中文诊断"}
+    assert calls == [
+        {
+            "cwd": ruff_baseline_module.ROOT,
+            "text": True,
+            "encoding": "utf-8",
+            "errors": "strict",
+            "capture_output": True,
+            "check": False,
+        }
+    ]

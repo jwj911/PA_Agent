@@ -32,14 +32,12 @@
 
 ### 1.1 当前收尾判定
 
-L2 的第 233 轮实现切片已完成，但仍处于兼容观察期；L1、L3、L4、L5、L6 仍未满足
-“完成定义”的全部条件。按依赖关系，后续收尾顺序应为：
+L1/L2 的实现、固定观察和下线策略门禁已收口，兼容入口按 `retain` 政策保留；L4 hosted
+baseline/10% 对照已收口并进入每日观察。当前尚未满足外部证据条件的顺序为：
 
-1. **L6**：完成 GUI/headless 最终/partial/cancel/failure record 等价和公开 adapter 契约；
-2. **L3**：将现有编排辅助方法适配为显式 Pipeline state/step，并验证事件/记录等价；
-3. **L5/L4**：复用稳定的 headless/pipeline harness，分别建立经验离线评估和性能预算；
-4. **L1**：独立完成插件/扩展契约治理及 registry 生命周期与并发测试；
-5. **L2**：完成兼容观察周期后，再决定旧入口和 feature flag 的下线。
+1. **L6**：在有凭据环境生成真实 legacy/Pipeline record/event pair；
+2. **L3**：使用该 pair 完成真实 rollout 观察，再评估默认 flag；
+3. **L5**：在有真实案例后完成人工标注和固定 split 指标报告。
 
 其中 L1 已具备第二阶段注册表基础，未知数据源配置回退、生命周期/并发证据和 entry point 扩展契约
 已完成，不再阻塞 L6；后续只观察外部扩展兼容性。L6 的 mock/fixed-fixture record 等价、
@@ -56,7 +54,7 @@ PersistStep 写入，成功后才发出 `RecordSaved`，磁盘失败由 `last_wr
 record、事件、prompt、流式内容、策略文件和写入边界对照；Pipeline feature flag、真实稳定
 观察周期和 GUI/headless 真实运行全链路等价仍未收口。L6 的 mock/fixed-fixture 等价证据已
 单独完成。
-L5/L4 在真实数据或固定 benchmark 建立前，不得宣称收敛或直接调整线上权重/热路径。
+L5 在真实数据和人工指标建立前不得调整线上权重；L4 只在持续基准证明回退时修改热路径。
 
 ## 2. 目标架构
 
@@ -565,10 +563,9 @@ AppContext.bootstrap_headless()
 AppContext.bootstrap() -> bootstrap_gui()
 ```
 
-当前 `_build_core` 仍是私有 helper，供 GUI/headless 两条路径复用。后续建议继续公开或收口：
-
-- `build_core(...)`
-- `build_gui_adapters(...)`
+`AppContext.build_core(...)` 已作为公开 PyQt-free 共享服务构造入口，GUI/headless 两条路径均
+通过它装配；`_build_core(...)` 仅保留兼容委托。GUI adapter 继续由 `bootstrap_gui()` 负责，
+不额外公开会触发数据源连接的 `build_gui_adapters()`。
 
 两者共享 settings、client、assembler、validator、records、experience reader 和
 pipeline services；只有 GUI 入口装配 Qt `EventBus`、数据源连接/订阅、MainWindow 和 Qt widgets。
@@ -766,5 +763,6 @@ L1-L6 只有同时满足以下条件，才标记为完成：
 Task 6 完成 `Stage1Step`，Task 7 完成 `RouteStep`，Task 8 完成 `Stage2Step`，Task 9 完成
 `PersistStep`，Task 10 完成 rollout flag 接线、终态矩阵和 Qt-free adapter equivalence；
 L6 已补齐 mock/fixed-fixture GUI/headless 全终态等价和 `pa-agent.event.v1` envelope 版本契约；
-当前下一步转入真实 Provider 环境观察。L3 仍只进行受控 rollout 观察与切换准备，默认 flag
-仍关闭，后续需真实稳定周期；L2 只保留兼容观察期。
+`AppContext.build_core()` 公共入口和 legacy/Pipeline 成对 artifact 合同也已交付。当前下一步
+只剩真实 Provider 环境观察；L3 默认 flag 仍关闭，后续需真实稳定周期。L5 等待真实经验数据；
+L1/L2 按兼容策略 retain，L4 每日观察。
