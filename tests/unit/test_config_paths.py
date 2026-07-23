@@ -7,8 +7,10 @@ from pa_agent.config import paths
 
 def test_project_root_points_to_repository_root() -> None:
     assert paths.PROJECT_ROOT == paths.PA_AGENT_DIR
-    assert paths.PROJECT_ROOT.name == "price_action_agent"
     assert paths.PROJECT_ROOT.resolve() == paths.PROJECT_ROOT
+    assert (paths.PROJECT_ROOT / "pyproject.toml").is_file()
+    assert (paths.PROJECT_ROOT / "pa_agent").is_dir()
+    assert paths.PROMPT_DIR.is_dir()
 
 
 def test_runtime_directories_are_rooted_at_project_root() -> None:

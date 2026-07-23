@@ -316,6 +316,8 @@ pytest -m live
 - CI（`.github/workflows/ci.yml`）在 Windows + Python 3.11/3.12 矩阵下执行安装/import 验证、
   CI 目标清单检查、`QT_QPA_PLATFORM=offscreen` 目标测试（带覆盖率）、非 live 非 e2e 回归、
   Ruff baseline、focused Ruff 和 focused Black 检查。
+- 测试不得假设 checkout 根目录名固定为 `price_action_agent`；GitHub Actions 当前使用
+  `PA_Agent`。仓库根应通过标志文件/目录关系判断。
 - 提交前建议至少运行与改动相关的目标测试；较大改动应补跑 `pytest -m "not e2e"`。
 
 ---

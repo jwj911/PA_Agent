@@ -18,6 +18,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-23（CI：公开导出与 checkout 路径合同修复）
+
+远端 Windows/Python 3.11/3.12 targeted pytest 暴露两项存量测试漂移；本轮仅修复测试合同，
+不修改运行代码。
+
+### 修复
+
+- `test_util_exports.py` 同步当前 `pa_agent.util.__all__`，补充 `EventReplayError`、
+  `JsonlEventSink` 和 `replay_jsonl` 的导出顺序与对象绑定断言。
+- `test_config_paths.py` 不再硬编码本机 checkout 目录名 `price_action_agent`；改为验证
+  `pyproject.toml`、`pa_agent/` 和 `prompt_engineering/` 标志路径，兼容 GitHub 的
+  `PA_Agent` checkout 目录。
+
+### 验证
+
+- 两项聚焦测试、完整 non-live/non-e2e 回归、Ruff/format、CI target 和远端 Python
+  3.11/3.12 矩阵作为本轮收口门禁。
+
+---
+
 ## [Unreleased] — 2026-07-23（L1/L2：兼容入口下线策略与 CI 门禁）
 
 本轮把 L1 legacy registrar 和 L2 legacy Prompt loader 从模糊的“继续观察”收敛为机器可执行的
