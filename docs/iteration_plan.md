@@ -5,6 +5,9 @@
 > 适用范围：后续若干轮原子迭代
 > 长期边界：以 [`docs/architecture_roadmap.md`](./architecture_roadmap.md) 为准
 
+> 最近验收：GitHub Actions run `29978639108` 在 Windows/Python 3.11/3.12 双矩阵全部通过。
+> 当前代码/合同侧迭代已完成；未收尾项均为下表列出的外部 Provider/真实数据证据。
+
 本文档用于把长期架构路线图拆成短中期可执行轮次，明确下一批交付物、验收标准、
 依赖关系和风险边界。长期模块边界、迁移原则、完成定义仍以
 [`docs/architecture_roadmap.md`](./architecture_roadmap.md) 为主参考；本文件不改写长期事实，

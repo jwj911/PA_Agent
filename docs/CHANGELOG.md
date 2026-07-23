@@ -18,6 +18,21 @@
 
 ---
 
+## [Unreleased] — 2026-07-23（最终收口审计与远端 CI）
+
+- GitHub Actions CI run `29978639108` 在 `main@f589c5f` 成功完成 Windows/Python 3.11 与
+  3.12 双矩阵：安装、目标测试、完整 non-live/non-e2e、Ruff baseline、Focused Ruff、
+  compatibility policy 和 Focused Black 全部通过。
+- 本地完整 non-live/non-e2e 回归、3,724 条 Ruff baseline、170 个 targeted pytest 路径、
+  281 个 Focused Ruff 路径和两个兼容 surface 策略检查均通过。
+- L1/L2 实现、观察和下线门禁已收口并按政策 retain；L4 hosted v2 已收口；L6/L3/L5 的工具、
+  测试、runbook 和本地合同已收口。
+- 当前仅剩外部证据：环境未设置 `PA_AGENT_LIVE_API_KEY`，无法生成真实 L6/L3 pair；
+  `experience/` 中真实 JSON 数量为 0，无法完成人工 L5 指标报告。默认 Pipeline flag 继续关闭，
+  线上经验权重保持不变。
+
+---
+
 ## [Unreleased] — 2026-07-23（CI：Focused Black 存量格式收口）
 
 - 按远端固定 Black 24.10.0 报告机械格式化 11 个既有 Focused Black 目标，覆盖 Pipeline
