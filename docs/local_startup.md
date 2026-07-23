@@ -107,9 +107,12 @@ pa-agent headless analyze --input snapshot.json --output dry-run.json
 ```
 
 headless 命令不创建 Qt `EventBus`，不连接数据源，stdout 只输出结构化 JSON，诊断写 stderr。
-其中 `analyze` 当前只做 provider-free Stage 1 prompt dry-run，不调用真实 Provider，也不写入
-分析记录；真实两阶段无 GUI runner 仍在后续迭代中。`snapshot.json` 可以是包含 `symbol`、
-`timeframe`、`bars` 的对象，也可以使用分析记录中的 `meta` + `kline_data` 结构。
+其中 `analyze` 默认只做 provider-free Stage 1 prompt dry-run；只有显式传入 `--run` 或
+`--execute` 才调用 Provider 并写入 final/partial record。真实 Provider 观察必须使用
+`tools/run_live_headless_observation.py --confirm-live` 的受控入口，legacy/Pipeline 成对验收
+步骤见 [`live_observation_runbook.md`](./live_observation_runbook.md)。`snapshot.json` 可以是
+包含 `symbol`、`timeframe`、`bars` 的对象，也可以使用分析记录中的 `meta` + `kline_data`
+结构。
 
 如果本机安装了 `make`，也可以使用：
 

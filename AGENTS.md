@@ -29,6 +29,8 @@
 - 架构升级路线图：[`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md)
 - 短中期执行计划：[`docs/iteration_plan.md`](./docs/iteration_plan.md)，在长期边界以
   `architecture_roadmap` 为准的前提下，拆解后续若干轮交付物、验收标准和依赖顺序。
+- L6/L3 真实观察手册：[`docs/live_observation_runbook.md`](./docs/live_observation_runbook.md)，
+  规定 legacy/Pipeline 显式运行、单体校验、成对结构校验和凭据清理步骤。
 
 ---
 
@@ -443,7 +445,10 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     `tools/run_live_headless_observation.py`，必须显式 `--confirm-live` 和
     `PA_AGENT_LIVE_API_KEY`；脚本只输出 `pa-agent.live-observation.v1` 脱敏摘要，不得接入
     常规/夜间 CI。运行后使用 `tools/validate_live_observation.py` 审计 summary、event、
-    correlation 和 record 文件自洽性；validator 不替代真实 Provider 或 GUI/headless 等价证据。
+    correlation 和 record 文件自洽性；再使用 `tools/compare_live_observations.py` 比较
+    legacy/Pipeline 的终态、事件序列、记录写入和 shape-only record 合同。成对输出不得包含
+    Prompt、回复、行情、价格、symbol、时间戳或 token 数值；完整步骤见
+    `docs/live_observation_runbook.md`。validator 不替代真实 Provider 或 GUI/headless 等价证据。
 14. **架构任务先读两份计划**：长期模块边界、迁移原则和完成定义以
     [`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md) 为准；短中期优先级、每轮建议
     交付物、验收标准和依赖顺序见 [`docs/iteration_plan.md`](./docs/iteration_plan.md)。

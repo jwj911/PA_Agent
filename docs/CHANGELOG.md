@@ -18,6 +18,35 @@
 
 ---
 
+## [Unreleased] — 2026-07-23（L6/L3：真实观察成对验证合同）
+
+本轮在不调用真实 Provider 的前提下，补齐 legacy/Pipeline 两次真实观察产物之间的可审计比较
+边界；单次 artifact validator 继续负责各自产物自洽。
+
+### 已交付
+
+- 新增 `tools/compare_live_observations.py`，先分别执行 summary/event/correlation/record 单体
+  校验，再要求 legacy 明确关闭 Pipeline、另一条路径明确开启且两次都到达 Provider 调用边界。
+- 成对比较终态、exception type、事件序列、record 写入结果，以及 record 顶层/meta 字段、
+  message roles、阶段 payload presence、异常和 usage 字段形状。
+- 输出 `pa-agent.live-observation-pair-validation.v1`，只包含 correlation、状态、事件名和字段
+  shape；不输出 Prompt、回复、行情、价格、symbol、时间戳、token 数值或归一化 JSON 值。
+- 新增 `docs/live_observation_runbook.md`，固定 legacy → Pipeline → 两次单体校验 → 成对校验
+  的执行顺序、环境变量边界和凭据清理步骤。
+- 新增成对成功、事件偏差、记录结构偏差和模式标志错误测试，并纳入 CI targeted pytest/
+  Focused Ruff。
+
+### 验证与边界
+
+- live observation 相关定向 pytest **8 passed**；Focused Ruff（含 I001）、Ruff format、
+  `py_compile`、CI target 和 `git diff --check` → **通过**。
+- 当前环境没有 `PA_AGENT_LIVE_API_KEY`，本轮不伪造真实运行结果；L6/L3 仍需在授权环境取得
+  至少一个 `valid=true` 的真实 legacy/Pipeline pair。
+- 两次独立 Provider 请求不保证正文逐字相等；成对工具只比较控制流和记录结构合同，固定
+  fixture 继续覆盖 final/partial/cancel/failure 的确定性全终态等价。
+
+---
+
 ## [Unreleased] — 2026-07-23（L4：v2 hosted baseline 收口）
 
 `l4.synthetic.v2` 推送后已完成两次相同参数的 GitHub Actions 运行，收口 hosted baseline

@@ -87,6 +87,7 @@ jobs:
           tests/unit/test_cli.py
           tests/unit/test_live_headless_observation.py
           tests/unit/test_live_observation_validation.py
+          tests/unit/test_live_observation_pair.py
           tests/unit/test_pipeline.py
           tests/unit/test_package_metadata.py
           tests/unit/test_package_markers.py
@@ -328,6 +329,7 @@ jobs:
           tools/run_l4_benchmark.py
           tools/run_live_headless_observation.py
           tools/validate_live_observation.py
+          tools/compare_live_observations.py
           pa_agent/config/orchestrator.py
           pa_agent/extensions.py
           pa_agent/headless.py
@@ -338,6 +340,7 @@ jobs:
           tests/unit/test_performance_benchmark.py
           tests/unit/test_live_headless_observation.py
           tests/unit/test_live_observation_validation.py
+          tests/unit/test_live_observation_pair.py
           tests/__init__.py
           tests/e2e/__init__.py
           tests/fixtures/__init__.py
