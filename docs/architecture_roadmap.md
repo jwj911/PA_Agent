@@ -25,7 +25,7 @@
 | L2 Prompt 模板引擎 | 5 轮等价观察与下线策略/CI 门禁已收口；旧 loader/fallback 按政策 retain | TemplateStore、TemplateContext、29 个 manifest、system/Stage 1/Stage 2/continuation、golden snapshot 和回退观察已完成 | 最早 0.3.0 且具备 v0.2.0 tag、fallback 零命中和 golden 报告后才评估删除 |
 | L3 Pipeline Builder | 三轮真实稳定观察与默认 Pipeline 切换已收口，legacy 作为显式回滚保留 | 完整四步 Pipeline、Task 10 全终态矩阵、5 场景×3 轮 fixture 对照；3 个独立真实 pair 的 6 个单体校验和 3 个成对校验均为 `valid=true`；新旧缺失配置默认 `true`，显式 `false` 回滚 | 持续观察 lifecycle/terminal/record 指标；出现未解释偏差先回滚，不删除 legacy facade |
 | L4 性能优化 | v2 hosted baseline 与同环境 10% p95 对照已收口，进入每日持续观察 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；`pa-agent.performance.v1` 报告、`l4.synthetic.v2` 批量折算采样、p50/p95、100/500/5000 bars 基准、版本隔离 baseline cache 和 artifact；run `29975410917`/`29975592352` 完成建基线与 restore 对照 | 维护每日 schedule；runner image、benchmark version 或采样合同变化时重建 baseline |
-| L5 经验库升级 | 记录筛选/显式 outcome 导入、readiness、评估合同、固定切分、opaque 标注/报告管道已交付，真实数据评估未收口 | completed record shape-only scan；人工 `success|failure` 最小化导入与 digest 去重；脱敏 export/evaluation preflight；全量相关性排序 + K 线相似度；版本化 dataset/split/report；HMAC opaque catalog 和 leave-one-out 对照；run `30100558235` 验收；不改变线上排序 | 人工确认 outcome 并导入至少两个 instrument group，完成相关性标注和指标报告；证据充分后才评估权重 |
+| L5 经验库升级 | 记录筛选/review catalog/显式 outcome 导入、readiness、评估合同、固定切分、opaque 标注/报告管道已交付，真实数据评估未收口 | completed record shape-only scan；脱敏 record ID catalog；人工 `success|failure` 最小化导入与 digest 去重；脱敏 export/evaluation preflight；全量相关性排序 + K 线相似度；版本化 dataset/split/report；HMAC opaque catalog 和 leave-one-out 对照；run `30100558235` 验收既有链路；不改变线上排序 | 人工确认 outcome 并导入至少两个 instrument group，完成相关性标注和指标报告；证据充分后才评估权重 |
 | L6 无 GUI 运行 | fixed-fixture 全终态等价、跨进程 replay 和真实 Provider 成功主路径已收口，进入持续观察 | `AppEvent`/`EventSink`、严格 correlation replay、共享 core/gui bootstrap、`HeadlessAnalysisAdapter`、PyQt-free CLI；2026-07-23 真实 legacy/Pipeline pair 均完成 5 事件、record 写入和 shape-only 等价校验 | Provider、事件或记录合同变化时按 `docs/live_observation_runbook.md` 重跑；单次 live 成功不替代固定 fixture 失败路径矩阵 |
 
 当前经验目录仍为空，因而 L5 的 scorer 目前只能由合成 fixture 验证，不能据此判断真实交易
@@ -34,6 +34,8 @@
 可核验 outcome，并以至少两个 instrument group、人工 outcome/相关性标签和离线指标为前置条件。
 当前 `pa-agent.experience-eval-readiness.v1` 预检稳定报告 `evaluation_salt_missing`、
 `no_experience_cases` 和 `annotations_not_provided`，不包含市场数据或本地路径。
+真实 review catalog 已为唯一 eligible record 生成稳定 `record_id`，symbol/绝对路径扫描均为
+0 命中；该记录继续 defer，未写入经验目录。
 
 ### 1.1 当前收尾判定
 
@@ -492,6 +494,9 @@ split 报告。产物只允许写入 Git 忽略的 `artifacts/`，流程见
 `tools/curate_experience_record.py` 进一步补齐 completed 分析记录到经验目录的前置链路：
 shape-only scan 不暴露源路径或市场正文；只有人工明确 `success|failure` 后才裁剪导入 meta、
 cycle/direction/patterns、K 线和结构化 Stage 1/2，使用内容 digest 去重并再次脱敏当前 Key。
+`pa-agent.experience-curation-review.v1` 又提供与文件名无关的稳定 `record_id` catalog，允许
+操作者在不暴露 symbol、价格、K 线或路径的情况下逐条引用记录，并按 ID 执行同一显式 outcome
+导入门禁。
 当前目录无真实 JSON 案例，因此仍不能给出质量结论。
 
 ### 8.2 下一阶段前置条件

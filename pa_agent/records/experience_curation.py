@@ -18,6 +18,7 @@ from pa_agent.records.schema import AnalysisRecord
 from pa_agent.util.mask_secret import mask_secret
 
 EXPERIENCE_CURATION_SCHEMA = "pa-agent.experience-curation.v1"
+EXPERIENCE_CURATION_REVIEW_SCHEMA = "pa-agent.experience-curation-review.v1"
 EXPERIENCE_CURATION_SCAN_SCHEMA = "pa-agent.experience-curation-scan.v1"
 CURATED_EXPERIENCE_CASE_SCHEMA = "pa-agent.curated-experience-case.v1"
 
@@ -51,6 +52,43 @@ def scan_record_directory(records_dir: Path) -> dict[str, object]:
         "reason_counts": dict(sorted(reasons.items())),
         "cycle_position_counts": dict(sorted(cycles.items())),
     }
+
+
+def export_record_review_catalog(records_dir: Path) -> dict[str, object]:
+    """Return safe per-record identifiers for manual outcome review."""
+    entries, reasons, record_count = _review_entries(Path(records_dir))
+    cases = [metadata for _path, metadata in entries]
+    return {
+        "schema": EXPERIENCE_CURATION_REVIEW_SCHEMA,
+        "record_count": record_count,
+        "eligible_count": len(cases),
+        "reason_counts": dict(sorted(reasons.items())),
+        "catalog_digest": _review_catalog_digest(cases),
+        "cases": cases,
+    }
+
+
+def curate_record_by_id(
+    records_dir: Path,
+    experience_dir: Path,
+    *,
+    record_id: str,
+    outcome: str,
+    sensitive_values: Iterable[str] = (),
+) -> dict[str, object]:
+    """Curate one record selected by its sanitized review identifier."""
+    normalized_id = str(record_id or "").strip().lower()
+    entries, _reasons, _record_count = _review_entries(Path(records_dir))
+    selected = [path for path, metadata in entries if metadata["record_id"] == normalized_id]
+    if len(selected) != 1:
+        raise ValueError("eligible review record id not found")
+    result = curate_record(
+        selected[0],
+        experience_dir,
+        outcome=outcome,
+        sensitive_values=sensitive_values,
+    )
+    return {**result, "review_record_id": normalized_id}
 
 
 def curate_record(
@@ -146,6 +184,74 @@ def _inspect_record(path: Path) -> tuple[str, AnalysisRecord | None]:
     if not _valid_kline_data(record.kline_data):
         return _REASON_INVALID_KLINE, None
     return _REASON_ELIGIBLE, record
+
+
+def _review_entries(
+    records_dir: Path,
+) -> tuple[tuple[tuple[Path, dict[str, object]], ...], Counter[str], int]:
+    paths = sorted(Path(records_dir).rglob("*.json"), key=lambda path: path.as_posix())
+    reasons: Counter[str] = Counter()
+    entries: list[tuple[Path, dict[str, object]]] = []
+    for path in paths:
+        reason, record = _inspect_record(path)
+        reasons[reason] += 1
+        if reason != _REASON_ELIGIBLE or record is None:
+            continue
+        diagnosis = dict(record.stage1_diagnosis or {})
+        patterns = tuple(
+            dict.fromkeys(
+                text for value in diagnosis["detected_patterns"] if (text := str(value).strip())
+            )
+        )
+        entries.append(
+            (
+                path,
+                {
+                    "record_id": _review_record_id(record, diagnosis),
+                    "timestamp_local_ms": record.meta.timestamp_local_ms,
+                    "timeframe": record.meta.timeframe,
+                    "cycle_position": diagnosis["cycle_position"],
+                    "direction": str(diagnosis["direction"]).strip(),
+                    "detected_pattern_count": len(patterns),
+                },
+            )
+        )
+    entries.sort(key=lambda item: str(item[1]["record_id"]))
+    record_ids = [str(metadata["record_id"]) for _path, metadata in entries]
+    if len(record_ids) != len(set(record_ids)):
+        raise ValueError("eligible review record ids are not unique")
+    return tuple(entries), reasons, len(paths)
+
+
+def _review_record_id(record: AnalysisRecord, diagnosis: dict[str, Any]) -> str:
+    identity = {
+        "meta": {
+            "symbol": record.meta.symbol,
+            "timeframe": record.meta.timeframe,
+            "timestamp_local_ms": record.meta.timestamp_local_ms,
+        },
+        "cycle_position": diagnosis["cycle_position"],
+        "direction": str(diagnosis["direction"]).strip(),
+        "detected_patterns": diagnosis["detected_patterns"],
+        "kline_data": record.kline_data,
+    }
+    encoded = json.dumps(
+        identity,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return f"record-{sha256(encoded).hexdigest()[:24]}"
+
+
+def _review_catalog_digest(cases: list[dict[str, object]]) -> str:
+    encoded = json.dumps(
+        cases,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return sha256(encoded).hexdigest()
 
 
 def _build_case_payload(
@@ -256,8 +362,11 @@ def _curation_result(
 
 __all__ = [
     "CURATED_EXPERIENCE_CASE_SCHEMA",
+    "EXPERIENCE_CURATION_REVIEW_SCHEMA",
     "EXPERIENCE_CURATION_SCAN_SCHEMA",
     "EXPERIENCE_CURATION_SCHEMA",
     "curate_record",
+    "curate_record_by_id",
+    "export_record_review_catalog",
     "scan_record_directory",
 ]

@@ -23,7 +23,7 @@
 | L2 Prompt 模板引擎 | 5 轮等价观察与下线策略/CI 门禁已收口；旧 loader/fallback 按政策 retain | TemplateStore、29 个 manifest、全部阶段迁移、TemplateContext、golden snapshots 和整组回退已交付 | 最早 0.3.0 且满足 tag/fallback 零命中/golden 证据后才评估删除 |
 | L3 Pipeline Builder | 三轮真实稳定观察与默认 Pipeline 切换已收口，legacy 作为显式回滚保留 | 完整四步 Pipeline、Task 10 全终态矩阵、5 场景×3 轮 fixture 对照；3 个独立真实 pair 的 6 个单体校验和 3 个成对校验均为 `valid=true`；缺失配置默认 `true`，显式 `false` 回滚 | 持续观察 lifecycle/terminal/record 指标；出现未解释偏差先回滚，不删除 legacy facade |
 | L4 性能预算 | v2 hosted baseline、restore、九项 p95 对照和 10% 门禁已收口，进入每日观察 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；`pa-agent.performance.v1` 报告、`l4.synthetic.v2` 批量折算采样、p50/p95、100/500/5000 bars 基准、版本隔离 baseline cache；run `29975410917`/`29975592352` 已通过 | 维护每日 schedule；runner image、benchmark version 或采样合同变化时重建 baseline |
-| L5 经验库升级 | 记录筛选/显式 outcome 导入、readiness、evaluator、固定切分和 opaque 标注/报告管道已交付，真实数据评估未收口 | completed record shape-only scan；人工 `success|failure` 最小化导入与 digest 去重；脱敏 export/evaluation preflight；全量相关性排序、K 线相似度、版本化 dataset/split/report 和 leave-one-out 对照；run `30100558235` 验收；不改变线上排序 | 人工确认 outcome 并导入至少两个 instrument group，完成相关性标注和指标报告；证据充分后才评估权重 |
+| L5 经验库升级 | 记录筛选/review catalog/显式 outcome 导入、readiness、evaluator、固定切分和 opaque 标注/报告管道已交付，真实数据评估未收口 | completed record shape-only scan；脱敏 record ID catalog；人工 `success|failure` 最小化导入与 digest 去重；脱敏 export/evaluation preflight；全量相关性排序、K 线相似度、版本化 dataset/split/report 和 leave-one-out 对照；run `30100558235` 验收既有链路；不改变线上排序 | 人工确认 outcome 并导入至少两个 instrument group，完成相关性标注和指标报告；证据充分后才评估权重 |
 | L6 Headless/编排 | fixed-fixture 全终态等价、跨进程 replay 和真实 Provider 成功主路径已收口，进入持续观察 | Headless adapter、PyQt-free CLI、strict replay、GUI/headless 全终态 fixture；2026-07-23 真实 legacy/Pipeline pair 均完成 5 事件、record 写入和 shape-only 等价校验 | Provider、事件或记录合同变化时按 runbook 重跑；单次 live 成功不替代固定 fixture 失败路径矩阵 |
 
 L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、数据源连接和订阅；
@@ -38,7 +38,7 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 |---|---|---|---|
 | 已收口 | L6 | fixed-fixture 全终态等价、strict replay、live harness 和真实成功 pair 已交付 | 保持受控显式执行；Provider、事件或记录合同变化时重跑 |
 | 已收口 | L3 | 完整四步 Pipeline、Task 10 矩阵、受控 rollout、三轮真实 pair 和默认切换已交付 | 持续观察；显式 `false` 保留 legacy 回滚，暂不删除旧实现 |
-| P0 | L5 | curation/评估管道和 readiness 已建立；真实 preflight 稳定报告缺 salt、无经验案例、无 annotations，操作者选择暂不导入 | 等待可核验 outcome，补足至少两个 instrument group，使 export/evaluation preflight 通过，再生成 Recall/NDCG/fallback/stability 报告 |
+| P0 | L5 | curation/review/评估管道和 readiness 已建立；唯一 eligible 已有脱敏 record ID，但操作者选择 defer，经验目录仍为空 | 等待可核验 outcome，按 record ID 导入并补足至少两个 instrument group，使 preflight 通过，再生成 Recall/NDCG/fallback/stability 报告 |
 | 已收口 | L4 | v1 负向证据证明 restore/阻断/失败保护；v2 run `29975410917`/`29975592352` 完成建基线和同环境对照 | 每日 schedule 持续观察；环境或合同变化时重建 baseline |
 | 观察 | L1 | 下线策略已固定，当前 retain | 收集真实安装扩展 inventory；未满足 0.3.0/tag/迁移证据前继续保留 |
 | 观察 | L2 | 下线策略已固定，当前 retain | 收集 fallback 零命中与 golden 报告；未满足 0.3.0/tag 条件前继续保留 |
@@ -763,6 +763,19 @@ target 和差异检查通过。
   不改变 `ExperienceReader` 线上排序。
 - GitHub Actions run `30100558235` 已对 `main@e79cb35` 完成 Windows/Python 3.11/3.12
   双矩阵验收，两个 job 均为 `success`。
+
+## 2.24.4 本轮完成结果（L5：脱敏 record review catalog）
+
+- 新增 `pa-agent.experience-curation-review.v1`，为 eligible records 生成与源文件名无关的稳定
+  `record_id`、catalog digest 和聚合拒绝原因；
+- catalog 的单条字段严格限制为 timestamp、timeframe、cycle、direction、pattern 数量和
+  `record_id`，不写 symbol、价格、K 线、Prompt、Provider 回复、文件名或路径；
+- CLI 新增 `export-review`，`import-record` 支持 `--record-id` + `--records-dir`；按 ID 导入
+  仍复用显式 outcome、最小化裁剪、Key 脱敏、幂等和冲突门禁；
+- 文件重命名稳定性、安全输出、未知 ID 拒绝和 CLI 路径均有测试；L5/质量门禁测试
+  **39 passed**，Focused Ruff、Ruff format、`py_compile` 和差异检查通过；
+- 已生成当前真实 review catalog：1 个 eligible，symbol/绝对路径均 0 命中。操作者此前选择
+  defer，本轮不执行真实导入，`experience/` 保持 0 个 JSON。
 
 ## 2.25 本轮完成结果（L6：显式 live headless observation harness）
 

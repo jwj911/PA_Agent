@@ -40,7 +40,29 @@ py -3.12 tools/curate_experience_record.py scan `
 只有完整且包含 Stage 1/2、合法 cycle/direction/patterns 和至少 3 根 OHLC 的记录才 eligible；
 partial、损坏或缺字段记录会被拒绝。
 
-操作者核对原始记录和后续真实交易结果后，为单条记录明确指定 outcome：
+当存在多个 eligible record 时，先导出脱敏 review catalog：
+
+```powershell
+py -3.12 tools/curate_experience_record.py export-review `
+  --records-dir records/pending `
+  --output artifacts/experience-curation/review.json
+```
+
+`pa-agent.experience-curation-review.v1` 只包含稳定 `record_id`、timestamp、timeframe、cycle、
+direction、pattern 数量和聚合计数；不包含 symbol、价格、K 线、Prompt、Provider 回复、
+源文件名或路径。record 文件重命名不改变 ID。
+
+操作者核对原始记录和后续真实交易结果后，可按 `record_id` 明确指定 outcome：
+
+```powershell
+py -3.12 tools/curate_experience_record.py import-record `
+  --record-id "<record-id-from-review-catalog>" `
+  --records-dir records/pending `
+  --experience-dir experience `
+  --outcome success
+```
+
+也可继续使用原始本地路径：
 
 ```powershell
 py -3.12 tools/curate_experience_record.py import-record `

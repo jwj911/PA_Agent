@@ -18,6 +18,22 @@
 
 ---
 
+## [Unreleased] — 2026-07-24（L5：脱敏 record review catalog）
+
+- 新增 `pa-agent.experience-curation-review.v1`，为每条 eligible completed record 生成稳定
+  `record_id` 和 catalog digest；review ID 不依赖源文件名，文件重命名后保持不变。
+- review catalog 只包含 timestamp、timeframe、cycle、direction 和 pattern 数量，不包含
+  symbol、价格、K 线、Prompt、Provider 回复、源文件名或路径。
+- `tools/curate_experience_record.py` 新增 `export-review`，`import-record` 新增
+  `--record-id` + `--records-dir` 选择方式；真实导入仍必须显式提供 `success|failure`，
+  未知或重复 ID 会拒绝，原 `--record` 路径保持兼容。
+- 新增 review catalog 安全性、文件重命名稳定性、按 ID 导入和 CLI 测试；聚焦测试
+  **39 passed**，Focused Ruff、Ruff format、`py_compile` 和差异检查通过。
+- 当前真实 catalog 为 1 个 eligible；symbol/绝对路径扫描均为 0 命中。操作者此前选择 defer，
+  因而本轮没有调用真实 `import-record`，`experience/` 仍为 0 个 JSON。
+
+---
+
 ## [Unreleased] — 2026-07-24（L5：脱敏端到端 readiness 预检）
 
 - 新增 `pa-agent.experience-eval-readiness.v1`：聚合经验案例数、instrument group 数、
