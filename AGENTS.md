@@ -527,7 +527,8 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     `tools/run_experience_evaluation.py preflight`；`pa-agent.experience-eval-readiness.v1`
     只能输出聚合计数和稳定 blocker code，不得输出 symbol、价格、K 线、路径、salt 或案例
     原文。当前真实 blocker 为 `evaluation_salt_missing`、`no_experience_cases` 和
-    `annotations_not_provided`。`experience_curation.py` 和
+    `annotations_not_provided`；提交 `e79cb35` 已由 GitHub Actions run `30100558235`
+    在 Windows/Python 3.11/3.12 双矩阵验收。`experience_curation.py` 和
     `tools/curate_experience_record.py` 已补齐 completed `AnalysisRecord` 的 shape-only scan 与
     显式 `success|failure` 导入：不得从 AI 置信度、是否下单或 terminal 字段推断 outcome；
     导入案例不保留源路径/文件名、Prompt、Provider 原始回复、usage、策略路径或 HTF 原文，

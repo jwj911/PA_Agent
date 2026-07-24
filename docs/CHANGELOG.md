@@ -29,6 +29,8 @@
 - 新增空目录、单 instrument group、双组已复核数据和 CLI 退出码测试；L5 聚焦测试
   **18 passed**，Ruff、Ruff format 和 `py_compile` 通过。本地 Black 24.10.0 仍在退出阶段
   无输出挂起，最终格式验收以远端固定版本门禁为准。
+- GitHub Actions run `30100558235` 已对 `main@e79cb35` 完成 Windows/Python 3.11/3.12
+  双矩阵验收，两个 job 均为 `success`，包括远端固定版本 Focused Black。
 - 当前真实预检为 `ready=false`：`evaluation_salt_missing`、`no_experience_cases`、
   `annotations_not_provided`。该结果不改变操作者“暂不导入”的决定，也不修改线上排序。
 
