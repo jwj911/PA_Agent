@@ -18,6 +18,22 @@
 
 ---
 
+## [Unreleased] — 2026-07-24（L5：脱敏端到端 readiness 预检）
+
+- 新增 `pa-agent.experience-eval-readiness.v1`：聚合经验案例数、instrument group 数、
+  outcome/cycle 计数，并分别给出 `ready_for_export` 与 `ready_for_evaluation`。
+- `tools/run_experience_evaluation.py preflight` 支持 `--require export|evaluation` 和可选
+  `--annotations`；所需阶段 ready 时退出 0，否则退出 1，便于自动化门禁。
+- blocker 使用稳定代码区分缺 salt、无案例、catalog 无效、instrument group 不足、未提供/
+  无效 annotations；输出不包含 symbol、价格、K 线、路径、salt 或原始案例内容。
+- 新增空目录、单 instrument group、双组已复核数据和 CLI 退出码测试；L5 聚焦测试
+  **18 passed**，Ruff、Ruff format 和 `py_compile` 通过。本地 Black 24.10.0 仍在退出阶段
+  无输出挂起，最终格式验收以远端固定版本门禁为准。
+- 当前真实预检为 `ready=false`：`evaluation_salt_missing`、`no_experience_cases`、
+  `annotations_not_provided`。该结果不改变操作者“暂不导入”的决定，也不修改线上排序。
+
+---
+
 ## [Unreleased] — 2026-07-24（L5：分析记录到经验案例的人工 outcome 导入）
 
 - 新增 `pa_agent.records.experience_curation`：shape-only 扫描本地分析记录，只有完整 Stage 1/2、

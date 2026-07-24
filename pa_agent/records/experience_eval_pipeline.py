@@ -24,8 +24,10 @@ from pa_agent.records.experience_eval import (
 from pa_agent.records.experience_similarity import score_kline_similarity
 
 EXPERIENCE_ANNOTATION_SCHEMA = "pa-agent.experience-annotation.v1"
+EXPERIENCE_READINESS_SCHEMA = "pa-agent.experience-eval-readiness.v1"
 EXPERIENCE_REPORT_SCHEMA = "pa-agent.experience-eval-report.v1"
 _TS_PATTERN = re.compile(r"(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})")
+_READINESS_SALT = b"pa-agent.experience-readiness.v1"
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,6 +55,73 @@ class _CatalogCase:
             "candidate_ids": list(candidate_ids),
             "similarity_fallback": _bars_from_content(self.content) is None,
         }
+
+
+def inspect_experience_readiness(
+    experience_dir: Path,
+    *,
+    salt: str = "",
+    annotations: object | None = None,
+) -> dict[str, Any]:
+    """Return sanitized blockers for annotation export and evaluation."""
+    export_blockers: list[str] = []
+    salt_text = str(salt or "")
+    if not salt_text:
+        export_blockers.append("evaluation_salt_missing")
+        catalog_salt = _READINESS_SALT
+    else:
+        try:
+            catalog_salt = _validated_salt(salt_text)
+        except ValueError:
+            export_blockers.append("evaluation_salt_too_short")
+            catalog_salt = _READINESS_SALT
+
+    root = Path(experience_dir)
+    paths = sorted(root.glob("*/*_cases/*.json"), key=lambda path: path.as_posix())
+    catalog: tuple[_CatalogCase, ...] = ()
+    catalog_valid = False
+    if not paths:
+        export_blockers.append("no_experience_cases")
+    else:
+        try:
+            catalog = _load_catalog(root, salt=catalog_salt)
+        except ValueError:
+            export_blockers.append("invalid_experience_catalog")
+        else:
+            catalog_valid = True
+
+    instrument_group_count = len({case.instrument_id for case in catalog})
+    if catalog_valid and instrument_group_count < 2:
+        export_blockers.append("insufficient_instrument_groups")
+
+    evaluation_blockers = list(export_blockers)
+    if annotations is None:
+        annotation_status = "not_provided"
+        evaluation_blockers.append("annotations_not_provided")
+    elif export_blockers:
+        annotation_status = "not_validated"
+    else:
+        try:
+            _validate_annotations(annotations, _sanitized_catalog(catalog))
+        except ValueError:
+            annotation_status = "invalid"
+            evaluation_blockers.append("annotations_invalid")
+        else:
+            annotation_status = "ready"
+
+    return {
+        "schema": EXPERIENCE_READINESS_SCHEMA,
+        "case_count": len(paths),
+        "instrument_group_count": instrument_group_count,
+        "outcome_counts": _count_values(case.outcome for case in catalog),
+        "cycle_position_counts": _count_values(case.cycle_position for case in catalog),
+        "catalog_valid": catalog_valid,
+        "annotation_status": annotation_status,
+        "ready_for_export": not export_blockers,
+        "ready_for_evaluation": not evaluation_blockers,
+        "export_blockers": export_blockers,
+        "evaluation_blockers": evaluation_blockers,
+    }
 
 
 def export_annotation_template(
@@ -471,7 +540,9 @@ def _count_values(values: Any) -> dict[str, int]:
 
 __all__ = [
     "EXPERIENCE_ANNOTATION_SCHEMA",
+    "EXPERIENCE_READINESS_SCHEMA",
     "EXPERIENCE_REPORT_SCHEMA",
     "evaluate_annotated_experience",
     "export_annotation_template",
+    "inspect_experience_readiness",
 ]

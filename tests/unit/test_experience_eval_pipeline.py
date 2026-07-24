@@ -9,9 +9,11 @@ import pytest
 
 from pa_agent.records.experience_eval_pipeline import (
     EXPERIENCE_ANNOTATION_SCHEMA,
+    EXPERIENCE_READINESS_SCHEMA,
     EXPERIENCE_REPORT_SCHEMA,
     evaluate_annotated_experience,
     export_annotation_template,
+    inspect_experience_readiness,
 )
 from tools.run_experience_evaluation import SALT_ENV, main
 
@@ -137,6 +139,111 @@ def test_export_template_is_opaque_and_contains_no_raw_market_payload(
         assert private_value not in rendered
 
 
+def test_readiness_reports_empty_library_and_missing_salt_blockers(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    experience_dir = tmp_path / "experience"
+
+    readiness = inspect_experience_readiness(experience_dir)
+
+    assert readiness == {
+        "schema": EXPERIENCE_READINESS_SCHEMA,
+        "case_count": 0,
+        "instrument_group_count": 0,
+        "outcome_counts": {},
+        "cycle_position_counts": {},
+        "catalog_valid": False,
+        "annotation_status": "not_provided",
+        "ready_for_export": False,
+        "ready_for_evaluation": False,
+        "export_blockers": [
+            "evaluation_salt_missing",
+            "no_experience_cases",
+        ],
+        "evaluation_blockers": [
+            "evaluation_salt_missing",
+            "no_experience_cases",
+            "annotations_not_provided",
+        ],
+    }
+
+    monkeypatch.delenv(SALT_ENV, raising=False)
+    assert (
+        main(
+            [
+                "preflight",
+                "--experience-dir",
+                str(experience_dir),
+                "--require",
+                "evaluation",
+            ]
+        )
+        == 1
+    )
+    output = json.loads(capsys.readouterr().out)
+    assert output["schema"] == EXPERIENCE_READINESS_SCHEMA
+    assert output["required_stage"] == "evaluation"
+    assert output["ready"] is False
+    assert str(experience_dir) not in json.dumps(output)
+
+
+def test_readiness_requires_two_instrument_groups(tmp_path: Path) -> None:
+    experience_dir = tmp_path / "experience"
+    _write_case(
+        experience_dir,
+        cycle="micro_channel",
+        outcome="success",
+        filename="2026-01-01_09-00-00_a.json",
+        symbol="PRIVATE_SYMBOL_A",
+        timeframe="5m",
+        direction="bullish",
+        patterns=["wedge"],
+        closes=[10, 11, 12, 13],
+    )
+
+    readiness = inspect_experience_readiness(experience_dir, salt=_SALT)
+    rendered = json.dumps(readiness)
+
+    assert readiness["case_count"] == 1
+    assert readiness["instrument_group_count"] == 1
+    assert readiness["export_blockers"] == ["insufficient_instrument_groups"]
+    assert readiness["ready_for_export"] is False
+    assert "PRIVATE_SYMBOL_A" not in rendered
+    assert str(experience_dir) not in rendered
+    assert _SALT not in rendered
+
+
+def test_readiness_accepts_reviewed_two_group_catalog(tmp_path: Path) -> None:
+    experience_dir = _experience_library(tmp_path)
+    reviewed = _review_all(export_annotation_template(experience_dir, salt=_SALT))
+
+    readiness = inspect_experience_readiness(
+        experience_dir,
+        salt=_SALT,
+        annotations=reviewed,
+    )
+    invalid = inspect_experience_readiness(
+        experience_dir,
+        salt=_SALT,
+        annotations={**reviewed, "catalog_digest": "invalid"},
+    )
+
+    assert readiness["case_count"] == 4
+    assert readiness["instrument_group_count"] == 2
+    assert readiness["outcome_counts"] == {"failure": 2, "success": 2}
+    assert readiness["ready_for_export"] is True
+    assert readiness["ready_for_evaluation"] is True
+    assert readiness["annotation_status"] == "ready"
+    assert readiness["export_blockers"] == []
+    assert readiness["evaluation_blockers"] == []
+    assert invalid["ready_for_export"] is True
+    assert invalid["ready_for_evaluation"] is False
+    assert invalid["annotation_status"] == "invalid"
+    assert invalid["evaluation_blockers"] == ["annotations_invalid"]
+
+
 def test_evaluation_generates_fixed_split_and_metrics_without_changing_online_sort(
     tmp_path: Path,
 ) -> None:
@@ -241,6 +348,18 @@ def test_cli_uses_environment_salt_and_writes_sanitized_outputs(
     assert (
         main(
             [
+                "preflight",
+                "--experience-dir",
+                str(experience_dir),
+                "--require",
+                "export",
+            ]
+        )
+        == 0
+    )
+    assert (
+        main(
+            [
                 "export-labels",
                 "--experience-dir",
                 str(experience_dir),
@@ -252,6 +371,20 @@ def test_cli_uses_environment_salt_and_writes_sanitized_outputs(
     )
     labels = _review_all(json.loads(labels_path.read_text(encoding="utf-8")))
     labels_path.write_text(json.dumps(labels), encoding="utf-8")
+    assert (
+        main(
+            [
+                "preflight",
+                "--experience-dir",
+                str(experience_dir),
+                "--annotations",
+                str(labels_path),
+                "--require",
+                "evaluation",
+            ]
+        )
+        == 0
+    )
     assert (
         main(
             [

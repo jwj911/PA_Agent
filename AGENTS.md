@@ -523,7 +523,11 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     路径。`experience_eval_pipeline.py` 和 `tools/run_experience_evaluation.py` 已提供基于
     `PA_AGENT_EXPERIENCE_EVAL_SALT` 的 HMAC opaque catalog、人工标注门禁、leave-one-out
     legacy/similarity 对照和版本化报告；产物只能写入 Git 忽略的 `artifacts/`，完整步骤见
-    `docs/experience_evaluation_runbook.md`。`experience_curation.py` 和
+    `docs/experience_evaluation_runbook.md`。运行导出/评估前必须先执行
+    `tools/run_experience_evaluation.py preflight`；`pa-agent.experience-eval-readiness.v1`
+    只能输出聚合计数和稳定 blocker code，不得输出 symbol、价格、K 线、路径、salt 或案例
+    原文。当前真实 blocker 为 `evaluation_salt_missing`、`no_experience_cases` 和
+    `annotations_not_provided`。`experience_curation.py` 和
     `tools/curate_experience_record.py` 已补齐 completed `AnalysisRecord` 的 shape-only scan 与
     显式 `success|failure` 导入：不得从 AI 置信度、是否下单或 terminal 字段推断 outcome；
     导入案例不保留源路径/文件名、Prompt、Provider 原始回复、usage、策略路径或 HTF 原文，

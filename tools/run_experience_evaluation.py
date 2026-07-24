@@ -16,6 +16,7 @@ from pa_agent.records.experience_eval import dump_dataset, dump_split  # noqa: E
 from pa_agent.records.experience_eval_pipeline import (  # noqa: E402
     evaluate_annotated_experience,
     export_annotation_template,
+    inspect_experience_readiness,
 )
 
 SALT_ENV = "PA_AGENT_EXPERIENCE_EVAL_SALT"
@@ -40,6 +41,15 @@ def _load_json(path: Path) -> dict[str, object]:
     return value
 
 
+def _load_preflight_annotations(path: Path | None) -> object | None:
+    if path is None:
+        return None
+    try:
+        return json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
 def _salt_from_environment() -> str:
     salt = os.environ.get(SALT_ENV, "")
     if not salt:
@@ -50,6 +60,15 @@ def _salt_from_environment() -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    preflight = subparsers.add_parser("preflight")
+    preflight.add_argument("--experience-dir", type=Path, required=True)
+    preflight.add_argument("--annotations", type=Path)
+    preflight.add_argument(
+        "--require",
+        choices=("export", "evaluation"),
+        default="evaluation",
+    )
 
     export = subparsers.add_parser("export-labels")
     export.add_argument("--experience-dir", type=Path, required=True)
@@ -64,6 +83,21 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     try:
+        if args.command == "preflight":
+            readiness = inspect_experience_readiness(
+                args.experience_dir,
+                salt=os.environ.get(SALT_ENV, ""),
+                annotations=_load_preflight_annotations(args.annotations),
+            )
+            required_key = f"ready_for_{args.require}"
+            summary = {
+                **readiness,
+                "required_stage": args.require,
+                "ready": readiness[required_key],
+            }
+            print(json.dumps(summary, ensure_ascii=False, sort_keys=True))
+            return 0 if readiness[required_key] else 1
+
         salt = _salt_from_environment()
         if args.command == "export-labels":
             template = export_annotation_template(args.experience_dir, salt=salt)

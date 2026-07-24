@@ -12,6 +12,21 @@ Recall@K、NDCG@K、fallback rate 和 ranking stability 报告。流程只做离
 - symbol 只在本地用于生成 opaque HMAC ID，不进入导出文件；
 - 经验 JSON、标注文件、dataset、split 和报告均保留在被 Git 忽略的 `artifacts/`。
 
+### 1.1 脱敏预检
+
+可在任何阶段运行预检查看稳定 blocker code：
+
+```powershell
+py -3.12 tools/run_experience_evaluation.py preflight `
+  --experience-dir experience `
+  --require evaluation
+```
+
+输出 schema 为 `pa-agent.experience-eval-readiness.v1`，只包含案例数、instrument group 数、
+outcome/cycle 聚合计数、annotation 状态和 blocker code。不得包含 symbol、价格、K 线、
+路径、salt 或案例原文。`--require export|evaluation` 指定所需阶段；ready 时退出 0，
+否则退出 1。评估阶段可通过 `--annotations <path>` 提供待验证的人工标注文件。
+
 ## 2. 从分析记录显式导入经验
 
 先扫描 `records/pending/`，输出只包含数量、cycle 分布和稳定拒绝原因，不包含源文件名、
@@ -54,6 +69,16 @@ py -3.12 tools/curate_experience_record.py import-record `
 $env:PA_AGENT_EXPERIENCE_EVAL_SALT = "<session-only-random-salt>"
 ```
 
+导出前运行：
+
+```powershell
+py -3.12 tools/run_experience_evaluation.py preflight `
+  --experience-dir experience `
+  --require export
+```
+
+只有 `ready_for_export=true` 才进入下一步。
+
 ## 4. 导出人工标注模板
 
 ```powershell
@@ -83,6 +108,17 @@ py -3.12 tools/run_experience_evaluation.py export-labels `
 评估命令会拒绝未复核、漏项、重复 case、catalog digest 不匹配、元数据被修改或引用候选集外 ID。
 
 ## 6. 生成固定 split 与报告
+
+先验证 catalog、salt 和人工标注是否共同就绪：
+
+```powershell
+py -3.12 tools/run_experience_evaluation.py preflight `
+  --experience-dir experience `
+  --annotations artifacts/experience-eval/annotations.json `
+  --require evaluation
+```
+
+只有 `ready_for_evaluation=true` 才执行正式评估：
 
 ```powershell
 py -3.12 tools/run_experience_evaluation.py evaluate `
