@@ -29,6 +29,8 @@
   未知或重复 ID 会拒绝，原 `--record` 路径保持兼容。
 - 新增 review catalog 安全性、文件重命名稳定性、按 ID 导入和 CLI 测试；聚焦测试
   **39 passed**，Focused Ruff、Ruff format、`py_compile` 和差异检查通过。
+- GitHub Actions run `30102643560` 已对 `main@c03214b` 完成 Windows/Python 3.11/3.12
+  双矩阵验收，两个 job 均为 `success`。
 - 当前真实 catalog 为 1 个 eligible；symbol/绝对路径扫描均为 0 命中。操作者此前选择 defer，
   因而本轮没有调用真实 `import-record`，`experience/` 仍为 0 个 JSON。
 

@@ -533,7 +533,8 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     `pa-agent.experience-curation-review.v1` 脱敏 review catalog；catalog 只允许 timestamp、
     timeframe、cycle、direction、pattern 数量、稳定 `record_id` 和聚合计数，不得包含 symbol、
     价格、K 线、Prompt、Provider 回复、文件名或路径。可按 `record_id` 显式
-    `success|failure` 导入，但不得从 AI 置信度、是否下单或 terminal 字段推断 outcome；
+    `success|failure` 导入；提交 `c03214b` 已由 GitHub Actions run `30102643560` 在
+    Windows/Python 3.11/3.12 双矩阵验收。不得从 AI 置信度、是否下单或 terminal 字段推断 outcome；
     导入案例不保留源路径/文件名、Prompt、Provider 原始回复、usage、策略路径或 HTF 原文，
     并以内容 digest 去重及当前 Key 二次脱敏。当前真实 scan 为 2 条记录中 1 eligible、
     1 partial，经验目录仍为 0 个 JSON；提交 `1e80d0b` 已由 GitHub Actions run
