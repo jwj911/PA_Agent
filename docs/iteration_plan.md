@@ -38,7 +38,7 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 |---|---|---|---|
 | 已收口 | L6 | fixed-fixture 全终态等价、strict replay、live harness 和真实成功 pair 已交付 | 保持受控显式执行；Provider、事件或记录合同变化时重跑 |
 | 已收口 | L3 | 完整四步 Pipeline、Task 10 矩阵、受控 rollout、三轮真实 pair 和默认切换已交付 | 持续观察；显式 `false` 保留 legacy 回滚，暂不删除旧实现 |
-| P0 | L5 | curation/评估管道已建立；真实 scan 仅 1 eligible、1 partial，经验目录仍无案例 | 人工确认 outcome，补足至少两个 instrument group，再运行 opaque 相关性标注和 Recall/NDCG/fallback/stability 报告 |
+| P0 | L5 | curation/评估管道已建立；真实 scan 仅 1 eligible、1 partial，操作者选择暂不导入，经验目录仍无案例 | 等待可核验 outcome，补足至少两个 instrument group，再运行 opaque 相关性标注和 Recall/NDCG/fallback/stability 报告 |
 | 已收口 | L4 | v1 负向证据证明 restore/阻断/失败保护；v2 run `29975410917`/`29975592352` 完成建基线和同环境对照 | 每日 schedule 持续观察；环境或合同变化时重建 baseline |
 | 观察 | L1 | 下线策略已固定，当前 retain | 收集真实安装扩展 inventory；未满足 0.3.0/tag/迁移证据前继续保留 |
 | 观察 | L2 | 下线策略已固定，当前 retain | 收集 fallback 零命中与 golden 报告；未满足 0.3.0/tag 条件前继续保留 |
@@ -744,9 +744,9 @@ target 和差异检查通过。
 - 新测试与既有 evaluation pipeline 合计 **9 passed**；Ruff/`py_compile` 通过，并接入 CI
   targeted pytest、Focused Ruff/Black。
 
-真实 scan 结果：2 条记录中 1 条 eligible、1 条 partial；经验目录仍为 0 个 JSON。由于缺少
-人工确认 outcome，本轮没有擅自导入。L5 仍需至少两个 instrument group、人工相关性标注和
-固定 split 指标报告，线上排序保持不变。
+真实 scan 结果：2 条记录中 1 条 eligible、1 条 partial；操作者已明确选择暂不导入，
+经验目录复核仍为 0 个 JSON。L5 必须等待可核验 outcome，并仍需至少两个 instrument group、
+人工相关性标注和固定 split 指标报告，线上排序保持不变。
 
 ## 2.25 本轮完成结果（L6：显式 live headless observation harness）
 

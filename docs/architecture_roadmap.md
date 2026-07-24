@@ -30,8 +30,8 @@
 
 当前经验目录仍为空，因而 L5 的 scorer 目前只能由合成 fixture 验证，不能据此判断真实交易
 结构的检索质量。真实 `records/pending/` 的 shape-only scan 为 2 条记录中 1 eligible、
-1 partial；缺少人工确认的真实 outcome，未擅自导入。L5 后续工作必须以至少两个 instrument
-group、人工 outcome/相关性标签和离线指标为前置条件。
+1 partial；操作者已明确选择暂不导入，经验目录复核仍为 0 个 JSON。L5 后续工作必须等待
+可核验 outcome，并以至少两个 instrument group、人工 outcome/相关性标签和离线指标为前置条件。
 
 ### 1.1 当前收尾判定
 
