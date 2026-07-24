@@ -18,6 +18,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-24（L5：分析记录到经验案例的人工 outcome 导入）
+
+- 新增 `pa_agent.records.experience_curation`：shape-only 扫描本地分析记录，只有完整 Stage 1/2、
+  合法 cycle/direction/patterns 和可比较 K 线的记录才 eligible；partial/损坏/缺字段记录使用
+  稳定原因拒绝。
+- 新增 `tools/curate_experience_record.py scan|import-record`。导入必须由操作者显式给出
+  `success|failure`，不得用 AI 置信度、是否下单或 terminal 字段自动推断真实交易结果。
+- 导入案例只保留评估/检索需要的 meta、cycle、direction、patterns、K 线和结构化 Stage 1/2；
+  不复制源路径/文件名、Prompt、Provider 原始回复、usage、策略路径或 HTF 原文，并使用当前
+  API Key 做二次递归脱敏。
+- 内容 digest 与无 symbol 文件名提供幂等去重；同一记录改判 outcome 会冲突失败，不会静默生成
+  两份矛盾案例。产物只写 Git 忽略的 `experience/`。
+- 新增 4 个 curation 单测并与既有 evaluation pipeline 合计 **9 passed**；新模块/CLI/测试
+  Ruff 与 `py_compile` 通过，并接入 CI targeted pytest、Focused Ruff/Black。
+- 当前真实 `records/pending/` scan：2 条记录中 1 条 eligible、1 条 partial；经验目录仍为
+  0 个 JSON。因尚无人工确认 outcome，未擅自导入；仍需至少两个 instrument group、人工相关性
+  标注和指标报告。
+
+---
+
 ## [Unreleased] — 2026-07-24（L3：三轮真实稳定观察与默认 Pipeline）
 
 - 在首个真实 pair 基础上继续完成 pair 02

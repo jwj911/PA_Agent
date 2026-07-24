@@ -12,7 +12,40 @@ Recall@K、NDCG@K、fallback rate 和 ranking stability 报告。流程只做离
 - symbol 只在本地用于生成 opaque HMAC ID，不进入导出文件；
 - 经验 JSON、标注文件、dataset、split 和报告均保留在被 Git 忽略的 `artifacts/`。
 
-## 2. 设置会话 salt
+## 2. 从分析记录显式导入经验
+
+先扫描 `records/pending/`，输出只包含数量、cycle 分布和稳定拒绝原因，不包含源文件名、
+symbol、价格、Prompt、Provider 回复或本地路径：
+
+```powershell
+py -3.12 tools/curate_experience_record.py scan `
+  --records-dir records/pending
+```
+
+只有完整且包含 Stage 1/2、合法 cycle/direction/patterns 和至少 3 根 OHLC 的记录才 eligible；
+partial、损坏或缺字段记录会被拒绝。
+
+操作者核对原始记录和后续真实交易结果后，为单条记录明确指定 outcome：
+
+```powershell
+py -3.12 tools/curate_experience_record.py import-record `
+  --record "<local-analysis-record.json>" `
+  --experience-dir experience `
+  --outcome success
+```
+
+`--outcome` 只允许 `success` 或 `failure`。不得依据 AI 置信度、是否下单、模型
+`terminal_outcome` 或预测自动推断；必须来自真实事后结果。导入器：
+
+- 只保留 meta symbol/timeframe/timestamp、cycle、direction、patterns、K 线、结构化 Stage 1/2；
+- 不复制源路径/文件名、Prompt、Provider 原始回复、usage、策略路径或 HTF 原文；
+- 读取当前本地 API Key 仅做二次递归脱敏，不输出 Key；
+- 使用内容 digest 和不含 symbol 的文件名去重；重复导入幂等，改判 outcome 会冲突失败；
+- 只写 Git 忽略的 `experience/`，不会修改原始 `records/`。
+
+导入足够案例并满足至少两个 instrument group 后，再进入 opaque 标注与评估。
+
+## 3. 设置会话 salt
 
 使用至少 16 字节的随机 salt。导出与评估必须使用同一个值；salt 不写入命令参数、文件、日志、
 仓库或聊天。
@@ -21,7 +54,7 @@ Recall@K、NDCG@K、fallback rate 和 ranking stability 报告。流程只做离
 $env:PA_AGENT_EXPERIENCE_EVAL_SALT = "<session-only-random-salt>"
 ```
 
-## 3. 导出人工标注模板
+## 4. 导出人工标注模板
 
 ```powershell
 py -3.12 tools/run_experience_evaluation.py export-labels `
@@ -38,7 +71,7 @@ py -3.12 tools/run_experience_evaluation.py export-labels `
 
 模板不得包含 symbol、价格、K 线原文、截图/本地路径、API Key、salt 或 Provider 内容。
 
-## 4. 人工标注
+## 5. 人工标注
 
 逐条复核模板：
 
@@ -49,7 +82,7 @@ py -3.12 tools/run_experience_evaluation.py export-labels `
 
 评估命令会拒绝未复核、漏项、重复 case、catalog digest 不匹配、元数据被修改或引用候选集外 ID。
 
-## 5. 生成固定 split 与报告
+## 6. 生成固定 split 与报告
 
 ```powershell
 py -3.12 tools/run_experience_evaluation.py evaluate `
@@ -69,9 +102,10 @@ py -3.12 tools/run_experience_evaluation.py evaluate `
 报告只保留版本、dataset digest、split、计数、Recall/NDCG/fallback/stability、score
 distribution 和指标差值，不包含原始案例内容。
 
-## 6. 验收边界
+## 7. 验收边界
 
 - 至少两个 instrument group，且 train/evaluation group 无交叉；
+- 每条导入记录的 success/failure 来自人工确认的真实结果；
 - 所有案例 `reviewed=true`；
 - 报告可用同一经验目录、annotation 和 salt 重复生成；
 - 线上排序保持不变，`online_sorting_changed=false`；

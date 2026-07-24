@@ -23,7 +23,7 @@
 | L2 Prompt 模板引擎 | 5 轮等价观察与下线策略/CI 门禁已收口；旧 loader/fallback 按政策 retain | TemplateStore、29 个 manifest、全部阶段迁移、TemplateContext、golden snapshots 和整组回退已交付 | 最早 0.3.0 且满足 tag/fallback 零命中/golden 证据后才评估删除 |
 | L3 Pipeline Builder | 三轮真实稳定观察与默认 Pipeline 切换已收口，legacy 作为显式回滚保留 | 完整四步 Pipeline、Task 10 全终态矩阵、5 场景×3 轮 fixture 对照；3 个独立真实 pair 的 6 个单体校验和 3 个成对校验均为 `valid=true`；缺失配置默认 `true`，显式 `false` 回滚 | 持续观察 lifecycle/terminal/record 指标；出现未解释偏差先回滚，不删除 legacy facade |
 | L4 性能预算 | v2 hosted baseline、restore、九项 p95 对照和 10% 门禁已收口，进入每日观察 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；`pa-agent.performance.v1` 报告、`l4.synthetic.v2` 批量折算采样、p50/p95、100/500/5000 bars 基准、版本隔离 baseline cache；run `29975410917`/`29975592352` 已通过 | 维护每日 schedule；runner image、benchmark version 或采样合同变化时重建 baseline |
-| L5 经验库升级 | evaluator、固定切分、opaque 导出/人工标注/报告管道已交付，真实数据评估未收口 | 全量相关性排序、K 线相似度、版本化 dataset/split/report、HMAC opaque catalog、标签门禁和 leave-one-out legacy/similarity 对照；不改变线上排序 | 按 runbook 导入真实案例、人工标注并生成指标报告；证据充分后才评估权重 |
+| L5 经验库升级 | 记录筛选/显式 outcome 导入、evaluator、固定切分和 opaque 标注/报告管道已交付，真实数据评估未收口 | completed record shape-only scan；人工 `success|failure` 最小化导入与 digest 去重；全量相关性排序、K 线相似度、版本化 dataset/split/report 和 leave-one-out 对照；不改变线上排序 | 人工确认 outcome 并导入至少两个 instrument group，完成相关性标注和指标报告；证据充分后才评估权重 |
 | L6 Headless/编排 | fixed-fixture 全终态等价、跨进程 replay 和真实 Provider 成功主路径已收口，进入持续观察 | Headless adapter、PyQt-free CLI、strict replay、GUI/headless 全终态 fixture；2026-07-23 真实 legacy/Pipeline pair 均完成 5 事件、record 写入和 shape-only 等价校验 | Provider、事件或记录合同变化时按 runbook 重跑；单次 live 成功不替代固定 fixture 失败路径矩阵 |
 
 L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、数据源连接和订阅；
@@ -38,7 +38,7 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 |---|---|---|---|
 | 已收口 | L6 | fixed-fixture 全终态等价、strict replay、live harness 和真实成功 pair 已交付 | 保持受控显式执行；Provider、事件或记录合同变化时重跑 |
 | 已收口 | L3 | 完整四步 Pipeline、Task 10 矩阵、受控 rollout、三轮真实 pair 和默认切换已交付 | 持续观察；显式 `false` 保留 legacy 回滚，暂不删除旧实现 |
-| P0 | L5 | 数据合同、固定切分和安全评估管道已建立，但经验目录仍无真实案例 | 运行真实 opaque 导出、人工标注，生成可重复的 Recall/NDCG/fallback/stability 报告 |
+| P0 | L5 | curation/评估管道已建立；真实 scan 仅 1 eligible、1 partial，经验目录仍无案例 | 人工确认 outcome，补足至少两个 instrument group，再运行 opaque 相关性标注和 Recall/NDCG/fallback/stability 报告 |
 | 已收口 | L4 | v1 负向证据证明 restore/阻断/失败保护；v2 run `29975410917`/`29975592352` 完成建基线和同环境对照 | 每日 schedule 持续观察；环境或合同变化时重建 baseline |
 | 观察 | L1 | 下线策略已固定，当前 retain | 收集真实安装扩展 inventory；未满足 0.3.0/tag/迁移证据前继续保留 |
 | 观察 | L2 | 下线策略已固定，当前 retain | 收集 fallback 零命中与 golden 报告；未满足 0.3.0/tag 条件前继续保留 |
@@ -729,6 +729,24 @@ target 和 `git diff --check` 通过。
 target 和差异检查通过。
 
 收尾边界：当前没有真实经验 JSON，本轮只完成可执行管道；仍需人工数据和指标，不修改线上排序。
+
+## 2.24.2 本轮完成结果（L5：分析记录人工 outcome 导入）
+
+- 新增 `pa_agent.records.experience_curation`，对 `records/pending/**/*.json` 做 shape-only
+  eligibility scan；输出只包含计数、cycle 分布和稳定拒绝原因。
+- 新增 `tools/curate_experience_record.py scan|import-record`；只有完整 Stage 1/2、合法
+  cycle/direction/patterns 和至少 3 根 OHLC 的记录可导入，partial/损坏/缺字段记录显式拒绝。
+- `import-record` 强制人工提供 `success|failure`；不得从 AI 置信度、是否下单、
+  `terminal_outcome` 或预测自动推断真实交易结果。
+- 导入内容裁剪为 meta、cycle、direction、patterns、K 线和结构化 Stage 1/2，不保留源路径/
+  文件名、Prompt、Provider 原始回复、usage、策略路径或 HTF 原文；当前 API Key 再次递归脱敏。
+- 内容 digest 和无 symbol 文件名保证重复导入幂等；同一记录改判 outcome 会冲突失败。
+- 新测试与既有 evaluation pipeline 合计 **9 passed**；Ruff/`py_compile` 通过，并接入 CI
+  targeted pytest、Focused Ruff/Black。
+
+真实 scan 结果：2 条记录中 1 条 eligible、1 条 partial；经验目录仍为 0 个 JSON。由于缺少
+人工确认 outcome，本轮没有擅自导入。L5 仍需至少两个 instrument group、人工相关性标注和
+固定 split 指标报告，线上排序保持不变。
 
 ## 2.25 本轮完成结果（L6：显式 live headless observation harness）
 

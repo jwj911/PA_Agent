@@ -184,6 +184,7 @@ jobs:
           tests/unit/test_experience_reader.py
           tests/unit/test_experience_eval.py
           tests/unit/test_experience_eval_pipeline.py
+          tests/unit/test_experience_curation.py
           tests/unit/test_compatibility_policy.py
           tests/unit/test_demo_record_loader.py
           tests/unit/test_demo_replayer.py
@@ -337,6 +338,7 @@ jobs:
           tools/validate_live_observation.py
           tools/compare_live_observations.py
           tools/run_experience_evaluation.py
+          tools/curate_experience_record.py
           pa_agent/config/orchestrator.py
           pa_agent/extensions.py
           pa_agent/headless.py
@@ -496,6 +498,7 @@ jobs:
           tests/unit/test_experience_reader.py
           tests/unit/test_experience_eval.py
           tests/unit/test_experience_eval_pipeline.py
+          tests/unit/test_experience_curation.py
           tests/unit/test_compatibility_policy.py
           tests/unit/test_demo_record_loader.py
           tests/unit/test_demo_replayer.py
