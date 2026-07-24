@@ -528,9 +528,10 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     显式 `success|failure` 导入：不得从 AI 置信度、是否下单或 terminal 字段推断 outcome；
     导入案例不保留源路径/文件名、Prompt、Provider 原始回复、usage、策略路径或 HTF 原文，
     并以内容 digest 去重及当前 Key 二次脱敏。当前真实 scan 为 2 条记录中 1 eligible、
-    1 partial，经验目录仍为 0 个 JSON；未获人工 outcome 前不得导入。真实脱敏数据集、至少
-    两个 instrument group、人工相关性标注、指标报告和线上权重校准仍待完成，不得顺手修改
-    `ExperienceReader` 线上排序。
+    1 partial，经验目录仍为 0 个 JSON；提交 `1e80d0b` 已由 GitHub Actions run
+    `30059750285` 在 Windows/Python 3.11/3.12 双矩阵验收。未获人工 outcome 前不得导入。
+    真实脱敏数据集、至少两个 instrument group、人工相关性标注、指标报告和线上权重校准
+    仍待完成，不得顺手修改 `ExperienceReader` 线上排序。
 19. **L4 性能基准当前进度**：`pa_agent.perf.benchmark` 和
     `tools/run_l4_benchmark.py` 提供 `pa-agent.performance.v1` 报告、p50/p95、p95 budget
     和超过 10% baseline regression 判定；固定 suite 覆盖 snapshot build、indicator、

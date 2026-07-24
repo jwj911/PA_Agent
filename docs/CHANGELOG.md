@@ -32,6 +32,8 @@
   两份矛盾案例。产物只写 Git 忽略的 `experience/`。
 - 新增 4 个 curation 单测并与既有 evaluation pipeline 合计 **9 passed**；新模块/CLI/测试
   Ruff 与 `py_compile` 通过，并接入 CI targeted pytest、Focused Ruff/Black。
+- GitHub Actions run `30059750285` 已对 `main@1e80d0b` 完成 Windows/Python 3.11/3.12
+  双矩阵验收，两个 job 均为 `success`；该证据只收口代码与合同，不替代真实 outcome 和数据集。
 - 当前真实 `records/pending/` scan：2 条记录中 1 条 eligible、1 条 partial；经验目录仍为
   0 个 JSON。因尚无人工确认 outcome，未擅自导入；仍需至少两个 instrument group、人工相关性
   标注和指标报告。
