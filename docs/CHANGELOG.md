@@ -18,6 +18,20 @@
 
 ---
 
+## [Unreleased] — 2026-07-25（L5：evidence-backed evaluator 门禁）
+
+- `experience_eval_pipeline` 现在复用 curation 的严格 evidence validator；annotation export、
+  readiness preflight 和正式 evaluate 都会拒绝缺失或被篡改的 `outcome_evidence`。
+- 在线 `ExperienceReader` 与 legacy fallback 不变；该门禁只约束离线真实数据评估，防止通过
+  Python API 或旧案例绕过 CLI 的可核验 outcome 要求。
+- 正向 evaluation fixtures 全部补齐合法 `pa-agent.outcome-evidence.v1`；新增缺失 evidence、
+  非法 SHA-256、preflight 脱敏 blocker 和 export 拒绝测试。
+- evaluator 直接相关测试 **21 passed**，含 reader/baseline/CI policy 的聚焦质量门禁
+  **41 passed**；Focused Ruff、Ruff format、`py_compile` 和差异检查通过。当前真实经验目录
+  仍为空，未用合成 evidence 冒充真实案例。
+
+---
+
 ## [Unreleased] — 2026-07-25（L5：可核验 outcome evidence）
 
 - 新增 `pa-agent.outcome-evidence.v1`，固定采用 `realized-net-pnl-sign.v1`：已平仓净已实现收益

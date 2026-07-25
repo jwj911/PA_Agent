@@ -7,6 +7,10 @@ from pathlib import Path
 
 import pytest
 
+from pa_agent.records.experience_curation import (
+    OUTCOME_EVIDENCE_SCHEMA,
+    OUTCOME_POLICY_REALIZED_NET_PNL,
+)
 from pa_agent.records.experience_eval_pipeline import (
     EXPERIENCE_ANNOTATION_SCHEMA,
     EXPERIENCE_READINESS_SCHEMA,
@@ -49,6 +53,12 @@ def _write_case(
                     }
                     for close in closes
                 ],
+                "outcome_evidence": {
+                    "schema": OUTCOME_EVIDENCE_SCHEMA,
+                    "policy": OUTCOME_POLICY_REALIZED_NET_PNL,
+                    "evidence_type": "trade_log",
+                    "evidence_sha256": "a" * 64,
+                },
                 "private_path": f"C:/private/{symbol}",
                 "api_key": "PRIVATE_KEY",
             }
@@ -333,6 +343,47 @@ def test_export_rejects_missing_symbol_and_short_salt(tmp_path: Path) -> None:
     case_path.rename(renamed)
     with pytest.raises(ValueError, match="filename"):
         export_annotation_template(experience_dir, salt=_SALT)
+
+
+def test_export_and_readiness_reject_missing_outcome_evidence(
+    tmp_path: Path,
+) -> None:
+    experience_dir = tmp_path / "experience"
+    case_path = experience_dir / "micro_channel" / "success_cases" / "2026-01-01_09-00-00_case.json"
+    case_path.parent.mkdir(parents=True)
+    case_path.write_text(
+        json.dumps(
+            {
+                "symbol": "PRIVATE_SYMBOL",
+                "timeframe": "5m",
+                "direction": "bullish",
+                "detected_patterns": ["wedge"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="outcome evidence"):
+        export_annotation_template(experience_dir, salt=_SALT)
+
+    payload = json.loads(case_path.read_text(encoding="utf-8"))
+    payload["outcome_evidence"] = {
+        "schema": OUTCOME_EVIDENCE_SCHEMA,
+        "policy": OUTCOME_POLICY_REALIZED_NET_PNL,
+        "evidence_type": "trade_log",
+        "evidence_sha256": "tampered",
+    }
+    case_path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(ValueError, match="outcome evidence"):
+        export_annotation_template(experience_dir, salt=_SALT)
+
+    readiness = inspect_experience_readiness(experience_dir, salt=_SALT)
+    rendered = json.dumps(readiness)
+    assert readiness["catalog_valid"] is False
+    assert readiness["ready_for_export"] is False
+    assert readiness["export_blockers"] == ["invalid_experience_catalog"]
+    assert "PRIVATE_SYMBOL" not in rendered
+    assert str(case_path) not in rendered
 
 
 def test_cli_uses_environment_salt_and_writes_sanitized_outputs(

@@ -9,6 +9,7 @@ Recall@K、NDCG@K、fallback rate 和 ranking stability 报告。流程只做离
 - `experience/<cycle_position>/success_cases|failure_cases/*.json` 至少包含两个 instrument group；
 - 文件名包含 `YYYY-MM-DD_HH-mm-ss`；
 - 每条案例可解析出 symbol、timeframe、direction 和 detected_patterns；
+- 每条案例必须包含通过 allowlist 校验的 `pa-agent.outcome-evidence.v1`；
 - symbol 只在本地用于生成 opaque HMAC ID，不进入导出文件；
 - 经验 JSON、标注文件、dataset、split 和报告均保留在被 Git 忽略的 `artifacts/`。
 
@@ -25,7 +26,8 @@ py -3.12 tools/run_experience_evaluation.py preflight `
 输出 schema 为 `pa-agent.experience-eval-readiness.v1`，只包含案例数、instrument group 数、
 outcome/cycle 聚合计数、annotation 状态和 blocker code。不得包含 symbol、价格、K 线、
 路径、salt 或案例原文。`--require export|evaluation` 指定所需阶段；ready 时退出 0，
-否则退出 1。评估阶段可通过 `--annotations <path>` 提供待验证的人工标注文件。
+否则退出 1。缺失或篡改 evidence 会作为 `invalid_experience_catalog` 拒绝。评估阶段可通过
+`--annotations <path>` 提供待验证的人工标注文件。
 
 ## 2. 从分析记录显式导入经验
 
@@ -165,6 +167,8 @@ py -3.12 tools/run_experience_evaluation.py export-labels `
 - `reviewed=false` 与空 `relevant_ids`。
 
 模板不得包含 symbol、价格、K 线原文、截图/本地路径、API Key、salt 或 Provider 内容。
+导出前 catalog loader 会再次校验所有 outcome evidence；不能通过手工写经验 JSON 绕过
+`import-record` 的证据门禁。
 
 ## 5. 人工标注
 
@@ -212,6 +216,7 @@ distribution 和指标差值，不包含原始案例内容。
 
 - 至少两个 instrument group，且 train/evaluation group 无交叉；
 - 每条导入记录的 success/failure 来自人工确认的真实结果；
+- 每条案例的 outcome evidence schema、policy、type 和 SHA-256 均通过共享 validator；
 - 所有案例 `reviewed=true`；
 - 报告可用同一经验目录、annotation 和 salt 重复生成；
 - 线上排序保持不变，`online_sorting_changed=false`；

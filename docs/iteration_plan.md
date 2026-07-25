@@ -23,7 +23,7 @@
 | L2 Prompt 模板引擎 | 5 轮等价观察与下线策略/CI 门禁已收口；旧 loader/fallback 按政策 retain | TemplateStore、29 个 manifest、全部阶段迁移、TemplateContext、golden snapshots 和整组回退已交付 | 最早 0.3.0 且满足 tag/fallback 零命中/golden 证据后才评估删除 |
 | L3 Pipeline Builder | 三轮真实稳定观察与默认 Pipeline 切换已收口，legacy 作为显式回滚保留 | 完整四步 Pipeline、Task 10 全终态矩阵、5 场景×3 轮 fixture 对照；3 个独立真实 pair 的 6 个单体校验和 3 个成对校验均为 `valid=true`；缺失配置默认 `true`，显式 `false` 回滚 | 持续观察 lifecycle/terminal/record 指标；出现未解释偏差先回滚，不删除 legacy facade |
 | L4 性能预算 | v2 hosted baseline、restore、九项 p95 对照和 10% 门禁已收口，进入每日观察 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；`pa-agent.performance.v1` 报告、`l4.synthetic.v2` 批量折算采样、p50/p95、100/500/5000 bars 基准、版本隔离 baseline cache；run `29975410917`/`29975592352` 已通过 | 维护每日 schedule；runner image、benchmark version 或采样合同变化时重建 baseline |
-| L5 经验库升级 | 记录筛选/review catalog/可核验 outcome 导入、readiness、evaluator、固定切分和 opaque 标注/报告管道已交付，真实数据评估未收口 | completed record shape-only scan；脱敏 record ID catalog；固定 outcome policy + 本地证据 SHA-256；人工 `success|failure` 最小化导入与 digest 去重；脱敏 export/evaluation preflight；版本化 dataset/split/report 和 leave-one-out 对照；不改变线上排序 | 为真实 outcome 提供本地证据并导入至少两个不同 symbol 的 instrument group，完成相关性标注和指标报告；证据充分后才评估权重 |
+| L5 经验库升级 | 记录筛选/review catalog/可核验 outcome 导入、evidence-backed readiness/evaluator、固定切分和 opaque 标注/报告管道已交付，真实数据评估未收口 | completed record shape-only scan；脱敏 record ID catalog；固定 outcome policy + 本地证据 SHA-256；annotation/export/evaluate evidence 门禁；人工 `success|failure` 最小化导入与 digest 去重；版本化 dataset/split/report 和 leave-one-out 对照；不改变线上排序 | 为真实 outcome 提供本地证据并导入至少两个不同 symbol 的 instrument group，完成相关性标注和指标报告；证据充分后才评估权重 |
 | L6 Headless/编排 | fixed-fixture 全终态等价、跨进程 replay 和真实 Provider 成功主路径已收口，进入持续观察 | Headless adapter、PyQt-free CLI、strict replay、GUI/headless 全终态 fixture；2026-07-23 真实 legacy/Pipeline pair 均完成 5 事件、record 写入和 shape-only 等价校验 | Provider、事件或记录合同变化时按 runbook 重跑；单次 live 成功不替代固定 fixture 失败路径矩阵 |
 
 L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、数据源连接和订阅；
@@ -38,7 +38,7 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 |---|---|---|---|
 | 已收口 | L6 | fixed-fixture 全终态等价、strict replay、live harness 和真实成功 pair 已交付 | 保持受控显式执行；Provider、事件或记录合同变化时重跑 |
 | 已收口 | L3 | 完整四步 Pipeline、Task 10 矩阵、受控 rollout、三轮真实 pair 和默认切换已交付 | 持续观察；显式 `false` 保留 legacy 回滚，暂不删除旧实现 |
-| P0 | L5 | curation/review/evidence/评估管道和 readiness 已建立；唯一 eligible 尚无已平仓证据并继续 defer，经验目录为空 | 提供本地 evidence file，按 record ID 导入至少两个不同 symbol 的 group，使 preflight 通过，再生成 Recall/NDCG/fallback/stability 报告 |
+| P0 | L5 | curation/review/evidence-backed 评估管道和 readiness 已建立；唯一 eligible 尚无已平仓证据并继续 defer，经验目录为空 | 提供本地 evidence file，按 record ID 导入至少两个不同 symbol 的 group，使 preflight 通过，再生成 Recall/NDCG/fallback/stability 报告 |
 | 已收口 | L4 | v1 负向证据证明 restore/阻断/失败保护；v2 run `29975410917`/`29975592352` 完成建基线和同环境对照 | 每日 schedule 持续观察；环境或合同变化时重建 baseline |
 | 观察 | L1 | 下线策略已固定，当前 retain | 收集真实安装扩展 inventory；未满足 0.3.0/tag/迁移证据前继续保留 |
 | 观察 | L2 | 下线策略已固定，当前 retain | 收集 fallback 零命中与 golden 报告；未满足 0.3.0/tag 条件前继续保留 |
@@ -794,6 +794,18 @@ target 和差异检查通过。
   真实缺证据导入退出 2，`experience/` 仍为 0 个 JSON。
 - GitHub Actions run `30159406614` 已对 `main@dfb0188` 完成 Windows/Python 3.11/3.12
   双矩阵验收，两个 job 均为 `success`。
+
+## 2.24.6 本轮完成结果（L5：evidence-backed evaluator 门禁）
+
+- curation 的 evidence validator 提升为共享公开合同，离线 catalog loader 对每个案例校验
+  schema、固定 policy、allowlist type 和 SHA-256；
+- `export-labels`、readiness preflight 和 `evaluate` 共用该 catalog loader，缺失或篡改
+  evidence 时稳定拒绝，不能通过 Python API 或旧案例绕过 CLI；
+- 在线 `ExperienceReader`、相似度排序和 legacy fallback 不变，本轮只收紧离线真实评估输入；
+- 正向 fixtures 全部带合法 evidence，新增缺失 evidence、非法 digest、脱敏 readiness blocker
+  和 export 拒绝测试；evaluator 直接相关测试 **21 passed**，含 reader/baseline/CI policy 的
+  聚焦质量门禁 **41 passed**，Focused Ruff、Ruff format、`py_compile` 和差异检查通过；
+- 当前 `experience/` 仍为 0 个 JSON，本轮没有导入合成案例或生成虚假真实指标。
 
 ## 2.25 本轮完成结果（L6：显式 live headless observation harness）
 

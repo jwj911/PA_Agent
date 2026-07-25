@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from pa_agent.data.base import KlineBar
+from pa_agent.records.experience_curation import validate_outcome_evidence
 from pa_agent.records.experience_eval import (
     EXPERIENCE_FEATURE_VERSION,
     ExperienceEvalCase,
@@ -283,6 +284,16 @@ def _load_catalog(experience_dir: Path, *, salt: bytes) -> tuple[_CatalogCase, .
             ("detected_patterns",),
         )
         patterns = _string_tuple(raw_patterns, f"experience case {index} patterns")
+        timestamp_key = _timestamp_key(path.name)
+        raw_evidence = _first_value(
+            content,
+            ("outcome_evidence",),
+            ("record", "outcome_evidence"),
+        )
+        try:
+            validate_outcome_evidence(raw_evidence)
+        except ValueError as exc:
+            raise ValueError(f"experience case {index} outcome evidence is invalid") from exc
         cases.append(
             _CatalogCase(
                 case_id=_opaque_id("case", relative_key, salt),
@@ -292,7 +303,7 @@ def _load_catalog(experience_dir: Path, *, salt: bytes) -> tuple[_CatalogCase, .
                 direction=direction,
                 patterns=patterns,
                 outcome=outcome,
-                timestamp_key=_timestamp_key(path.name),
+                timestamp_key=timestamp_key,
                 content=content,
             )
         )

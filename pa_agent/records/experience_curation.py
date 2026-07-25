@@ -325,11 +325,12 @@ def _build_case_payload(
         "stage2_decision": record.stage2_decision,
     }
     if outcome_evidence is not None:
-        payload["outcome_evidence"] = _normalize_outcome_evidence(outcome_evidence)
+        payload["outcome_evidence"] = validate_outcome_evidence(outcome_evidence)
     return _sanitize(payload, sensitive_values)
 
 
-def _normalize_outcome_evidence(value: dict[str, object]) -> dict[str, object]:
+def validate_outcome_evidence(value: object) -> dict[str, object]:
+    """Validate and normalize the allowlisted outcome evidence envelope."""
     required = {
         "schema",
         "policy",
@@ -448,4 +449,5 @@ __all__ = [
     "curate_record_by_id",
     "export_record_review_catalog",
     "scan_record_directory",
+    "validate_outcome_evidence",
 ]
