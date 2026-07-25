@@ -5,7 +5,7 @@
 > 适用分支：`main`
 > 关联路线：[`docs/backend_review_report.md`](./backend_review_report.md)
 > 短中期执行计划：[`docs/iteration_plan.md`](./iteration_plan.md)
-> 最近验收：GitHub Actions run `30160388537`，`main@b963cee` 的
+> 最近验收：GitHub Actions run `30161941541`，`main@1d167ad` 的
 > Windows/Python 3.11/3.12 全门禁通过。
 
 本文档把长期路线图 L1-L6 细化为可分批迁移的架构计划。目标是降低模块之间的隐式耦合，

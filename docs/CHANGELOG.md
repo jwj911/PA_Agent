@@ -36,6 +36,8 @@
   `py_compile`、CI target 清单和差异检查通过。
 - 当前真实 `experience/` 和 evidence 目录仍无数据，preflight 为
   `evidence_status=not_checked`；本轮未导入合成案例或生成虚假真实指标。
+- GitHub Actions run `30161941541` 已对 `main@1d167ad` 完成 Windows/Python 3.11/3.12
+  双矩阵验收，两个 job 均为 `success`。
 
 ---
 

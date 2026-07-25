@@ -545,7 +545,8 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     `evaluate` 必须接收本地 evidence 目录并重新计算所有非空证据文件的 SHA-256；缺目录、
     空/不可读文件或摘要不匹配只能返回稳定 blocker 和聚合计数，不得输出摘要、文件名或路径。
     正式报告必须记录 `outcome_evidence_revalidated=true`，且只记录 catalog 引用的唯一摘要数
-    和已核验案例数；
+    和已核验案例数；提交 `1d167ad` 已由 GitHub Actions run `30161941541` 在
+    Windows/Python 3.11/3.12 双矩阵验收；
     导入案例不保留源路径/文件名、Prompt、Provider 原始回复、usage、策略路径或 HTF 原文，
     并以内容 digest 去重及当前 Key 二次脱敏。当前真实 scan 为 2 条记录中 1 eligible、
     1 partial，经验目录仍为 0 个 JSON；提交 `1e80d0b` 已由 GitHub Actions run
