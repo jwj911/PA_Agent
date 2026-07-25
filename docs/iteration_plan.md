@@ -5,7 +5,7 @@
 > 适用范围：后续若干轮原子迭代
 > 长期边界：以 [`docs/architecture_roadmap.md`](./architecture_roadmap.md) 为准
 
-> 最近验收：GitHub Actions run `30102643560` 在 `main@c03214b` 的
+> 最近验收：GitHub Actions run `30159406614` 在 `main@dfb0188` 的
 > Windows/Python 3.11/3.12 双矩阵全部通过。
 > 当前代码/合同侧迭代、L6 真实成功主路径和 L3 三轮稳定观察/默认切换已完成；未收尾项为
 > L5 真实数据证据。
@@ -792,6 +792,8 @@ target 和差异检查通过。
 - evidence 摘要、安全字段、空/缺失文件、非法类型、额外字段、CLI 强制参数及兼容入口均有
   测试；聚焦质量门禁 **40 passed**，Focused Ruff、Ruff format、`py_compile` 和差异检查通过。
   真实缺证据导入退出 2，`experience/` 仍为 0 个 JSON。
+- GitHub Actions run `30159406614` 已对 `main@dfb0188` 完成 Windows/Python 3.11/3.12
+  双矩阵验收，两个 job 均为 `success`。
 
 ## 2.25 本轮完成结果（L6：显式 live headless observation harness）
 

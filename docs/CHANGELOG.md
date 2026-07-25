@@ -32,6 +32,8 @@
 - Outcome evidence 安全性、摘要稳定性、空/缺失文件、字段 allowlist、CLI 强制参数和兼容入口
   均有测试；聚焦质量门禁 **40 passed**，Focused Ruff、Ruff format、`py_compile` 和差异检查
   通过。真实 CLI 缺证据时退出 2，`experience/` 保持 0 个 JSON。
+- GitHub Actions run `30159406614` 已对 `main@dfb0188` 完成 Windows/Python 3.11/3.12
+  双矩阵验收，两个 job 均为 `success`。
 
 ---
 
