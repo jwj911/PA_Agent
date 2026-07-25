@@ -71,7 +71,8 @@ continuation/flags/gate/流式/retry/network/validation/cancel/partial record，
   人工标注门禁、leave-one-out legacy/similarity 对照和 `pa-agent.experience-eval-report.v1`
   报告 CLI。record curation 又补齐 completed record shape-only scan、显式人工
   `success|failure` 最小化导入、Key 二次脱敏和 digest 去重；脱敏 record review catalog
-  提供稳定 ID 与按 ID 导入，readiness preflight 可机器判定 export/evaluation 前置条件。
+  提供稳定 ID 与按 ID 导入；outcome evidence 合同以固定净已实现收益政策和本地文件 SHA-256
+  约束真实标签；readiness preflight 可机器判定 export/evaluation 前置条件。
   真实 scan 仅 1 eligible、1 partial，review catalog 已生成但该记录继续 defer，经验目录
   仍为空；当前 blocker 为无案例和无 annotations，不能据此判断真实交易结构检索质量，
   也不应调整线上权重。
@@ -367,7 +368,7 @@ Task 11 已同步生命周期日志业务代码、聚焦测试和项目文档/�
 | L2 | Prompt 模板引擎化 | `prompt_engineering/`、`ai/prompt_assembler.py` | 使用 Jinja2 或结构化模板，支持热更新 |
 | L3 | 引入 Pipeline Builder（三轮稳定观察和默认切换已收口） | `orchestrator/pipeline/`、`orchestrator/two_stage.py`、`pa_agent/config/orchestrator.py`、`tests/unit/test_pipeline.py`、`tests/unit/test_settings_round_trip.py`、`tests/integration/test_stage1_pipeline_step.py`、`tests/integration/test_route_pipeline_step.py`、`tests/integration/test_stage2_pipeline_step.py`、`tests/integration/test_persist_pipeline_step.py`、`tests/integration/test_task10_pipeline_rollout.py` | state 已承载阶段 payload、usage、route 输出、Stage 2 flags、持久化意图、partial reason 和 `persistence_pending`；flag-on sequence 为 `Stage1Step -> RouteStep -> Stage2Step -> PersistStep`；3 个真实 pair 全部通过，`pipeline_builder_enabled` 默认 `true`，缺失字段采用新默认，显式 `false` 回滚 legacy；完整终态矩阵和 Qt-free adapter equivalence 已纳入 CI |
 | L4 | 性能优化 | `data/snapshot.py`、`ai/kline_features.py`、`records/analysis_history.py`、`records/pending_writer.py`、`ai/deepseek_client.py` | 增量指标、索引、追加写、复用 HTTP client |
-| L5 | 经验库升级（数据/评估管道完成，真实标注待输入） | `records/experience_reader.py`、`records/experience_similarity.py`、`records/experience_curation.py`、`records/experience_eval_pipeline.py` | Stage 2 先按 pattern + direction 排序，再以 K 线几何相似度打破同分；completed records 只能经脱敏 review catalog + 人工 outcome 导入；readiness、opaque 标注、固定 split 和指标报告已具备，当前样本不足 |
+| L5 | 经验库升级（数据/评估管道完成，真实标注待输入） | `records/experience_reader.py`、`records/experience_similarity.py`、`records/experience_curation.py`、`records/experience_eval_pipeline.py` | Stage 2 先按 pattern + direction 排序，再以 K 线几何相似度打破同分；completed records 只能经脱敏 review catalog + evidence digest + 人工 outcome 导入；readiness、opaque 标注、固定 split 和指标报告已具备，当前样本不足 |
 | L6 | 无 GUI 运行支持（全终态 fixture 与真实成功主路径已收口） | `pa_agent/headless.py`、`util/events.py`、`util/event_sink.py`、`util/event_bus.py`、`app_context.py`、`cli.py`、`records/pending_writer.py` | 默认 dry-run 保持无网络；显式 `--run/--execute` 通过公开 `HeadlessAnalysisAdapter` 写入 final/partial record 并输出 correlation JSONL；GUI/headless 全终态 fixture、严格 replay、事件 envelope 和三轮真实 pair 已完成 |
 | L7 | CI 增强 | `.github/workflows/ci.yml` | 运行 `pytest -m "not e2e"`、ruff、black、覆盖率 |
 
@@ -403,7 +404,8 @@ L1-L6 的详细边界、依赖顺序、迁移开关、验收标准和回滚策�
 
 1. **等待人工 outcome 后运行 L5 离线评估**：record curation 与安全导出/标注/报告管道已
    建立；下一步按 `docs/experience_evaluation_runbook.md` 人工确认 eligible records 的
-   success/failure，按脱敏 record ID 导入并补足至少两个 instrument group，使
+   success/failure，提供本地证据文件，按脱敏 record ID 导入并补足至少两个不同 symbol 的
+   instrument group，使
    export/evaluation preflight 通过，再生成 Recall/NDCG、fallback 和 ranking stability 报告。
 2. **持续观察 L3/L6 默认路径**：Pipeline 已在三轮真实 pair 后默认启用；继续观察 lifecycle、
    terminal 和 record 指标，出现未解释偏差时显式回滚 `false`，暂不删除 legacy facade。

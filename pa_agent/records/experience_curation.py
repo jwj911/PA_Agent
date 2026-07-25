@@ -21,8 +21,17 @@ EXPERIENCE_CURATION_SCHEMA = "pa-agent.experience-curation.v1"
 EXPERIENCE_CURATION_REVIEW_SCHEMA = "pa-agent.experience-curation-review.v1"
 EXPERIENCE_CURATION_SCAN_SCHEMA = "pa-agent.experience-curation-scan.v1"
 CURATED_EXPERIENCE_CASE_SCHEMA = "pa-agent.curated-experience-case.v1"
+OUTCOME_EVIDENCE_SCHEMA = "pa-agent.outcome-evidence.v1"
+OUTCOME_POLICY_REALIZED_NET_PNL = "realized-net-pnl-sign.v1"
 
 _VALID_OUTCOMES = frozenset({"success", "failure"})
+_VALID_EVIDENCE_TYPES = frozenset(
+    {
+        "broker_closed_trade",
+        "exchange_settlement",
+        "trade_log",
+    }
+)
 _REASON_ELIGIBLE = "eligible"
 _REASON_INVALID_JSON = "invalid_json"
 _REASON_INVALID_RECORD = "invalid_record"
@@ -68,12 +77,42 @@ def export_record_review_catalog(records_dir: Path) -> dict[str, object]:
     }
 
 
+def build_outcome_evidence(
+    evidence_path: Path,
+    *,
+    evidence_type: str,
+) -> dict[str, object]:
+    """Hash local outcome evidence without retaining its path or contents."""
+    normalized_type = str(evidence_type or "").strip().lower()
+    if normalized_type not in _VALID_EVIDENCE_TYPES:
+        raise ValueError("unsupported outcome evidence type")
+
+    digest = sha256()
+    byte_count = 0
+    try:
+        with Path(evidence_path).open("rb") as stream:
+            while chunk := stream.read(1024 * 1024):
+                digest.update(chunk)
+                byte_count += len(chunk)
+    except OSError as exc:
+        raise ValueError("outcome evidence file is not readable") from exc
+    if byte_count == 0:
+        raise ValueError("outcome evidence file must not be empty")
+    return {
+        "schema": OUTCOME_EVIDENCE_SCHEMA,
+        "policy": OUTCOME_POLICY_REALIZED_NET_PNL,
+        "evidence_type": normalized_type,
+        "evidence_sha256": digest.hexdigest(),
+    }
+
+
 def curate_record_by_id(
     records_dir: Path,
     experience_dir: Path,
     *,
     record_id: str,
     outcome: str,
+    outcome_evidence: dict[str, object] | None = None,
     sensitive_values: Iterable[str] = (),
 ) -> dict[str, object]:
     """Curate one record selected by its sanitized review identifier."""
@@ -86,6 +125,7 @@ def curate_record_by_id(
         selected[0],
         experience_dir,
         outcome=outcome,
+        outcome_evidence=outcome_evidence,
         sensitive_values=sensitive_values,
     )
     return {**result, "review_record_id": normalized_id}
@@ -96,6 +136,7 @@ def curate_record(
     experience_dir: Path,
     *,
     outcome: str,
+    outcome_evidence: dict[str, object] | None = None,
     sensitive_values: Iterable[str] = (),
 ) -> dict[str, object]:
     """Write one explicitly labeled, minimal experience case.
@@ -117,6 +158,7 @@ def curate_record(
         record,
         diagnosis,
         outcome=normalized_outcome,
+        outcome_evidence=outcome_evidence,
         sensitive_values=sensitive_values,
     )
     digest = _record_digest(payload)
@@ -259,6 +301,7 @@ def _build_case_payload(
     diagnosis: dict[str, Any],
     *,
     outcome: str,
+    outcome_evidence: dict[str, object] | None,
     sensitive_values: Iterable[str],
 ) -> dict[str, Any]:
     patterns = list(
@@ -281,7 +324,38 @@ def _build_case_payload(
         "stage1_diagnosis": diagnosis,
         "stage2_decision": record.stage2_decision,
     }
+    if outcome_evidence is not None:
+        payload["outcome_evidence"] = _normalize_outcome_evidence(outcome_evidence)
     return _sanitize(payload, sensitive_values)
+
+
+def _normalize_outcome_evidence(value: dict[str, object]) -> dict[str, object]:
+    required = {
+        "schema",
+        "policy",
+        "evidence_type",
+        "evidence_sha256",
+    }
+    if not isinstance(value, dict) or set(value) != required:
+        raise ValueError("outcome evidence fields are invalid")
+    if value.get("schema") != OUTCOME_EVIDENCE_SCHEMA:
+        raise ValueError("unsupported outcome evidence schema")
+    if value.get("policy") != OUTCOME_POLICY_REALIZED_NET_PNL:
+        raise ValueError("unsupported outcome evidence policy")
+    evidence_type = str(value.get("evidence_type") or "").strip().lower()
+    if evidence_type not in _VALID_EVIDENCE_TYPES:
+        raise ValueError("unsupported outcome evidence type")
+    evidence_digest = str(value.get("evidence_sha256") or "").strip().lower()
+    if len(evidence_digest) != 64 or any(
+        character not in "0123456789abcdef" for character in evidence_digest
+    ):
+        raise ValueError("outcome evidence digest must be SHA-256")
+    return {
+        "schema": OUTCOME_EVIDENCE_SCHEMA,
+        "policy": OUTCOME_POLICY_REALIZED_NET_PNL,
+        "evidence_type": evidence_type,
+        "evidence_sha256": evidence_digest,
+    }
 
 
 def _valid_kline_data(value: object) -> bool:
@@ -317,7 +391,9 @@ def _sanitize(value: dict[str, Any], sensitive_values: Iterable[str]) -> dict[st
 
 
 def _record_digest(payload: dict[str, Any]) -> str:
-    identity = {key: value for key, value in payload.items() if key != "outcome"}
+    identity = {
+        key: value for key, value in payload.items() if key not in {"outcome", "outcome_evidence"}
+    }
     encoded = json.dumps(
         identity,
         ensure_ascii=False,
@@ -365,6 +441,9 @@ __all__ = [
     "EXPERIENCE_CURATION_REVIEW_SCHEMA",
     "EXPERIENCE_CURATION_SCAN_SCHEMA",
     "EXPERIENCE_CURATION_SCHEMA",
+    "OUTCOME_EVIDENCE_SCHEMA",
+    "OUTCOME_POLICY_REALIZED_NET_PNL",
+    "build_outcome_evidence",
     "curate_record",
     "curate_record_by_id",
     "export_record_review_catalog",

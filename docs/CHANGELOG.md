@@ -18,6 +18,23 @@
 
 ---
 
+## [Unreleased] — 2026-07-25（L5：可核验 outcome evidence）
+
+- 新增 `pa-agent.outcome-evidence.v1`，固定采用 `realized-net-pnl-sign.v1`：已平仓净已实现收益
+  大于 0 为 success、小于 0 为 failure；未成交、未平仓、盈亏为 0 或证据不明继续 defer。
+- `import-record` 现在强制提供非空 `--evidence-file` 和 allowlist `--evidence-type`；支持券商
+  已平仓记录、交易所结算单和交易日志。导入器只保存证据 SHA-256、policy 和 type，不保存
+  文件名、路径、symbol、价格、PnL 或正文。
+- record digest 排除 outcome/evidence provenance，因此同一分析记录的身份保持稳定；重复导入
+  幂等，改判 outcome 或更换证据会触发现有冲突门禁，不会生成相互矛盾的案例。
+- 运行手册新增 GUI/headless 第二 instrument group 生成步骤，明确不同 timeframe 不等于不同
+  group；当前记录若继续 defer，必须收集两个不同 symbol 的新案例。
+- Outcome evidence 安全性、摘要稳定性、空/缺失文件、字段 allowlist、CLI 强制参数和兼容入口
+  均有测试；聚焦质量门禁 **40 passed**，Focused Ruff、Ruff format、`py_compile` 和差异检查
+  通过。真实 CLI 缺证据时退出 2，`experience/` 保持 0 个 JSON。
+
+---
+
 ## [Unreleased] — 2026-07-24（L5：脱敏 record review catalog）
 
 - 新增 `pa-agent.experience-curation-review.v1`，为每条 eligible completed record 生成稳定

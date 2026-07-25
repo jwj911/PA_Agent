@@ -15,6 +15,7 @@ from pa_agent.config.settings import load_settings  # noqa: E402
 from pa_agent.records.experience_curation import (  # noqa: E402
     EXPERIENCE_CURATION_REVIEW_SCHEMA,
     EXPERIENCE_CURATION_SCHEMA,
+    build_outcome_evidence,
     curate_record,
     curate_record_by_id,
     export_record_review_catalog,
@@ -51,6 +52,12 @@ def main(argv: list[str] | None = None) -> int:
     import_record.add_argument("--records-dir", type=Path)
     import_record.add_argument("--experience-dir", type=Path, required=True)
     import_record.add_argument("--outcome", choices=("success", "failure"), required=True)
+    import_record.add_argument("--evidence-file", type=Path, required=True)
+    import_record.add_argument(
+        "--evidence-type",
+        choices=("broker_closed_trade", "exchange_settlement", "trade_log"),
+        required=True,
+    )
 
     args = parser.parse_args(argv)
     try:
@@ -66,6 +73,10 @@ def main(argv: list[str] | None = None) -> int:
             }
         else:
             api_key = (load_settings().provider.api_key or "").strip()
+            outcome_evidence = build_outcome_evidence(
+                args.evidence_file,
+                evidence_type=args.evidence_type,
+            )
             if args.record_id is not None:
                 if args.records_dir is None:
                     raise ValueError("--records-dir is required with --record-id")
@@ -74,6 +85,7 @@ def main(argv: list[str] | None = None) -> int:
                     args.experience_dir,
                     record_id=args.record_id,
                     outcome=args.outcome,
+                    outcome_evidence=outcome_evidence,
                     sensitive_values=(api_key,),
                 )
             else:
@@ -81,6 +93,7 @@ def main(argv: list[str] | None = None) -> int:
                     args.record,
                     args.experience_dir,
                     outcome=args.outcome,
+                    outcome_evidence=outcome_evidence,
                     sensitive_values=(api_key,),
                 )
     except ValueError as exc:

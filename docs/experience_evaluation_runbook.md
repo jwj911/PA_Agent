@@ -52,6 +52,24 @@ py -3.12 tools/curate_experience_record.py export-review `
 direction、pattern 数量和聚合计数；不包含 symbol、价格、K 线、Prompt、Provider 回复、
 源文件名或路径。record 文件重命名不改变 ID。
 
+### 2.1 生成可核验 outcome
+
+默认政策固定为 `realized-net-pnl-sign.v1`：
+
+- 真实成交且已平仓，扣除费用后的净已实现收益大于 0：`success`；
+- 真实成交且已平仓，扣除费用后的净已实现收益小于 0：`failure`；
+- 未成交、未平仓、盈亏为 0、证据不完整或同一根 OHLC 无法判断先触发止盈/止损：继续 defer，
+  不得强行导入。
+
+原始证据应是券商已平仓成交记录、交易所结算单或可追溯交易日志，保存在 Git 忽略的
+`artifacts/outcome-evidence/`。证据文件不得提交到仓库或粘贴到聊天。导入器只写入
+`pa-agent.outcome-evidence.v1`，包含固定 policy、evidence type 和文件 SHA-256；不复制文件名、
+路径、symbol、价格、PnL 或正文。`--evidence-type` 只允许：
+
+- `broker_closed_trade`；
+- `exchange_settlement`；
+- `trade_log`。
+
 操作者核对原始记录和后续真实交易结果后，可按 `record_id` 明确指定 outcome：
 
 ```powershell
@@ -59,7 +77,9 @@ py -3.12 tools/curate_experience_record.py import-record `
   --record-id "<record-id-from-review-catalog>" `
   --records-dir records/pending `
   --experience-dir experience `
-  --outcome success
+  --outcome success `
+  --evidence-file "artifacts/outcome-evidence/<local-evidence-file>" `
+  --evidence-type broker_closed_trade
 ```
 
 也可继续使用原始本地路径：
@@ -68,7 +88,9 @@ py -3.12 tools/curate_experience_record.py import-record `
 py -3.12 tools/curate_experience_record.py import-record `
   --record "<local-analysis-record.json>" `
   --experience-dir experience `
-  --outcome success
+  --outcome success `
+  --evidence-file "artifacts/outcome-evidence/<local-evidence-file>" `
+  --evidence-type broker_closed_trade
 ```
 
 `--outcome` 只允许 `success` 或 `failure`。不得依据 AI 置信度、是否下单、模型
@@ -77,8 +99,34 @@ py -3.12 tools/curate_experience_record.py import-record `
 - 只保留 meta symbol/timeframe/timestamp、cycle、direction、patterns、K 线、结构化 Stage 1/2；
 - 不复制源路径/文件名、Prompt、Provider 原始回复、usage、策略路径或 HTF 原文；
 - 读取当前本地 API Key 仅做二次递归脱敏，不输出 Key；
+- CLI 强制提供非空证据文件；只保存 SHA-256 摘要和 allowlist provenance 字段；
 - 使用内容 digest 和不含 symbol 的文件名去重；重复导入幂等，改判 outcome 会冲突失败；
 - 只写 Git 忽略的 `experience/`，不会修改原始 `records/`。
+
+### 2.2 生成第二 instrument group
+
+instrument group 按原始 `meta.symbol` 划分。同一 symbol 更换 timeframe 不算第二组，symbol
+只在本地参与 HMAC，不进入评估产物。可以通过 GUI 对另一品种完成一次真实分析，也可以准备
+包含真实 `symbol`、`timeframe`、`bars` 的 snapshot 后显式运行 headless：
+
+```powershell
+py -3.12 -m pa_agent.cli analyze `
+  --input artifacts/second-instrument-snapshot.json `
+  --settings config/settings.json `
+  --records-dir records/pending `
+  --events artifacts/second-instrument-events.jsonl `
+  --output artifacts/second-instrument-result.json `
+  --run
+```
+
+snapshot 的 bars 必须来自真实数据源、按时间升序且使用已收盘 K 线；不得为补足 group 人工合成
+行情。命令成功后重新执行 `scan` 和 `export-review`，等待第二品种真实交易平仓，再按 2.1 的
+同一政策导入。若当前 eligible record 继续 defer，则必须收集两个不同 symbol 的新案例，不能把
+defer 记录计作第一组。
+
+合同最低要求为两个 instrument group。为了让同 cycle 候选排序产生有意义指标，建议至少准备
+4 个真实案例，并尽量保证每个待评估 cycle 有跨 instrument 候选；不满足时即使 split 可生成，
+也不得据此调整线上权重。
 
 导入足够案例并满足至少两个 instrument group 后，再进入 opaque 标注与评估。
 

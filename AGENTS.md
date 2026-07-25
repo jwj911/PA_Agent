@@ -534,7 +534,10 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     timeframe、cycle、direction、pattern 数量、稳定 `record_id` 和聚合计数，不得包含 symbol、
     价格、K 线、Prompt、Provider 回复、文件名或路径。可按 `record_id` 显式
     `success|failure` 导入；提交 `c03214b` 已由 GitHub Actions run `30102643560` 在
-    Windows/Python 3.11/3.12 双矩阵验收。不得从 AI 置信度、是否下单或 terminal 字段推断 outcome；
+    Windows/Python 3.11/3.12 双矩阵验收。真实 CLI 导入必须提供非空 evidence file，并只保存
+    `pa-agent.outcome-evidence.v1` 的 `realized-net-pnl-sign.v1` policy、allowlist evidence type
+    和 SHA-256；禁止保存证据文件名/路径、symbol、价格、PnL 或正文。未成交、未平仓、盈亏为 0
+    或证据不明必须 defer，不得从 AI 置信度、是否下单或 terminal 字段推断 outcome；
     导入案例不保留源路径/文件名、Prompt、Provider 原始回复、usage、策略路径或 HTF 原文，
     并以内容 digest 去重及当前 Key 二次脱敏。当前真实 scan 为 2 条记录中 1 eligible、
     1 partial，经验目录仍为 0 个 JSON；提交 `1e80d0b` 已由 GitHub Actions run

@@ -13,6 +13,9 @@ from pa_agent.records.experience_curation import (
     EXPERIENCE_CURATION_REVIEW_SCHEMA,
     EXPERIENCE_CURATION_SCAN_SCHEMA,
     EXPERIENCE_CURATION_SCHEMA,
+    OUTCOME_EVIDENCE_SCHEMA,
+    OUTCOME_POLICY_REALIZED_NET_PNL,
+    build_outcome_evidence,
     curate_record,
     curate_record_by_id,
     export_record_review_catalog,
@@ -79,6 +82,14 @@ def _write_record(path: Path, payload: dict[str, object] | None = None) -> None:
     )
 
 
+def _write_evidence(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        f"closed trade {_SYMBOL} price=123.45 secret={_SECRET}",
+        encoding="utf-8",
+    )
+
+
 def test_scan_reports_only_shape_and_rejection_reasons(tmp_path: Path) -> None:
     records_dir = tmp_path / "records"
     _write_record(records_dir / f"completed_{_SYMBOL}.json")
@@ -105,6 +116,56 @@ def test_scan_reports_only_shape_and_rejection_reasons(tmp_path: Path) -> None:
     assert _SYMBOL not in rendered
     assert _SECRET not in rendered
     assert str(records_dir) not in rendered
+
+
+def test_outcome_evidence_is_digest_only_and_strictly_validated(
+    tmp_path: Path,
+) -> None:
+    evidence_path = tmp_path / "artifacts" / f"statement-{_SYMBOL}.txt"
+    _write_evidence(evidence_path)
+
+    evidence = build_outcome_evidence(
+        evidence_path,
+        evidence_type="broker_closed_trade",
+    )
+    repeated = build_outcome_evidence(
+        evidence_path,
+        evidence_type="broker_closed_trade",
+    )
+    rendered = json.dumps(evidence)
+
+    assert repeated == evidence
+    assert evidence["schema"] == OUTCOME_EVIDENCE_SCHEMA
+    assert evidence["policy"] == OUTCOME_POLICY_REALIZED_NET_PNL
+    assert evidence["evidence_type"] == "broker_closed_trade"
+    assert len(evidence["evidence_sha256"]) == 64
+    for private_value in (
+        _SYMBOL,
+        _SECRET,
+        str(evidence_path),
+        evidence_path.name,
+        "123.45",
+    ):
+        assert private_value not in rendered
+
+    empty_path = tmp_path / "empty.txt"
+    empty_path.write_bytes(b"")
+    with pytest.raises(ValueError, match="must not be empty"):
+        build_outcome_evidence(empty_path, evidence_type="trade_log")
+    with pytest.raises(ValueError, match="not readable"):
+        build_outcome_evidence(tmp_path / "missing.txt", evidence_type="trade_log")
+    with pytest.raises(ValueError, match="unsupported"):
+        build_outcome_evidence(evidence_path, evidence_type="prediction")
+
+    record_path = tmp_path / "record.json"
+    _write_record(record_path)
+    with pytest.raises(ValueError, match="fields are invalid"):
+        curate_record(
+            record_path,
+            tmp_path / "experience",
+            outcome="success",
+            outcome_evidence={**evidence, "evidence_path": str(evidence_path)},
+        )
 
 
 def test_review_catalog_is_sanitized_and_supports_record_id_import(
@@ -179,18 +240,26 @@ def test_review_catalog_is_sanitized_and_supports_record_id_import(
 def test_curate_record_is_minimal_sanitized_and_idempotent(tmp_path: Path) -> None:
     record_path = tmp_path / "records" / f"source_{_SYMBOL}.json"
     experience_dir = tmp_path / "experience"
+    evidence_path = tmp_path / "artifacts" / "closed-trade.txt"
     _write_record(record_path)
+    _write_evidence(evidence_path)
+    outcome_evidence = build_outcome_evidence(
+        evidence_path,
+        evidence_type="broker_closed_trade",
+    )
 
     first = curate_record(
         record_path,
         experience_dir,
         outcome="success",
+        outcome_evidence=outcome_evidence,
         sensitive_values=(_SECRET,),
     )
     second = curate_record(
         record_path,
         experience_dir,
         outcome="success",
+        outcome_evidence=outcome_evidence,
         sensitive_values=(_SECRET,),
     )
 
@@ -211,16 +280,24 @@ def test_curate_record_is_minimal_sanitized_and_idempotent(tmp_path: Path) -> No
         "direction",
         "detected_patterns",
         "outcome",
+        "outcome_evidence",
         "kline_data",
         "stage1_diagnosis",
         "stage2_decision",
     }
+    assert payload["outcome_evidence"] == outcome_evidence
+    assert payload["outcome_evidence"]["schema"] == OUTCOME_EVIDENCE_SCHEMA
+    assert payload["outcome_evidence"]["policy"] == OUTCOME_POLICY_REALIZED_NET_PNL
+    assert len(payload["outcome_evidence"]["evidence_sha256"]) == 64
     assert payload["detected_patterns"] == ["wedge"]
     assert _SECRET not in rendered
     assert "private prompt" not in rendered
     assert "private provider response" not in rendered
     assert "total_tokens" not in rendered
     assert str(record_path) not in rendered
+    assert str(evidence_path) not in rendered
+    assert "closed trade" not in rendered
+    assert "123.45" not in rendered
 
     template = export_annotation_template(experience_dir, salt=_SALT)
     assert len(template["cases"]) == 1
@@ -260,7 +337,9 @@ def test_cli_scan_and_import_outputs_are_sanitized(
     record_path = records_dir / f"source_{_SYMBOL}.json"
     experience_dir = tmp_path / "experience"
     review_path = tmp_path / "artifacts" / "review.json"
+    evidence_path = tmp_path / "artifacts" / "closed-trade.txt"
     _write_record(record_path)
+    _write_evidence(evidence_path)
     monkeypatch.setattr(
         curation_cli,
         "load_settings",
@@ -303,6 +382,10 @@ def test_cli_scan_and_import_outputs_are_sanitized(
                 str(experience_dir),
                 "--outcome",
                 "success",
+                "--evidence-file",
+                str(evidence_path),
+                "--evidence-type",
+                "broker_closed_trade",
             ]
         )
         == 0
@@ -317,6 +400,10 @@ def test_cli_scan_and_import_outputs_are_sanitized(
                 str(experience_dir),
                 "--outcome",
                 "success",
+                "--evidence-file",
+                str(evidence_path),
+                "--evidence-type",
+                "broker_closed_trade",
             ]
         )
         == 0
@@ -328,5 +415,7 @@ def test_cli_scan_and_import_outputs_are_sanitized(
     assert _SYMBOL not in output
     assert _SECRET not in output
     assert str(record_path) not in output
+    assert str(evidence_path) not in output
+    assert "123.45" not in output
     assert _SYMBOL not in review_path.read_text(encoding="utf-8")
     assert len(list(experience_dir.rglob("*.json"))) == 1
