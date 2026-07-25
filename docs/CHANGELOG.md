@@ -29,6 +29,8 @@
 - evaluator 直接相关测试 **21 passed**，含 reader/baseline/CI policy 的聚焦质量门禁
   **41 passed**；Focused Ruff、Ruff format、`py_compile` 和差异检查通过。当前真实经验目录
   仍为空，未用合成 evidence 冒充真实案例。
+- GitHub Actions run `30160388537` 已对 `main@b963cee` 完成 Windows/Python 3.11/3.12
+  双矩阵验收，两个 job 均为 `success`。
 
 ---
 
