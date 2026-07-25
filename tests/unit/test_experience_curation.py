@@ -299,7 +299,11 @@ def test_curate_record_is_minimal_sanitized_and_idempotent(tmp_path: Path) -> No
     assert "closed trade" not in rendered
     assert "123.45" not in rendered
 
-    template = export_annotation_template(experience_dir, salt=_SALT)
+    template = export_annotation_template(
+        experience_dir,
+        evidence_dir=evidence_path.parent,
+        salt=_SALT,
+    )
     assert len(template["cases"]) == 1
     assert _SYMBOL not in json.dumps(template)
 

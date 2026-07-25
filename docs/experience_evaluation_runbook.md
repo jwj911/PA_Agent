@@ -10,6 +10,8 @@ Recall@K、NDCG@K、fallback rate 和 ranking stability 报告。流程只做离
 - 文件名包含 `YYYY-MM-DD_HH-mm-ss`；
 - 每条案例可解析出 symbol、timeframe、direction 和 detected_patterns；
 - 每条案例必须包含通过 allowlist 校验的 `pa-agent.outcome-evidence.v1`；
+- 每条案例摘要对应的非空原始证据文件必须仍保留在本地 `artifacts/outcome-evidence/`，并在
+  annotation export 和 evaluate 时重新计算 SHA-256；
 - symbol 只在本地用于生成 opaque HMAC ID，不进入导出文件；
 - 经验 JSON、标注文件、dataset、split 和报告均保留在被 Git 忽略的 `artifacts/`。
 
@@ -20,14 +22,18 @@ Recall@K、NDCG@K、fallback rate 和 ranking stability 报告。流程只做离
 ```powershell
 py -3.12 tools/run_experience_evaluation.py preflight `
   --experience-dir experience `
+  --evidence-dir artifacts/outcome-evidence `
   --require evaluation
 ```
 
 输出 schema 为 `pa-agent.experience-eval-readiness.v1`，只包含案例数、instrument group 数、
-outcome/cycle 聚合计数、annotation 状态和 blocker code。不得包含 symbol、价格、K 线、
-路径、salt 或案例原文。`--require export|evaluation` 指定所需阶段；ready 时退出 0，
-否则退出 1。缺失或篡改 evidence 会作为 `invalid_experience_catalog` 拒绝。评估阶段可通过
-`--annotations <path>` 提供待验证的人工标注文件。
+outcome/cycle 聚合计数、evidence 状态/文件数/已核验案例数、annotation 状态和 blocker code。
+不得包含 symbol、价格、K 线、路径、摘要、salt 或案例原文。`--require export|evaluation`
+指定所需阶段；ready 时退出 0，否则退出 1。案例 envelope 缺失或非法时以
+`invalid_experience_catalog` 拒绝；本地证据目录缺失、含空/不可读文件或摘要不匹配时分别以
+`outcome_evidence_files_missing`、`outcome_evidence_files_invalid`、
+`outcome_evidence_files_unmatched` 拒绝。评估阶段可通过 `--annotations <path>` 提供待验证的
+人工标注文件。
 
 ## 2. 从分析记录显式导入经验
 
@@ -66,7 +72,8 @@ direction、pattern 数量和聚合计数；不包含 symbol、价格、K 线、
 原始证据应是券商已平仓成交记录、交易所结算单或可追溯交易日志，保存在 Git 忽略的
 `artifacts/outcome-evidence/`。证据文件不得提交到仓库或粘贴到聊天。导入器只写入
 `pa-agent.outcome-evidence.v1`，包含固定 policy、evidence type 和文件 SHA-256；不复制文件名、
-路径、symbol、价格、PnL 或正文。`--evidence-type` 只允许：
+路径、symbol、价格、PnL 或正文。原始证据必须保留到正式评估完成；证据目录只放非空、可读
+文件，不能用占位文件替代。`--evidence-type` 只允许：
 
 - `broker_closed_trade`；
 - `exchange_settlement`；
@@ -146,6 +153,7 @@ $env:PA_AGENT_EXPERIENCE_EVAL_SALT = "<session-only-random-salt>"
 ```powershell
 py -3.12 tools/run_experience_evaluation.py preflight `
   --experience-dir experience `
+  --evidence-dir artifacts/outcome-evidence `
   --require export
 ```
 
@@ -156,6 +164,7 @@ py -3.12 tools/run_experience_evaluation.py preflight `
 ```powershell
 py -3.12 tools/run_experience_evaluation.py export-labels `
   --experience-dir experience `
+  --evidence-dir artifacts/outcome-evidence `
   --output artifacts/experience-eval/annotations.json
 ```
 
@@ -167,8 +176,9 @@ py -3.12 tools/run_experience_evaluation.py export-labels `
 - `reviewed=false` 与空 `relevant_ids`。
 
 模板不得包含 symbol、价格、K 线原文、截图/本地路径、API Key、salt 或 Provider 内容。
-导出前 catalog loader 会再次校验所有 outcome evidence；不能通过手工写经验 JSON 绕过
-`import-record` 的证据门禁。
+导出前 catalog loader 会再次校验所有 outcome evidence，并对 `--evidence-dir` 下的非空文件
+重新计算 SHA-256；所有案例摘要均匹配才会导出。不能通过手工写经验 JSON、删除或替换原始
+证据文件绕过 `import-record` 的证据门禁。
 
 ## 5. 人工标注
 
@@ -188,6 +198,7 @@ py -3.12 tools/run_experience_evaluation.py export-labels `
 ```powershell
 py -3.12 tools/run_experience_evaluation.py preflight `
   --experience-dir experience `
+  --evidence-dir artifacts/outcome-evidence `
   --annotations artifacts/experience-eval/annotations.json `
   --require evaluation
 ```
@@ -197,6 +208,7 @@ py -3.12 tools/run_experience_evaluation.py preflight `
 ```powershell
 py -3.12 tools/run_experience_evaluation.py evaluate `
   --experience-dir experience `
+  --evidence-dir artifacts/outcome-evidence `
   --annotations artifacts/experience-eval/annotations.json `
   --output-dir artifacts/experience-eval/report `
   --evaluation-fraction 0.2 `
@@ -210,13 +222,16 @@ py -3.12 tools/run_experience_evaluation.py evaluate `
 - `report.json`：`pa-agent.experience-eval-report.v1` 旧排序与 similarity 排序指标对照。
 
 报告只保留版本、dataset digest、split、计数、Recall/NDCG/fallback/stability、score
-distribution 和指标差值，不包含原始案例内容。
+distribution、指标差值，以及 `outcome_evidence_revalidated=true` 和 catalog 引用的唯一
+evidence digest/已核验案例聚合计数；不包含摘要值、文件名、路径或原始案例内容。
 
 ## 7. 验收边界
 
 - 至少两个 instrument group，且 train/evaluation group 无交叉；
 - 每条导入记录的 success/failure 来自人工确认的真实结果；
 - 每条案例的 outcome evidence schema、policy、type 和 SHA-256 均通过共享 validator；
+- annotation export 和 evaluate 均重新读取本地 evidence 文件，所有案例摘要匹配，报告中
+  `outcome_evidence_revalidated=true`；
 - 所有案例 `reviewed=true`；
 - 报告可用同一经验目录、annotation 和 salt 重复生成；
 - 线上排序保持不变，`online_sorting_changed=false`；

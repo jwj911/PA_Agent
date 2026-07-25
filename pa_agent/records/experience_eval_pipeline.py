@@ -12,7 +12,10 @@ from pathlib import Path
 from typing import Any
 
 from pa_agent.data.base import KlineBar
-from pa_agent.records.experience_curation import validate_outcome_evidence
+from pa_agent.records.experience_curation import (
+    digest_outcome_evidence_file,
+    validate_outcome_evidence,
+)
 from pa_agent.records.experience_eval import (
     EXPERIENCE_FEATURE_VERSION,
     ExperienceEvalCase,
@@ -29,6 +32,11 @@ EXPERIENCE_READINESS_SCHEMA = "pa-agent.experience-eval-readiness.v1"
 EXPERIENCE_REPORT_SCHEMA = "pa-agent.experience-eval-report.v1"
 _TS_PATTERN = re.compile(r"(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})")
 _READINESS_SALT = b"pa-agent.experience-readiness.v1"
+_EVIDENCE_BLOCKERS = {
+    "missing": "outcome_evidence_files_missing",
+    "invalid": "outcome_evidence_files_invalid",
+    "unmatched": "outcome_evidence_files_unmatched",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,6 +48,7 @@ class _CatalogCase:
     direction: str
     patterns: tuple[str, ...]
     outcome: str
+    evidence_sha256: str
     timestamp_key: str
     content: dict[str, Any]
 
@@ -61,6 +70,7 @@ class _CatalogCase:
 def inspect_experience_readiness(
     experience_dir: Path,
     *,
+    evidence_dir: Path | None = None,
     salt: str = "",
     annotations: object | None = None,
 ) -> dict[str, Any]:
@@ -95,6 +105,19 @@ def inspect_experience_readiness(
     if catalog_valid and instrument_group_count < 2:
         export_blockers.append("insufficient_instrument_groups")
 
+    evidence_status = "not_checked"
+    evidence_file_count = 0
+    evidence_verified_case_count = 0
+    if catalog_valid:
+        (
+            evidence_status,
+            evidence_file_count,
+            evidence_verified_case_count,
+        ) = _local_evidence_status(catalog, evidence_dir)
+        evidence_blocker = _EVIDENCE_BLOCKERS.get(evidence_status)
+        if evidence_blocker is not None:
+            export_blockers.append(evidence_blocker)
+
     evaluation_blockers = list(export_blockers)
     if annotations is None:
         annotation_status = "not_provided"
@@ -117,6 +140,9 @@ def inspect_experience_readiness(
         "outcome_counts": _count_values(case.outcome for case in catalog),
         "cycle_position_counts": _count_values(case.cycle_position for case in catalog),
         "catalog_valid": catalog_valid,
+        "evidence_status": evidence_status,
+        "evidence_file_count": evidence_file_count,
+        "evidence_verified_case_count": evidence_verified_case_count,
         "annotation_status": annotation_status,
         "ready_for_export": not export_blockers,
         "ready_for_evaluation": not evaluation_blockers,
@@ -128,10 +154,12 @@ def inspect_experience_readiness(
 def export_annotation_template(
     experience_dir: Path,
     *,
+    evidence_dir: Path,
     salt: str,
 ) -> dict[str, Any]:
     """Build a deterministic, sanitized human-labeling template."""
     catalog = _load_catalog(experience_dir, salt=_validated_salt(salt))
+    _require_local_evidence(catalog, evidence_dir)
     metadata = _sanitized_catalog(catalog)
     return {
         "schema": EXPERIENCE_ANNOTATION_SCHEMA,
@@ -152,12 +180,17 @@ def evaluate_annotated_experience(
     experience_dir: Path,
     annotations: dict[str, Any],
     *,
+    evidence_dir: Path,
     salt: str,
     evaluation_fraction: float = 0.2,
     k: int = 3,
 ) -> tuple[ExperienceEvalDataset, ExperienceEvalSplit, dict[str, Any]]:
     """Validate labels, build a fixed split, and compare legacy/new rankings."""
     catalog = _load_catalog(experience_dir, salt=_validated_salt(salt))
+    evidence_digest_count, evidence_verified_case_count = _require_local_evidence(
+        catalog,
+        evidence_dir,
+    )
     metadata = _sanitized_catalog(catalog)
     annotation_cases = _validate_annotations(annotations, metadata)
     catalog_by_id = {case.case_id: case for case in catalog}
@@ -217,6 +250,9 @@ def evaluate_annotated_experience(
         "k": k,
         "case_count": len(dataset.cases),
         "instrument_group_count": len({case.instrument_id for case in dataset.cases}),
+        "outcome_evidence_revalidated": True,
+        "outcome_evidence_digest_count": evidence_digest_count,
+        "outcome_evidence_case_count": evidence_verified_case_count,
         "train_case_count": len(split.train_case_ids),
         "evaluation_case_count": len(split.evaluation_case_ids),
         "outcome_counts": _count_values(case.outcome for case in catalog),
@@ -291,7 +327,7 @@ def _load_catalog(experience_dir: Path, *, salt: bytes) -> tuple[_CatalogCase, .
             ("record", "outcome_evidence"),
         )
         try:
-            validate_outcome_evidence(raw_evidence)
+            evidence = validate_outcome_evidence(raw_evidence)
         except ValueError as exc:
             raise ValueError(f"experience case {index} outcome evidence is invalid") from exc
         cases.append(
@@ -303,6 +339,7 @@ def _load_catalog(experience_dir: Path, *, salt: bytes) -> tuple[_CatalogCase, .
                 direction=direction,
                 patterns=patterns,
                 outcome=outcome,
+                evidence_sha256=str(evidence["evidence_sha256"]),
                 timestamp_key=timestamp_key,
                 content=content,
             )
@@ -311,6 +348,52 @@ def _load_catalog(experience_dir: Path, *, salt: bytes) -> tuple[_CatalogCase, .
     if len(case_ids) != len(set(case_ids)):
         raise ValueError("opaque experience case ids are not unique")
     return tuple(cases)
+
+
+def _local_evidence_status(
+    catalog: tuple[_CatalogCase, ...],
+    evidence_dir: Path | None,
+) -> tuple[str, int, int]:
+    if evidence_dir is None:
+        return "missing", 0, 0
+    root = Path(evidence_dir)
+    if not root.is_dir():
+        return "missing", 0, 0
+    try:
+        paths = sorted(
+            (path for path in root.rglob("*") if path.is_file()),
+            key=lambda path: path.as_posix(),
+        )
+    except OSError:
+        return "invalid", 0, 0
+    if not paths:
+        return "missing", 0, 0
+
+    digests: set[str] = set()
+    for path in paths:
+        try:
+            digests.add(digest_outcome_evidence_file(path))
+        except ValueError:
+            return "invalid", len(paths), 0
+
+    verified_case_count = sum(case.evidence_sha256 in digests for case in catalog)
+    if verified_case_count != len(catalog):
+        return "unmatched", len(paths), verified_case_count
+    return "ready", len(paths), verified_case_count
+
+
+def _require_local_evidence(
+    catalog: tuple[_CatalogCase, ...],
+    evidence_dir: Path,
+) -> tuple[int, int]:
+    status, _file_count, verified_case_count = _local_evidence_status(
+        catalog,
+        evidence_dir,
+    )
+    blocker = _EVIDENCE_BLOCKERS.get(status)
+    if blocker is not None:
+        raise ValueError(blocker)
+    return len({case.evidence_sha256 for case in catalog}), verified_case_count
 
 
 def _sanitized_catalog(catalog: tuple[_CatalogCase, ...]) -> list[dict[str, Any]]:

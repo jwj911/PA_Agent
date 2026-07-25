@@ -18,6 +18,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-25（L5：本地 outcome evidence 重核门禁）
+
+- 修复离线 evaluator 只校验 evidence envelope 和 64 位摘要格式、却不确认本地原始证据仍存在
+  且匹配的问题；annotation export 和正式 evaluate 现在都会重新计算证据文件 SHA-256。
+- 提取共享的非空 evidence 文件摘要函数，使 curation 导入和 evaluator 重核使用相同的分块
+  读取、不可读文件和空文件拒绝语义。
+- `preflight` 新增 `--evidence-dir`，脱敏输出只增加 evidence 状态、文件数、已核验案例数和
+  稳定 blocker；`export-labels`/`evaluate` 强制要求该参数。缺目录、空/不可读文件和摘要
+  不匹配分别以 `outcome_evidence_files_missing|invalid|unmatched` 拒绝。
+- 报告新增 `outcome_evidence_revalidated=true`、catalog 引用的唯一 evidence digest 数和
+  已核验案例数；不输出摘要值、文件名、路径、symbol、价格、PnL 或正文。目录中的额外非空
+  本地文件不会改变报告。
+- 正向 fixtures 改为真实写入本地 evidence 字节并独立计算摘要；新增缺目录、证据被替换、
+  3/4 案例匹配、导出/评估双拒绝和脱敏输出测试。直接相关测试 **16 passed**，含
+  reader/baseline/CI policy 的聚焦门禁 **36 passed**；Focused Ruff、Ruff format、
+  `py_compile`、CI target 清单和差异检查通过。
+- 当前真实 `experience/` 和 evidence 目录仍无数据，preflight 为
+  `evidence_status=not_checked`；本轮未导入合成案例或生成虚假真实指标。
+
+---
+
 ## [Unreleased] — 2026-07-25（L5：evidence-backed evaluator 门禁）
 
 - `experience_eval_pipeline` 现在复用 curation 的严格 evidence validator；annotation export、

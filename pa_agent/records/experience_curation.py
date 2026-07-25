@@ -87,6 +87,17 @@ def build_outcome_evidence(
     if normalized_type not in _VALID_EVIDENCE_TYPES:
         raise ValueError("unsupported outcome evidence type")
 
+    evidence_digest = digest_outcome_evidence_file(evidence_path)
+    return {
+        "schema": OUTCOME_EVIDENCE_SCHEMA,
+        "policy": OUTCOME_POLICY_REALIZED_NET_PNL,
+        "evidence_type": normalized_type,
+        "evidence_sha256": evidence_digest,
+    }
+
+
+def digest_outcome_evidence_file(evidence_path: Path) -> str:
+    """Return the SHA-256 digest of a non-empty local evidence file."""
     digest = sha256()
     byte_count = 0
     try:
@@ -98,12 +109,7 @@ def build_outcome_evidence(
         raise ValueError("outcome evidence file is not readable") from exc
     if byte_count == 0:
         raise ValueError("outcome evidence file must not be empty")
-    return {
-        "schema": OUTCOME_EVIDENCE_SCHEMA,
-        "policy": OUTCOME_POLICY_REALIZED_NET_PNL,
-        "evidence_type": normalized_type,
-        "evidence_sha256": digest.hexdigest(),
-    }
+    return digest.hexdigest()
 
 
 def curate_record_by_id(
@@ -447,6 +453,7 @@ __all__ = [
     "build_outcome_evidence",
     "curate_record",
     "curate_record_by_id",
+    "digest_outcome_evidence_file",
     "export_record_review_catalog",
     "scan_record_directory",
     "validate_outcome_evidence",

@@ -63,6 +63,7 @@ def main(argv: list[str] | None = None) -> int:
 
     preflight = subparsers.add_parser("preflight")
     preflight.add_argument("--experience-dir", type=Path, required=True)
+    preflight.add_argument("--evidence-dir", type=Path)
     preflight.add_argument("--annotations", type=Path)
     preflight.add_argument(
         "--require",
@@ -72,10 +73,12 @@ def main(argv: list[str] | None = None) -> int:
 
     export = subparsers.add_parser("export-labels")
     export.add_argument("--experience-dir", type=Path, required=True)
+    export.add_argument("--evidence-dir", type=Path, required=True)
     export.add_argument("--output", type=Path, required=True)
 
     evaluate = subparsers.add_parser("evaluate")
     evaluate.add_argument("--experience-dir", type=Path, required=True)
+    evaluate.add_argument("--evidence-dir", type=Path, required=True)
     evaluate.add_argument("--annotations", type=Path, required=True)
     evaluate.add_argument("--output-dir", type=Path, required=True)
     evaluate.add_argument("--evaluation-fraction", type=float, default=0.2)
@@ -86,6 +89,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "preflight":
             readiness = inspect_experience_readiness(
                 args.experience_dir,
+                evidence_dir=args.evidence_dir,
                 salt=os.environ.get(SALT_ENV, ""),
                 annotations=_load_preflight_annotations(args.annotations),
             )
@@ -100,7 +104,11 @@ def main(argv: list[str] | None = None) -> int:
 
         salt = _salt_from_environment()
         if args.command == "export-labels":
-            template = export_annotation_template(args.experience_dir, salt=salt)
+            template = export_annotation_template(
+                args.experience_dir,
+                evidence_dir=args.evidence_dir,
+                salt=salt,
+            )
             _write_json(args.output, template)
             summary = {
                 "schema": template["schema"],
@@ -112,6 +120,7 @@ def main(argv: list[str] | None = None) -> int:
             dataset, split, report = evaluate_annotated_experience(
                 args.experience_dir,
                 annotations,
+                evidence_dir=args.evidence_dir,
                 salt=salt,
                 evaluation_fraction=args.evaluation_fraction,
                 k=args.k,

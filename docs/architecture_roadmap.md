@@ -25,7 +25,7 @@
 | L2 Prompt 模板引擎 | 5 轮等价观察与下线策略/CI 门禁已收口；旧 loader/fallback 按政策 retain | TemplateStore、TemplateContext、29 个 manifest、system/Stage 1/Stage 2/continuation、golden snapshot 和回退观察已完成 | 最早 0.3.0 且具备 v0.2.0 tag、fallback 零命中和 golden 报告后才评估删除 |
 | L3 Pipeline Builder | 三轮真实稳定观察与默认 Pipeline 切换已收口，legacy 作为显式回滚保留 | 完整四步 Pipeline、Task 10 全终态矩阵、5 场景×3 轮 fixture 对照；3 个独立真实 pair 的 6 个单体校验和 3 个成对校验均为 `valid=true`；新旧缺失配置默认 `true`，显式 `false` 回滚 | 持续观察 lifecycle/terminal/record 指标；出现未解释偏差先回滚，不删除 legacy facade |
 | L4 性能优化 | v2 hosted baseline 与同环境 10% p95 对照已收口，进入每日持续观察 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；`pa-agent.performance.v1` 报告、`l4.synthetic.v2` 批量折算采样、p50/p95、100/500/5000 bars 基准、版本隔离 baseline cache 和 artifact；run `29975410917`/`29975592352` 完成建基线与 restore 对照 | 维护每日 schedule；runner image、benchmark version 或采样合同变化时重建 baseline |
-| L5 经验库升级 | 记录筛选/review catalog/可核验 outcome 导入、evidence-backed readiness、评估合同、固定切分、opaque 标注/报告管道已交付，真实数据评估未收口 | completed record shape-only scan；脱敏 record ID catalog；固定 outcome policy + 本地证据 SHA-256；annotation/export/evaluate evidence 门禁；人工 `success|failure` 最小化导入与 digest 去重；全量相关性排序 + K 线相似度；版本化 dataset/split/report；HMAC opaque catalog 和 leave-one-out 对照；不改变线上排序 | 为真实 outcome 提供本地证据并导入至少两个不同 symbol 的 instrument group，完成相关性标注和指标报告；证据充分后才评估权重 |
+| L5 经验库升级 | 记录筛选/review catalog/可核验 outcome 导入、本地 evidence 重核、evidence-backed readiness、固定切分、opaque 标注/报告管道已交付，真实数据评估未收口 | completed record shape-only scan；脱敏 record ID catalog；固定 outcome policy + 本地证据 SHA-256；annotation/export/evaluate envelope 校验与本地文件重哈希门禁；人工 `success|failure` 最小化导入与 digest 去重；全量相关性排序 + K 线相似度；版本化 dataset/split/report；HMAC opaque catalog 和 leave-one-out 对照；不改变线上排序 | 为真实 outcome 提供并保留本地证据文件，导入至少两个不同 symbol 的 instrument group，完成相关性标注和指标报告；证据充分后才评估权重 |
 | L6 无 GUI 运行 | fixed-fixture 全终态等价、跨进程 replay 和真实 Provider 成功主路径已收口，进入持续观察 | `AppEvent`/`EventSink`、严格 correlation replay、共享 core/gui bootstrap、`HeadlessAnalysisAdapter`、PyQt-free CLI；2026-07-23 真实 legacy/Pipeline pair 均完成 5 事件、record 写入和 shape-only 等价校验 | Provider、事件或记录合同变化时按 `docs/live_observation_runbook.md` 重跑；单次 live 成功不替代固定 fixture 失败路径矩阵 |
 
 当前经验目录仍为空，因而 L5 的 scorer 目前只能由合成 fixture 验证，不能据此判断真实交易
@@ -34,6 +34,8 @@
 可核验 outcome，并以至少两个 instrument group、人工 outcome/相关性标签和离线指标为前置条件。
 当前 `pa-agent.experience-eval-readiness.v1` 预检稳定报告 `evaluation_salt_missing`、
 `no_experience_cases` 和 `annotations_not_provided`，不包含市场数据或本地路径。
+当存在经验案例时，preflight、annotation export 和 evaluate 还必须对本地 evidence 目录重新
+计算 SHA-256；缺失、空/不可读或摘要不匹配的文件不能进入报告，报告只记录重核状态与聚合计数。
 真实 review catalog 已为唯一 eligible record 生成稳定 `record_id`，symbol/绝对路径扫描均为
 0 命中；该记录仍无可核验已平仓证据并继续 defer，未写入经验目录。
 
@@ -692,6 +694,7 @@ pa-agent headless analyze --input snapshot.json --run --records-dir records/ --e
 - 已建立版本化脱敏评估合同和离线 scorer；
 - 已建立 `pa-agent.experience-split.v1` instrument-grouped 固定切分和 dataset digest；
 - 已建立真实经验 HMAC opaque 导出、人工标注门禁、leave-one-out 旧/新排序和版本化报告管道；
+- 已建立本地 outcome evidence 重哈希门禁，annotation export/evaluate 必须验证所有案例摘要；
 - 下一步按 runbook 导入真实案例、人工标注并建立固定 train/evaluation benchmark；
 - 仅在指标改善且稳定性可接受时调整线上权重。
 

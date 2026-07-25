@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from hashlib import sha256
 from pathlib import Path
 
 import pytest
@@ -36,6 +37,10 @@ def _write_case(
     patterns: list[str],
     closes: list[float],
 ) -> None:
+    evidence_dir = root.parent / "outcome-evidence"
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    evidence_bytes = f"closed outcome evidence for {filename}".encode()
+    (evidence_dir / f"{filename}.evidence").write_bytes(evidence_bytes)
     path = root / cycle / f"{outcome}_cases" / filename
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -57,7 +62,7 @@ def _write_case(
                     "schema": OUTCOME_EVIDENCE_SCHEMA,
                     "policy": OUTCOME_POLICY_REALIZED_NET_PNL,
                     "evidence_type": "trade_log",
-                    "evidence_sha256": "a" * 64,
+                    "evidence_sha256": sha256(evidence_bytes).hexdigest(),
                 },
                 "private_path": f"C:/private/{symbol}",
                 "api_key": "PRIVATE_KEY",
@@ -65,6 +70,10 @@ def _write_case(
         ),
         encoding="utf-8",
     )
+
+
+def _evidence_dir(experience_dir: Path) -> Path:
+    return experience_dir.parent / "outcome-evidence"
 
 
 def _experience_library(tmp_path: Path) -> Path:
@@ -129,7 +138,11 @@ def test_export_template_is_opaque_and_contains_no_raw_market_payload(
 ) -> None:
     experience_dir = _experience_library(tmp_path)
 
-    template = export_annotation_template(experience_dir, salt=_SALT)
+    template = export_annotation_template(
+        experience_dir,
+        evidence_dir=_evidence_dir(experience_dir),
+        salt=_SALT,
+    )
     rendered = json.dumps(template)
 
     assert template["schema"] == EXPERIENCE_ANNOTATION_SCHEMA
@@ -165,6 +178,9 @@ def test_readiness_reports_empty_library_and_missing_salt_blockers(
         "outcome_counts": {},
         "cycle_position_counts": {},
         "catalog_valid": False,
+        "evidence_status": "not_checked",
+        "evidence_file_count": 0,
+        "evidence_verified_case_count": 0,
         "annotation_status": "not_provided",
         "ready_for_export": False,
         "ready_for_evaluation": False,
@@ -213,7 +229,11 @@ def test_readiness_requires_two_instrument_groups(tmp_path: Path) -> None:
         closes=[10, 11, 12, 13],
     )
 
-    readiness = inspect_experience_readiness(experience_dir, salt=_SALT)
+    readiness = inspect_experience_readiness(
+        experience_dir,
+        evidence_dir=_evidence_dir(experience_dir),
+        salt=_SALT,
+    )
     rendered = json.dumps(readiness)
 
     assert readiness["case_count"] == 1
@@ -227,15 +247,23 @@ def test_readiness_requires_two_instrument_groups(tmp_path: Path) -> None:
 
 def test_readiness_accepts_reviewed_two_group_catalog(tmp_path: Path) -> None:
     experience_dir = _experience_library(tmp_path)
-    reviewed = _review_all(export_annotation_template(experience_dir, salt=_SALT))
+    reviewed = _review_all(
+        export_annotation_template(
+            experience_dir,
+            evidence_dir=_evidence_dir(experience_dir),
+            salt=_SALT,
+        )
+    )
 
     readiness = inspect_experience_readiness(
         experience_dir,
+        evidence_dir=_evidence_dir(experience_dir),
         salt=_SALT,
         annotations=reviewed,
     )
     invalid = inspect_experience_readiness(
         experience_dir,
+        evidence_dir=_evidence_dir(experience_dir),
         salt=_SALT,
         annotations={**reviewed, "catalog_digest": "invalid"},
     )
@@ -243,6 +271,9 @@ def test_readiness_accepts_reviewed_two_group_catalog(tmp_path: Path) -> None:
     assert readiness["case_count"] == 4
     assert readiness["instrument_group_count"] == 2
     assert readiness["outcome_counts"] == {"failure": 2, "success": 2}
+    assert readiness["evidence_status"] == "ready"
+    assert readiness["evidence_file_count"] == 4
+    assert readiness["evidence_verified_case_count"] == 4
     assert readiness["ready_for_export"] is True
     assert readiness["ready_for_evaluation"] is True
     assert readiness["annotation_status"] == "ready"
@@ -258,11 +289,18 @@ def test_evaluation_generates_fixed_split_and_metrics_without_changing_online_so
     tmp_path: Path,
 ) -> None:
     experience_dir = _experience_library(tmp_path)
-    annotations = _review_all(export_annotation_template(experience_dir, salt=_SALT))
+    annotations = _review_all(
+        export_annotation_template(
+            experience_dir,
+            evidence_dir=_evidence_dir(experience_dir),
+            salt=_SALT,
+        )
+    )
 
     dataset, split, report = evaluate_annotated_experience(
         experience_dir,
         annotations,
+        evidence_dir=_evidence_dir(experience_dir),
         salt=_SALT,
         evaluation_fraction=0.5,
         k=2,
@@ -270,6 +308,19 @@ def test_evaluation_generates_fixed_split_and_metrics_without_changing_online_so
     repeated_dataset, repeated_split, repeated_report = evaluate_annotated_experience(
         experience_dir,
         annotations,
+        evidence_dir=_evidence_dir(experience_dir),
+        salt=_SALT,
+        evaluation_fraction=0.5,
+        k=2,
+    )
+    (_evidence_dir(experience_dir) / "unrelated-local-file.txt").write_text(
+        "unrelated local evidence",
+        encoding="utf-8",
+    )
+    _extra_dataset, _extra_split, report_with_extra_file = evaluate_annotated_experience(
+        experience_dir,
+        annotations,
+        evidence_dir=_evidence_dir(experience_dir),
         salt=_SALT,
         evaluation_fraction=0.5,
         k=2,
@@ -279,12 +330,16 @@ def test_evaluation_generates_fixed_split_and_metrics_without_changing_online_so
     assert repeated_dataset == dataset
     assert repeated_split == split
     assert repeated_report == report
+    assert report_with_extra_file == report
     assert len(split.train_group_ids) == 1
     assert len(split.evaluation_group_ids) == 1
     assert set(split.train_group_ids).isdisjoint(split.evaluation_group_ids)
     assert report["schema"] == EXPERIENCE_REPORT_SCHEMA
     assert report["case_count"] == 4
     assert report["evaluation_case_count"] == 2
+    assert report["outcome_evidence_revalidated"] is True
+    assert report["outcome_evidence_digest_count"] == 4
+    assert report["outcome_evidence_case_count"] == 4
     assert report["online_sorting_changed"] is False
     assert report["legacy_metrics"]["query_count"] == 2
     assert report["similarity_metrics"]["query_count"] == 2
@@ -295,15 +350,29 @@ def test_evaluation_generates_fixed_split_and_metrics_without_changing_online_so
 
 def test_annotations_require_review_and_catalog_candidates(tmp_path: Path) -> None:
     experience_dir = _experience_library(tmp_path)
-    template = export_annotation_template(experience_dir, salt=_SALT)
+    template = export_annotation_template(
+        experience_dir,
+        evidence_dir=_evidence_dir(experience_dir),
+        salt=_SALT,
+    )
 
     with pytest.raises(ValueError, match="reviewed"):
-        evaluate_annotated_experience(experience_dir, template, salt=_SALT)
+        evaluate_annotated_experience(
+            experience_dir,
+            template,
+            evidence_dir=_evidence_dir(experience_dir),
+            salt=_SALT,
+        )
 
     reviewed = _review_all(template)
     reviewed["cases"][0]["relevant_ids"] = ["case-not-in-catalog"]
     with pytest.raises(ValueError, match="candidate_ids"):
-        evaluate_annotated_experience(experience_dir, reviewed, salt=_SALT)
+        evaluate_annotated_experience(
+            experience_dir,
+            reviewed,
+            evidence_dir=_evidence_dir(experience_dir),
+            salt=_SALT,
+        )
 
 
 def test_export_rejects_missing_symbol_and_short_salt(tmp_path: Path) -> None:
@@ -324,9 +393,17 @@ def test_export_rejects_missing_symbol_and_short_salt(tmp_path: Path) -> None:
     )
 
     with pytest.raises(ValueError, match="salt"):
-        export_annotation_template(experience_dir, salt="short")
+        export_annotation_template(
+            experience_dir,
+            evidence_dir=_evidence_dir(experience_dir),
+            salt="short",
+        )
     with pytest.raises(ValueError, match="symbol"):
-        export_annotation_template(experience_dir, salt=_SALT)
+        export_annotation_template(
+            experience_dir,
+            evidence_dir=_evidence_dir(experience_dir),
+            salt=_SALT,
+        )
 
     case_path.write_text(
         json.dumps(
@@ -342,7 +419,11 @@ def test_export_rejects_missing_symbol_and_short_salt(tmp_path: Path) -> None:
     renamed = case_path.with_name("missing-timestamp.json")
     case_path.rename(renamed)
     with pytest.raises(ValueError, match="filename"):
-        export_annotation_template(experience_dir, salt=_SALT)
+        export_annotation_template(
+            experience_dir,
+            evidence_dir=_evidence_dir(experience_dir),
+            salt=_SALT,
+        )
 
 
 def test_export_and_readiness_reject_missing_outcome_evidence(
@@ -364,7 +445,11 @@ def test_export_and_readiness_reject_missing_outcome_evidence(
     )
 
     with pytest.raises(ValueError, match="outcome evidence"):
-        export_annotation_template(experience_dir, salt=_SALT)
+        export_annotation_template(
+            experience_dir,
+            evidence_dir=_evidence_dir(experience_dir),
+            salt=_SALT,
+        )
 
     payload = json.loads(case_path.read_text(encoding="utf-8"))
     payload["outcome_evidence"] = {
@@ -375,15 +460,97 @@ def test_export_and_readiness_reject_missing_outcome_evidence(
     }
     case_path.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(ValueError, match="outcome evidence"):
-        export_annotation_template(experience_dir, salt=_SALT)
+        export_annotation_template(
+            experience_dir,
+            evidence_dir=_evidence_dir(experience_dir),
+            salt=_SALT,
+        )
 
-    readiness = inspect_experience_readiness(experience_dir, salt=_SALT)
+    readiness = inspect_experience_readiness(
+        experience_dir,
+        evidence_dir=_evidence_dir(experience_dir),
+        salt=_SALT,
+    )
     rendered = json.dumps(readiness)
     assert readiness["catalog_valid"] is False
     assert readiness["ready_for_export"] is False
     assert readiness["export_blockers"] == ["invalid_experience_catalog"]
     assert "PRIVATE_SYMBOL" not in rendered
     assert str(case_path) not in rendered
+
+
+def test_local_evidence_revalidation_rejects_missing_and_replaced_files(
+    tmp_path: Path,
+) -> None:
+    experience_dir = _experience_library(tmp_path)
+    evidence_dir = _evidence_dir(experience_dir)
+    template = export_annotation_template(
+        experience_dir,
+        evidence_dir=evidence_dir,
+        salt=_SALT,
+    )
+    annotations = _review_all(template)
+
+    missing = inspect_experience_readiness(
+        experience_dir,
+        evidence_dir=tmp_path / "missing-evidence",
+        salt=_SALT,
+    )
+    assert missing["catalog_valid"] is True
+    assert missing["evidence_status"] == "missing"
+    assert missing["evidence_file_count"] == 0
+    assert missing["evidence_verified_case_count"] == 0
+    assert missing["export_blockers"] == ["outcome_evidence_files_missing"]
+
+    invalid_evidence_dir = tmp_path / "invalid-evidence"
+    invalid_evidence_dir.mkdir()
+    (invalid_evidence_dir / "empty-evidence.txt").write_bytes(b"")
+    invalid = inspect_experience_readiness(
+        experience_dir,
+        evidence_dir=invalid_evidence_dir,
+        salt=_SALT,
+    )
+    assert invalid["catalog_valid"] is True
+    assert invalid["evidence_status"] == "invalid"
+    assert invalid["evidence_file_count"] == 1
+    assert invalid["evidence_verified_case_count"] == 0
+    assert invalid["export_blockers"] == ["outcome_evidence_files_invalid"]
+
+    evidence_path = sorted(evidence_dir.iterdir())[0]
+    evidence_path.write_text("replaced evidence payload", encoding="utf-8")
+    unmatched = inspect_experience_readiness(
+        experience_dir,
+        evidence_dir=evidence_dir,
+        salt=_SALT,
+    )
+    rendered = json.dumps(unmatched)
+    assert unmatched["catalog_valid"] is True
+    assert unmatched["evidence_status"] == "unmatched"
+    assert unmatched["evidence_file_count"] == 4
+    assert unmatched["evidence_verified_case_count"] == 3
+    assert unmatched["export_blockers"] == ["outcome_evidence_files_unmatched"]
+    for private_value in (
+        "PRIVATE_SYMBOL",
+        str(experience_dir),
+        str(evidence_dir),
+        evidence_path.name,
+    ):
+        assert private_value not in rendered
+
+    with pytest.raises(ValueError, match="outcome_evidence_files_unmatched"):
+        export_annotation_template(
+            experience_dir,
+            evidence_dir=evidence_dir,
+            salt=_SALT,
+        )
+    with pytest.raises(ValueError, match="outcome_evidence_files_unmatched"):
+        evaluate_annotated_experience(
+            experience_dir,
+            annotations,
+            evidence_dir=evidence_dir,
+            salt=_SALT,
+            evaluation_fraction=0.5,
+        )
 
 
 def test_cli_uses_environment_salt_and_writes_sanitized_outputs(
@@ -402,6 +569,8 @@ def test_cli_uses_environment_salt_and_writes_sanitized_outputs(
                 "preflight",
                 "--experience-dir",
                 str(experience_dir),
+                "--evidence-dir",
+                str(_evidence_dir(experience_dir)),
                 "--require",
                 "export",
             ]
@@ -414,6 +583,8 @@ def test_cli_uses_environment_salt_and_writes_sanitized_outputs(
                 "export-labels",
                 "--experience-dir",
                 str(experience_dir),
+                "--evidence-dir",
+                str(_evidence_dir(experience_dir)),
                 "--output",
                 str(labels_path),
             ]
@@ -428,6 +599,8 @@ def test_cli_uses_environment_salt_and_writes_sanitized_outputs(
                 "preflight",
                 "--experience-dir",
                 str(experience_dir),
+                "--evidence-dir",
+                str(_evidence_dir(experience_dir)),
                 "--annotations",
                 str(labels_path),
                 "--require",
@@ -442,6 +615,8 @@ def test_cli_uses_environment_salt_and_writes_sanitized_outputs(
                 "evaluate",
                 "--experience-dir",
                 str(experience_dir),
+                "--evidence-dir",
+                str(_evidence_dir(experience_dir)),
                 "--annotations",
                 str(labels_path),
                 "--output-dir",
