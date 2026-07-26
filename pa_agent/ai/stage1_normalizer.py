@@ -674,24 +674,24 @@ def normalize_stage1(
         except Exception as exc:  # noqa: BLE001
             logger.warning("DecisionNodeEngine.apply_stage1 failed: %s", exc)
 
-    if "strategy_files_needed" not in out or out.get("strategy_files_needed") is None:
-        alt = out.pop("recommended_strategy_files", None)
-        if alt is not None:
-            out["strategy_files_needed"] = _normalize_strategy_file_names(alt)
-            logger.debug("Mapped recommended_strategy_files -> strategy_files_needed")
-        elif out.get("cycle_position") and out.get("direction"):
+    legacy_files = out.pop("strategy_files_needed", None)
+    recommended_files = out.pop("recommended_strategy_files", None)
+    if legacy_files is None:
+        legacy_files = recommended_files
+    if _normalize_strategy_file_names(legacy_files):
+        logger.debug("Ignored model-provided strategy filename suggestions")
+    if out.get("cycle_position"):
+        if out.get("direction"):
             try:
                 from pa_agent.ai.router import route_strategy_files
-
                 out["strategy_files_needed"] = route_strategy_files(out)
-                logger.debug("Filled strategy_files_needed from router")
             except Exception as exc:  # noqa: BLE001
-                logger.debug("router fallback for strategy_files_needed failed: %s", exc)
-                out.setdefault("strategy_files_needed", [])
+                logger.debug("router projection for strategy_files_needed failed: %s", exc)
+                out["strategy_files_needed"] = []
+        else:
+            out["strategy_files_needed"] = []
     else:
-        out["strategy_files_needed"] = _normalize_strategy_file_names(
-            out.get("strategy_files_needed")
-        )
+        out["strategy_files_needed"] = []
 
     from pa_agent.ai.pattern_routing import ensure_detected_patterns_coherent
 

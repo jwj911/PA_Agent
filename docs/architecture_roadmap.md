@@ -22,7 +22,7 @@
 | 路线 | 当前状态 | 已有基础 | 主要剩余工作 |
 |---|---|---|---|
 | L1 Provider/数据源注册表 | 扩展兼容观察与下线策略/CI 门禁已收口；legacy registrar 按政策 retain | registry、entry point、v1 registrar、失败隔离、并发/lazy-import 和固定样例观察已完成；`compatibility_policy.json` 强制保留未声明版本 callable | 观察真实安装扩展；最早 0.3.0 且具备 v0.2.0 tag、inventory 和迁移报告后才评估删除 |
-| L2 Prompt 模板引擎 | 5 轮等价观察与下线策略/CI 门禁已收口；Prompt ID M1-M3 已完成；旧 loader/fallback 按政策 retain | TemplateStore、29 个稳定 Prompt ID、ID 路由/loader、TemplateContext/AnalysisRecord/Pipeline 双合同、GUI 显示名 + ID/tooltip、golden snapshot 和回退观察已完成 | 执行 M4 模型合同清理并独立评估，再按证据决定 M5 物理后缀迁移；最早 0.3.0 且具备 v0.2.0 tag、fallback 零命中和 golden 报告后才评估删除旧入口 |
+| L2 Prompt 模板引擎 | 5 轮等价观察与下线策略/CI 门禁已收口；Prompt ID M1-M3、M4.1 已完成；旧 loader/fallback 按政策 retain | TemplateStore、29 个稳定 Prompt ID、ID 路由/loader、TemplateContext/AnalysisRecord/Pipeline 双合同、GUI 显示名 + ID/tooltip、Stage 1 schema v2 和 router 权威兼容 Normalizer 已完成 | 执行 M4.2 Prompt/golden 清理与 M4.3 独立评估，再按证据决定 M5 物理后缀迁移；最早 0.3.0 且具备 v0.2.0 tag、fallback 零命中和 golden 报告后才评估删除旧入口 |
 | L3 Pipeline Builder | 三轮真实稳定观察与默认 Pipeline 切换已收口，legacy 作为显式回滚保留 | 完整四步 Pipeline、Task 10 全终态矩阵、5 场景×3 轮 fixture 对照；3 个独立真实 pair 的 6 个单体校验和 3 个成对校验均为 `valid=true`；新旧缺失配置默认 `true`，显式 `false` 回滚 | 持续观察 lifecycle/terminal/record 指标；出现未解释偏差先回滚，不删除 legacy facade |
 | L4 性能优化 | v2 hosted baseline 与同环境 10% p95 对照已收口，进入每日持续观察 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；`pa-agent.performance.v1` 报告、`l4.synthetic.v2` 批量折算采样、p50/p95、100/500/5000 bars 基准、版本隔离 baseline cache 和 artifact；run `29975410917`/`29975592352` 完成建基线与 restore 对照 | 维护每日 schedule；runner image、benchmark version 或采样合同变化时重建 baseline |
 | L5 经验库升级 | 记录筛选/review catalog/可核验 outcome 导入、本地 evidence 重核、evidence-backed readiness、固定切分、opaque 标注/报告管道已交付，真实数据评估未收口 | completed record shape-only scan；脱敏 record ID catalog；固定 outcome policy + 本地证据 SHA-256；annotation/export/evaluate envelope 校验与本地文件重哈希门禁；人工 `success|failure` 最小化导入与 digest 去重；全量相关性排序 + K 线相似度；版本化 dataset/split/report；HMAC opaque catalog 和 leave-one-out 对照；不改变线上排序 | 为真实 outcome 提供并保留本地证据文件，导入至少两个不同 symbol 的 instrument group，完成相关性标注和指标报告；证据充分后才评估权重 |
@@ -319,6 +319,11 @@ filename 参数和 callback 保持兼容，安全摘要只记录数量。旧 `Te
 未知旧值仅标记 unresolved。M1-M3 已完成且保持 Prompt 字节不变。后续 M4 单独清理模型输出
 filename 的职责并执行合同评估，M5 再决定物理后缀迁移；不得与多 Agent、Prompt 文本优化或
 经验库权重调整混在同一提交。
+
+M4.1 已升级 Stage 1 schema 为 `pa-agent.stage1-output.v2`，模型输出不再要求
+`strategy_files_needed`；Normalizer 仍接受旧字段/alias，但兼容字段始终由 router 重新投影，
+模型建议不能覆盖运行时路由。本切片未修改 Prompt 正文或 golden；M4.2 再清理模型可见字段和
+物理 filename 交叉引用，M4.3 独立执行合同评估与真实 Provider 观察。
 
 ## 6. L3：Pipeline Builder / State Machine
 

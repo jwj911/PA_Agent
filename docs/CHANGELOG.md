@@ -18,6 +18,24 @@
 
 ---
 
+## [Unreleased] — 2026-07-26（L2：Prompt ID 解耦 M4.1 Stage 1 schema v2）
+
+- Stage 1 schema 新增 `pa-agent.stage1-output.v2` 标识，并从 `required` 与 `properties`
+  移除 `strategy_files_needed`；新模型不再承担策略 filename 输出职责，旧输出携带额外字段
+  仍可兼容校验。
+- Normalizer 同时接受旧 `strategy_files_needed` 与 `recommended_strategy_files`，但忽略
+  模型建议内容；输出中的兼容字段始终由 `route_strategy_files()` 重新投影，缺少核心诊断字段
+  或 router 异常时保守置空。
+- 更新 Stage 1 Normalizer 测试，覆盖 schema v2、无 filename 字段输入、旧建议不越权、
+  alias 不越权和 router 投影；schema/Normalizer/Pipeline 聚焦回归 **47 passed**、
+  属性/Pipeline 专项 **32 passed**、完整非 live unit 层 **1,090 passed**、integration 层
+  **80 passed**。
+- `py_compile`、focused Ruff/Black、CI target、3,712 条 Ruff baseline 和差异检查通过。
+- 同步 Prompt ID 方案、`AGENTS.md`、架构路线图和执行计划为“M4.1 已完成，M4.2 待实施”。
+  本切片未修改 Prompt 正文、增量合同、Stage 2 carryover、golden 或 Provider 行为。
+
+---
+
 ## [Unreleased] — 2026-07-26（L2：Prompt ID 解耦 M3.3 GUI 显示合同）
 
 - `PromptFilesPanel` 默认显示 `display_name [prompt_id]`，不再把 `.txt` filename 当作用户可见

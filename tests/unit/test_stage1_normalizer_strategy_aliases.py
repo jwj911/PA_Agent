@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from pa_agent.ai.router import route_strategy_files
 from pa_agent.ai.stage1_normalizer import normalize_stage1
 
 
-def test_strategy_file_aliases():
+def test_model_strategy_file_aliases_do_not_override_router():
     obj = {
         "cycle_position": "trading_range",
         "direction": "neutral",
@@ -43,8 +44,5 @@ def test_strategy_file_aliases():
         "gate_result": "wait",
     }
     out = normalize_stage1(obj)
-    assert out["strategy_files_needed"] == [
-        "震荡区间分析识别.txt",
-        "震荡区间交易策略.txt",
-        "文件13-窄通道与宽通道策略.txt",
-    ]
+    assert out["strategy_files_needed"] == route_strategy_files(out)
+    assert "文件13-窄通道与宽通道策略.txt" not in out["strategy_files_needed"]

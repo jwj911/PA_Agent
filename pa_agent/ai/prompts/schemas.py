@@ -198,8 +198,11 @@ _BAR_BY_BAR_ITEM: dict = {
 
 # ── Stage 1 schema ────────────────────────────────────────────────────────────
 
+STAGE1_SCHEMA_VERSION = "pa-agent.stage1-output.v2"
+
 STAGE1_SCHEMA: dict = {
     "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": f"urn:{STAGE1_SCHEMA_VERSION}",
     "type": "object",
     "required": [
         "cycle_position",
@@ -210,7 +213,6 @@ STAGE1_SCHEMA: dict = {
         "key_signals",
         "htf_context",
         "entry_setup",
-        "strategy_files_needed",
         "bar_by_bar_summary",
         "gate_trace",
         "gate_result",
@@ -280,7 +282,6 @@ STAGE1_SCHEMA: dict = {
             "additionalProperties": True,
         },
         "entry_setup": {"type": "string"},
-        "strategy_files_needed": {"type": "array", "items": {"type": "string"}},
         "risk_warning": {"type": "string"},
         "bar_analysis": _BAR_ANALYSIS,
         "bar_by_bar_summary": {

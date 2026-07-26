@@ -28,8 +28,8 @@
 - 迭代记录：[`docs/CHANGELOG.md`](./docs/CHANGELOG.md)
 - 架构升级路线图：[`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md)
 - Prompt ID 解耦方案：[`docs/prompt_id_decoupling_plan.md`](./docs/prompt_id_decoupling_plan.md)，
-  规定稳定逻辑 ID、可变存储路径、旧文件名兼容投影和 M1-M5 迁移门禁；M1-M3 已完成，
-  下一阶段为 M4 模型合同清理与独立评估。
+  规定稳定逻辑 ID、可变存储路径、旧文件名兼容投影和 M1-M5 迁移门禁；M1-M3、M4.1
+  已完成，下一阶段为 M4.2 Prompt/golden 清理。
 - 短中期执行计划：[`docs/iteration_plan.md`](./docs/iteration_plan.md)，在长期边界以
   `architecture_roadmap` 为准的前提下，拆解后续若干轮交付物、验收标准和依赖顺序。
 - L6/L3 真实观察手册：[`docs/live_observation_runbook.md`](./docs/live_observation_runbook.md)，
@@ -598,7 +598,9 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     未知兼容 router filename 保留且 ID 为空，旧 `on_stage2_files` 与 Stage 2 filename 参数
     不变。M3.3 已让 Prompt 调试面板显示 `display_name [prompt_id]`，相对 `source_path`、
     legacy filename 和版本只进入 tooltip；未知旧值显示 `[unresolved]`，不用于磁盘访问。
-    M1-M3 均不得更新 golden 来掩盖字节漂移；M4 合同变化必须独立评估并保留旧 schema 兼容。
+    M1-M3 均不得更新 golden 来掩盖字节漂移。M4.1 已升级 Stage 1 schema v2，移除
+    `strategy_files_needed` 的模型必填/property；Normalizer 仍接受旧字段与 alias，但兼容字段
+    始终由 router 重建。M4.2 才修改 Prompt/golden，M4.3 必须独立评估并保留旧 schema 兼容。
 21. **L1 外部扩展兼容观察当前进度**：外部风格 data source/AI client registrar 已完成 5 轮
     重复观察；versioned registrar 必须声明 `pa-agent.registry-extension.v1`，旧的未声明版本
     callable 继续兼容，未知显式版本只隔离当前扩展。观察样例只使用 marker builder，不连接

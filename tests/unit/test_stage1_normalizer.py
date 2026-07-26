@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from pa_agent.ai.coherence_checks import validate_stage1_coherence
+from pa_agent.ai.prompts.schemas import STAGE1_SCHEMA, STAGE1_SCHEMA_VERSION
+from pa_agent.ai.router import route_strategy_files
 from pa_agent.ai.stage1_normalizer import normalize_stage1
 from pa_agent.data.base import IndicatorBundle, KlineBar, KlineFrame
 from tests.fixtures.validators import schema_test_validator
@@ -30,12 +32,38 @@ def test_hoists_bar_by_bar_summary_from_bar_analysis() -> None:
     assert "bar_by_bar_summary" not in (out.get("bar_analysis") or {})
 
 
-def test_maps_recommended_strategy_files() -> None:
+def test_new_stage1_schema_drops_model_strategy_filename_field() -> None:
+    assert STAGE1_SCHEMA_VERSION == "pa-agent.stage1-output.v2"
+    assert STAGE1_SCHEMA["$id"] == "urn:pa-agent.stage1-output.v2"
+    assert "strategy_files_needed" not in STAGE1_SCHEMA["required"]
+    assert "strategy_files_needed" not in STAGE1_SCHEMA["properties"]
+
+
+def test_validator_accepts_new_stage1_payload_without_strategy_files() -> None:
+    import json
+
+    from pa_agent.ai.json_validator import Ok
+
+    raw = {**VALID_STAGE1}
+    raw.pop("strategy_files_needed")
+
+    result = schema_test_validator().validate(
+        "stage1",
+        json.dumps(raw, ensure_ascii=False),
+    )
+
+    assert isinstance(result, Ok)
+    assert result.obj["strategy_files_needed"] == route_strategy_files(result.obj)
+
+
+def test_ignores_recommended_strategy_files_and_projects_router_output() -> None:
     raw = {**VALID_STAGE1}
     del raw["strategy_files_needed"]
     raw["recommended_strategy_files"] = ["下跌通道分析识别.txt"]
     out = normalize_stage1(raw)
-    assert out["strategy_files_needed"] == ["下跌通道分析识别.txt"]
+    assert out["strategy_files_needed"] == route_strategy_files(out)
+    assert "下跌通道分析识别.txt" not in out["strategy_files_needed"]
+    assert "recommended_strategy_files" not in out
 
 
 def test_repair_gate_result_unknown_to_proceed_when_13_not_chaotic() -> None:

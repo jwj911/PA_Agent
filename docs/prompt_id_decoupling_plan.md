@@ -1,6 +1,6 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1-M3 已完成，M4 模型合同清理待实施
+> 状态：M1-M3、M4.1 已完成，M4.2 Prompt/golden 待实施
 >
 > 日期：2026-07-26
 >
@@ -463,6 +463,19 @@ GUI 默认显示：
 - Prompt 正文中的 ``*.txt`` 交叉引用改为稳定文档标题，例如 `《市场诊断框架》`；
   不向模型暴露物理路径或要求模型输出 `prompt_id`。
 - 更新 schema 版本、golden、使用文档和兼容策略。
+
+**M4.1 Stage 1 schema 与兼容 Normalizer 实施结果（2026-07-26）**：
+
+- Stage 1 schema 新增 `pa-agent.stage1-output.v2` 标识，并从 `required` 与 `properties` 中移除
+  `strategy_files_needed`；旧模型仍可携带该额外字段，不会因兼容输入被拒绝。
+- Normalizer 同时接受旧 `strategy_files_needed` 与 `recommended_strategy_files`，但只把它们
+  视为兼容输入并忽略其内容；输出中的同名兼容字段始终由 `route_strategy_files()` 生成，
+  缺少核心诊断字段或 router 异常时保守回退为空列表。
+- 新增 schema v2、无 filename 字段校验、旧建议不覆盖 router 和 alias 不越权测试；schema/
+  Normalizer/Pipeline 聚焦回归 47 项、属性/Pipeline 专项 32 项、完整非 live unit 层
+  1,090 项、integration 层 80 项通过，3,712 条 Ruff baseline 不变。
+- 本切片未修改 Prompt 正文、增量合同、Stage 2 carryover、golden 或 Provider 行为。M4.2
+  单独移除模型可见字段与物理 filename 交叉引用，并更新预期 Prompt/golden。
 
 **退出门禁**：
 
