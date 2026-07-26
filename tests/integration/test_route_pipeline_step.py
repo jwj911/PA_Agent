@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+from pa_agent.ai.router import route_strategy_files, route_strategy_prompt_ids
 from pa_agent.config.settings import Settings
 from pa_agent.orchestrator.pipeline import PersistenceIntent, TerminalStatus
 from pa_agent.orchestrator.two_stage import TwoStageOrchestrator
@@ -59,11 +60,32 @@ def test_route_step_uses_callable_router_and_preserves_file_order(frame) -> None
     )
 
     assert state.terminal_status is TerminalStatus.COMPLETED
+    assert state.strategy_prompt_ids == []
     assert state.strategy_files == ["first.txt", "second.txt", "third.txt"]
+    assert state.route_outputs["strategy_prompt_ids"] == []
     assert state.route_outputs["strategy_files"] == state.strategy_files
     assert state.route_outputs["experience_entries"] == []
+    assert state.record.strategy_prompt_ids_used == []
     assert len(routed_diagnoses) == 1
     assert routed_diagnoses[0]["cycle_position"] == VALID_STAGE1["cycle_position"]
+
+
+def test_route_step_carries_prompt_ids_through_route_and_record(frame) -> None:
+    orchestrator, _client, _writer, exp_reader = _orchestrator(route_strategy_files)
+    exp_reader.read_for_stage2.return_value = []
+
+    state = orchestrator.run_pipeline(
+        frame=frame,
+        cancel_token=CancelToken(),
+        on_event=lambda _event: None,
+    )
+
+    expected_ids = route_strategy_prompt_ids(state.stage1_normalized_json)
+    assert state.terminal_status is TerminalStatus.COMPLETED
+    assert state.strategy_prompt_ids == expected_ids
+    assert state.route_outputs["strategy_prompt_ids"] == expected_ids
+    assert state.record.strategy_prompt_ids_used == expected_ids
+    assert state.record.strategy_files_used == state.strategy_files
 
 
 def test_route_step_supports_object_router(frame) -> None:
@@ -155,7 +177,9 @@ def test_route_step_preserves_pre_stage2_cancel_boundary(frame) -> None:
 
     assert state.terminal_status is TerminalStatus.CANCELLED
     assert state.step_history == ["stage1", "route", "persist"]
+    assert state.strategy_prompt_ids == []
     assert state.strategy_files == ["strategy.txt"]
+    assert state.record.strategy_prompt_ids_used == []
     assert events == [
         OrchestratorEvent.Stage1Started,
         OrchestratorEvent.Stage1Done,

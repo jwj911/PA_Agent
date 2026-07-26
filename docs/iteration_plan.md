@@ -20,7 +20,7 @@
 | 路线 | 当前状态 | 已完成基础 | 主要剩余工作 |
 |---|---|---|---|
 | L1 Provider/数据源注册表 | 固定样例观察与下线策略/CI 门禁已收口；legacy registrar 按政策 retain | registry、entry point、v1 registrar、失败隔离、生命周期/并发/lazy-import 和 5 轮观察已交付 | 观察真实安装扩展；最早 0.3.0 且满足 tag/inventory/迁移证据后才评估删除 |
-| L2 Prompt 模板引擎 | 5 轮等价观察与下线策略/CI 门禁已收口；Prompt ID M1-M3.1 已完成；旧 loader/fallback 按政策 retain | TemplateStore、29 个稳定 Prompt ID 与 manifest 映射、ID 路由、Stage 1/2 原子 ID loader、TemplateContext 与 AnalysisRecord ID/filename 双合同、golden snapshots 和整组回退已交付 | 执行 M3.2 Pipeline state/route outputs 与 M3.3 GUI 双合同；最早 0.3.0 且满足 tag/fallback 零命中/golden 证据后才评估删除旧入口 |
+| L2 Prompt 模板引擎 | 5 轮等价观察与下线策略/CI 门禁已收口；Prompt ID M1-M3.2 已完成；旧 loader/fallback 按政策 retain | TemplateStore、29 个稳定 Prompt ID 与 manifest 映射、ID 路由、Stage 1/2 原子 ID loader、TemplateContext、AnalysisRecord 与 Pipeline state ID/filename 双合同、golden snapshots 和整组回退已交付 | 执行 M3.3 GUI 显示名/ID/tooltip 双合同；最早 0.3.0 且满足 tag/fallback 零命中/golden 证据后才评估删除旧入口 |
 | L3 Pipeline Builder | 三轮真实稳定观察与默认 Pipeline 切换已收口，legacy 作为显式回滚保留 | 完整四步 Pipeline、Task 10 全终态矩阵、5 场景×3 轮 fixture 对照；3 个独立真实 pair 的 6 个单体校验和 3 个成对校验均为 `valid=true`；缺失配置默认 `true`，显式 `false` 回滚 | 持续观察 lifecycle/terminal/record 指标；出现未解释偏差先回滚，不删除 legacy facade |
 | L4 性能预算 | v2 hosted baseline、restore、九项 p95 对照和 10% 门禁已收口，进入每日观察 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；`pa-agent.performance.v1` 报告、`l4.synthetic.v2` 批量折算采样、p50/p95、100/500/5000 bars 基准、版本隔离 baseline cache；run `29975410917`/`29975592352` 已通过 | 维护每日 schedule；runner image、benchmark version 或采样合同变化时重建 baseline |
 | L5 经验库升级 | 记录筛选/review catalog/可核验 outcome 导入、本地 evidence 重核、evidence-backed readiness/evaluator、固定切分和 opaque 标注/报告管道已交付，真实数据评估未收口 | completed record shape-only scan；脱敏 record ID catalog；固定 outcome policy + 本地证据 SHA-256；annotation/export/evaluate envelope 校验与本地文件重哈希门禁；人工 `success|failure` 最小化导入与 digest 去重；版本化 dataset/split/report 和 leave-one-out 对照；不改变线上排序 | 为真实 outcome 提供并保留本地证据文件，导入至少两个不同 symbol 的 instrument group，完成相关性标注和指标报告；证据充分后才评估权重 |
@@ -41,7 +41,7 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 | P0 | L5 | curation/review/evidence-backed 评估管道、本地文件重核和 readiness 已建立；唯一 eligible 尚无已平仓证据并继续 defer，经验目录为空 | 提供并保留本地 evidence file，按 record ID 导入至少两个不同 symbol 的 group，使文件重核和 preflight 通过，再生成 Recall/NDCG/fallback/stability 报告 |
 | 已收口 | L4 | v1 负向证据证明 restore/阻断/失败保护；v2 run `29975410917`/`29975592352` 完成建基线和同环境对照 | 每日 schedule 持续观察；环境或合同变化时重建 baseline |
 | 观察 | L1 | 下线策略已固定，当前 retain | 收集真实安装扩展 inventory；未满足 0.3.0/tag/迁移证据前继续保留 |
-| P1 | L2 | M1-M3.1 已完成；AnalysisRecord 已双写 ID/legacy filename，Pipeline state 和 GUI callback 仍以 `.txt` 文件名传递 | 下一切片为 M3.2 Pipeline state/route outputs 双合同；随后完成 M3.3 GUI 显示名 + ID |
+| P1 | L2 | M1-M3.2 已完成；AnalysisRecord、Pipeline state 和 route outputs 已双写 ID/legacy filename，GUI callback 仍以 `.txt` 文件名传递 | 下一切片为 M3.3 ID callback 与 GUI 显示名 + ID，路径仅作 tooltip |
 
 当前外部证据主链路只剩 **L5**；在等待真实 evidence 期间，可按
 [`prompt_id_decoupling_plan.md`](./prompt_id_decoupling_plan.md) 推进不依赖外部数据的 L2
@@ -61,17 +61,18 @@ flag-off/flag-on 受控 fixture rollout 观察，并于 2026-07-23/24 连续取�
 
 推荐顺序如下：
 
-1. **L2/M3：Pipeline、record 与 GUI 双合同**。M1-M3.1 已完成；下一步让 Pipeline state 和
-   route outputs 承载 Prompt ID，同时保留旧 callback/字段和旧记录读取，不改变 Prompt 正文
-   或模型 JSON schema；随后完成 GUI 显示名 + ID。
+1. **L2/M3：Pipeline、record 与 GUI 双合同**。M1-M3.2 已完成；下一步增加兼容 ID callback，
+   让 GUI 显示名称 + ID、路径仅作 tooltip，同时保留旧 filename callback/字段和旧记录读取，
+   不改变 Prompt 正文或模型 JSON schema。
 2. **L5：真实案例 opaque 导出、人工标注和离线指标报告**。具备真实 evidence 后立即恢复。
 3. **L3/L6**：保持持续观察；Provider、事件或记录合同变化时重跑真实 pair，出现偏差先回滚。
 4. **L4**：每日持续基准，不凭单次波动修改热路径。
 5. **L1/L2 旧入口**：按 `compatibility_policy.json` retain；证据与版本条件未满足前不删除。
 
 第 233 轮模板引擎迁移和 Prompt ID M1-M2 已完成；M3.1 已完成 AnalysisRecord ID/filename
-双合同与旧记录内存补全。M3.2 从 Pipeline state/route outputs 继续结构解耦并保持 Prompt
-字节不变，不重复改写 L2 Prompt 文本。M4 模型合同清理必须另开评估切片。
+双合同与旧记录内存补全，M3.2 已完成 Pipeline state/route outputs 双合同。M3.3 从 ID callback
+和 GUI 展示继续结构解耦并保持 Prompt 字节不变，不重复改写 L2 Prompt 文本。M4 模型合同清理
+必须另开评估切片。
 
 ## 2.1 当前未收敛问题
 

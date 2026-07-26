@@ -109,6 +109,7 @@ def _assemble_pipeline_record(state: PipelineState, *, full: bool) -> Any:
         if state.stage2_normalized_json is not None
         else record.stage2_decision
     )
+    strategy_prompt_ids = state.strategy_prompt_ids or record.strategy_prompt_ids_used
     strategy_files = state.strategy_files or record.strategy_files_used
     experience_loaded = _experience_payload(
         state.experience_entries,
@@ -122,6 +123,7 @@ def _assemble_pipeline_record(state: PipelineState, *, full: bool) -> Any:
         "stage2_messages": list(stage2_messages),
         "stage2_response": stage2_reply,
         "stage2_decision": stage2_json,
+        "strategy_prompt_ids_used": [str(prompt_id) for prompt_id in strategy_prompt_ids],
         "strategy_files_used": list(strategy_files),
         "experience_loaded": experience_loaded,
         "usage_total": usage_total,
@@ -199,12 +201,11 @@ def _set_stage2_record_snapshot(
     state.stage2_usage = _response_usage(record.stage2_response)
     if not state.stage2_usage and state.stage2_usage_calls:
         state.stage2_usage = _usage_snapshot({"usage": state.stage2_usage_calls[-1]})
-    state.strategy_files = list(record.strategy_files_used)
-    state.experience_entries = list(record.experience_loaded)
-    state.route_outputs = {
-        "strategy_files": list(state.strategy_files),
-        "experience_entries": list(state.experience_entries),
-    }
+    state.set_route_outputs(
+        strategy_prompt_ids=record.strategy_prompt_ids_used,
+        strategy_files=record.strategy_files_used,
+        experience_entries=record.experience_loaded,
+    )
     state.usage_total = dict(record.usage_total)
 
 
@@ -233,6 +234,7 @@ def _set_stage1_runtime_snapshot(
 def _record_with_route_snapshot(
     state: PipelineState,
     *,
+    strategy_prompt_ids: list[str],
     strategy_files: list[str],
     experience_entries: list[Any],
     exception: dict[str, Any] | None = None,
@@ -244,6 +246,7 @@ def _record_with_route_snapshot(
         "stage1_messages": state.stage1_messages,
         "stage1_response": state.stage1_reply.raw,
         "stage1_diagnosis": state.stage1_normalized_json,
+        "strategy_prompt_ids_used": strategy_prompt_ids,
         "strategy_files_used": strategy_files,
         "experience_loaded": [
             entry.model_dump() if hasattr(entry, "model_dump") else dict(entry)
@@ -431,6 +434,7 @@ class RouteStep:
             state.set_persistence_intent("partial")
             state.record = _record_with_route_snapshot(
                 state,
+                strategy_prompt_ids=[],
                 strategy_files=[],
                 experience_entries=[],
                 exception={
@@ -450,11 +454,14 @@ class RouteStep:
             strategy_files=strategy_files,
             experience_entries=experience_entries,
         )
+        strategy_prompt_ids = [str(prompt_id) for prompt_id in state.strategy_prompt_ids]
+        strategy_files = list(state.strategy_files)
         _log(
             state,
             "route_result",
             pipeline_step=self.name,
             pipeline_status="succeeded",
+            pipeline_strategy_prompt_id_count=len(strategy_prompt_ids),
             pipeline_strategy_file_count=len(strategy_files),
             pipeline_experience_entry_count=len(experience_entries),
         )
@@ -463,6 +470,7 @@ class RouteStep:
             _log(state, "route_cancelled", pipeline_step=self.name)
             state.record = _record_with_route_snapshot(
                 state,
+                strategy_prompt_ids=strategy_prompt_ids,
                 strategy_files=strategy_files,
                 experience_entries=experience_entries,
             )

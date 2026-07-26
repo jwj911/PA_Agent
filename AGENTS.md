@@ -28,8 +28,8 @@
 - 迭代记录：[`docs/CHANGELOG.md`](./docs/CHANGELOG.md)
 - 架构升级路线图：[`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md)
 - Prompt ID 解耦方案：[`docs/prompt_id_decoupling_plan.md`](./docs/prompt_id_decoupling_plan.md)，
-  规定稳定逻辑 ID、可变存储路径、旧文件名兼容投影和 M1-M5 迁移门禁；M1-M3.1 已完成，
-  M3.2 Pipeline state/route outputs 与 M3.3 GUI 双合同待实施。
+  规定稳定逻辑 ID、可变存储路径、旧文件名兼容投影和 M1-M5 迁移门禁；M1-M3.2 已完成，
+  M3.3 ID callback 与 GUI 显示名/ID/tooltip 双合同待实施。
 - 短中期执行计划：[`docs/iteration_plan.md`](./docs/iteration_plan.md)，在长期边界以
   `architecture_roadmap` 为准的前提下，拆解后续若干轮交付物、验收标准和依赖顺序。
 - L6/L3 真实观察手册：[`docs/live_observation_runbook.md`](./docs/live_observation_runbook.md)，
@@ -593,8 +593,10 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     Prompt golden 不变。M2.3 已将 Stage 2 builder 与 TemplateContext 切换为 ID，并保留
     filename 公共参数和双合同投影。M3.1 已让 `AnalysisRecord` 双写
     `strategy_prompt_ids_used`/`strategy_files_used`，已知旧 filename 在内存中补全 ID，
-    未知 legacy 值原样保留且不得用于磁盘访问，ID/file 不一致时失败关闭。M3.2 前不得修改
-    GUI callback，M3.3 前不得改变 GUI 展示合同；M1-M3 均不得更新 golden 来掩盖字节漂移。
+    未知 legacy 值原样保留且不得用于磁盘访问，ID/file 不一致时失败关闭。M3.2 已让
+    `PipelineState`、route outputs、Stage 2 snapshot 和 PersistStep 双写 ID/filename；
+    未知兼容 router filename 保留且 ID 为空，旧 `on_stage2_files` 与 Stage 2 filename 参数
+    不变。M3.3 前不得改变现有 callback 行为；M1-M3 均不得更新 golden 来掩盖字节漂移。
 21. **L1 外部扩展兼容观察当前进度**：外部风格 data source/AI client registrar 已完成 5 轮
     重复观察；versioned registrar 必须声明 `pa-agent.registry-extension.v1`，旧的未声明版本
     callable 继续兼容，未知显式版本只隔离当前扩展。观察样例只使用 marker builder，不连接

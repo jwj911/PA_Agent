@@ -14,6 +14,9 @@ from numbers import Real
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
+from pa_agent.ai.prompting.prompt_catalog import PromptCatalogError
+from pa_agent.ai.prompting.prompt_ids import PromptId
+from pa_agent.ai.prompting.template_manifest import TEMPLATE_CATALOG
 from pa_agent.records.schema import AnalysisRecord
 from pa_agent.util.threading import CancelToken, OrchestratorEvent
 
@@ -257,21 +260,54 @@ def _stage_summary(
 
 def _route_summary(
     route_outputs: Mapping[str, Any],
+    strategy_prompt_ids: Sequence[PromptId],
     strategy_files: Sequence[str],
     experience_entries: Sequence[Any],
 ) -> dict[str, Any]:
     """Summarize route cardinalities without exposing route payloads."""
+    prompt_ids = route_outputs.get("strategy_prompt_ids", strategy_prompt_ids)
     files = route_outputs.get("strategy_files", strategy_files)
     entries = route_outputs.get("experience_entries", experience_entries)
+    prompt_id_count = (
+        len(prompt_ids)
+        if isinstance(prompt_ids, Sequence) and not isinstance(prompt_ids, str)
+        else 0
+    )
     file_count = len(files) if isinstance(files, Sequence) and not isinstance(files, str) else 0
     entry_count = (
         len(entries) if isinstance(entries, Sequence) and not isinstance(entries, str) else 0
     )
     return {
-        "output_present": bool(route_outputs or strategy_files or experience_entries),
+        "output_present": bool(
+            route_outputs or strategy_prompt_ids or strategy_files or experience_entries
+        ),
+        "strategy_prompt_id_count": prompt_id_count,
         "strategy_file_count": file_count,
         "experience_entry_count": entry_count,
     }
+
+
+def _normalize_strategy_prompt_identity(
+    prompt_ids: Sequence[PromptId],
+    filenames: Sequence[str],
+) -> tuple[list[PromptId], list[str]]:
+    """Keep Pipeline Prompt IDs authoritative while preserving legacy routers."""
+    normalized_ids = [PromptId(str(prompt_id)) for prompt_id in prompt_ids]
+    normalized_files = [str(filename) for filename in filenames]
+    if normalized_ids:
+        projected = list(TEMPLATE_CATALOG.legacy_filenames(normalized_ids))
+        if normalized_files and normalized_files != projected:
+            raise ValueError("Pipeline strategy Prompt IDs and files do not match")
+        return normalized_ids, projected
+    if normalized_files:
+        try:
+            resolved = [
+                TEMPLATE_CATALOG.resolve_legacy_filename(filename) for filename in normalized_files
+            ]
+        except PromptCatalogError:
+            return [], normalized_files
+        return resolved, list(TEMPLATE_CATALOG.legacy_filenames(resolved))
+    return [], []
 
 
 def _exception_value(record: AnalysisRecord | None, name: str) -> str:
@@ -354,6 +390,7 @@ class PipelineState:
     stage2_usage_calls: list[Any] = field(default_factory=list, repr=False)
     stage2_enable_next_bar_prediction: bool = field(default=False, repr=False)
     stage2_structure_flip_cooldown_bars: int = field(default=3, repr=False)
+    strategy_prompt_ids: list[PromptId] = field(default_factory=list, repr=False)
     strategy_files: list[str] = field(default_factory=list, repr=False)
     experience_entries: list[Any] = field(default_factory=list, repr=False)
     route_outputs: dict[str, Any] = field(default_factory=dict, repr=False)
@@ -373,6 +410,26 @@ class PipelineState:
         """Normalize enum inputs passed by compatibility callers."""
         self.persistence_intent = PersistenceIntent(self.persistence_intent)
         self.terminal_status = TerminalStatus(self.terminal_status)
+        initial_outputs = dict(self.route_outputs)
+        prompt_ids = initial_outputs.pop("strategy_prompt_ids", self.strategy_prompt_ids)
+        strategy_files = initial_outputs.pop("strategy_files", self.strategy_files)
+        experience_entries = initial_outputs.pop(
+            "experience_entries",
+            self.experience_entries,
+        )
+        if (
+            prompt_ids
+            or strategy_files
+            or experience_entries
+            or initial_outputs
+            or self.route_outputs
+        ):
+            self.set_route_outputs(
+                strategy_prompt_ids=prompt_ids,
+                strategy_files=strategy_files,
+                experience_entries=experience_entries,
+                **initial_outputs,
+            )
 
     def emit(self, event: OrchestratorEvent) -> None:
         """Record and forward one legacy orchestrator event."""
@@ -426,15 +483,22 @@ class PipelineState:
     def set_route_outputs(
         self,
         *,
+        strategy_prompt_ids: Sequence[PromptId] = (),
         strategy_files: Sequence[str] = (),
         experience_entries: Sequence[Any] = (),
         **outputs: Any,
     ) -> None:
         """Store route results for later steps and keep common outputs explicit."""
-        self.strategy_files = list(strategy_files)
+        prompt_ids, filenames = _normalize_strategy_prompt_identity(
+            strategy_prompt_ids,
+            strategy_files,
+        )
+        self.strategy_prompt_ids = prompt_ids
+        self.strategy_files = filenames
         self.experience_entries = list(experience_entries)
         self.route_outputs = {
             **outputs,
+            "strategy_prompt_ids": list(self.strategy_prompt_ids),
             "strategy_files": list(self.strategy_files),
             "experience_entries": list(self.experience_entries),
         }
@@ -500,7 +564,13 @@ class PipelineState:
 
     @route_output.setter
     def route_output(self, value: Mapping[str, Any]) -> None:
-        self.route_outputs = dict(value)
+        outputs = dict(value)
+        self.set_route_outputs(
+            strategy_prompt_ids=outputs.pop("strategy_prompt_ids", ()),
+            strategy_files=outputs.pop("strategy_files", ()),
+            experience_entries=outputs.pop("experience_entries", ()),
+            **outputs,
+        )
 
     def update_terminal_metadata(self, record: AnalysisRecord | None = None) -> None:
         """Infer partial/persistence metadata after a compatibility submission."""
@@ -564,6 +634,7 @@ class PipelineState:
             ),
             "route": _route_summary(
                 self.route_outputs,
+                self.strategy_prompt_ids,
                 self.strategy_files,
                 self.experience_entries,
             ),

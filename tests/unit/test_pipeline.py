@@ -7,6 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from pa_agent.ai.prompting import prompt_ids
 from pa_agent.orchestrator.pipeline import (
     PersistenceIntent,
     PipelineBuilder,
@@ -334,8 +335,73 @@ def test_pipeline_state_carries_stage_route_and_persistence_runtime_data() -> No
     assert state.stage1_reply.content == "stage 1 reply"
     assert state.stage1_normalized_json == {"direction": "up"}
     assert state.stage2_usage["completion_tokens"] == 5
+    assert state.strategy_prompt_ids == []
     assert state.route_outputs["strategy_files"] == ["strategy.txt"]
+    assert state.route_outputs["strategy_prompt_ids"] == []
     assert state.persistence_intent is PersistenceIntent.PARTIAL
+
+
+def test_pipeline_state_projects_prompt_ids_to_legacy_route_output() -> None:
+    state = PipelineState(
+        frame=object(),
+        cancel_token=CancelToken(),
+        strategy_prompt_ids=[
+            prompt_ids.BULLISH_CHANNEL_ID,
+            prompt_ids.BULLISH_CHANNEL_STRATEGY,
+        ],
+    )
+
+    assert state.strategy_files == [
+        "上涨通道分析识别.txt",
+        "上涨通道交易策略.txt",
+    ]
+    assert state.route_outputs["strategy_prompt_ids"] == state.strategy_prompt_ids
+    assert state.route_outputs["strategy_files"] == state.strategy_files
+    assert state.safe_summary()["route"] == {
+        "output_present": True,
+        "strategy_prompt_id_count": 2,
+        "strategy_file_count": 2,
+        "experience_entry_count": 0,
+    }
+
+
+def test_pipeline_state_resolves_known_files_and_preserves_unknown_files() -> None:
+    state = _state()
+    state.set_route_outputs(strategy_files=["震荡区间交易策略.txt"])
+
+    assert state.strategy_prompt_ids == [prompt_ids.RANGE_STRATEGY]
+    assert state.strategy_files == ["震荡区间交易策略.txt"]
+
+    state.set_route_outputs(strategy_files=["private-strategy-path"])
+
+    assert state.strategy_prompt_ids == []
+    assert state.strategy_files == ["private-strategy-path"]
+
+
+def test_pipeline_state_rejects_mismatched_or_unknown_prompt_ids() -> None:
+    state = _state()
+
+    with pytest.raises(ValueError, match="Prompt IDs and files do not match"):
+        state.set_route_outputs(
+            strategy_prompt_ids=[prompt_ids.BULLISH_CHANNEL_ID],
+            strategy_files=["下跌通道分析识别.txt"],
+        )
+    with pytest.raises(ValueError, match="Unknown prompt ID"):
+        state.set_route_outputs(strategy_prompt_ids=["test.unknown"])
+
+
+def test_pipeline_state_route_output_alias_synchronizes_dual_contract() -> None:
+    state = _state()
+
+    state.route_output = {
+        "strategy_prompt_ids": [prompt_ids.RANGE_STRATEGY],
+        "experience_entries": [],
+        "route": "compatibility",
+    }
+
+    assert state.strategy_prompt_ids == [prompt_ids.RANGE_STRATEGY]
+    assert state.strategy_files == ["震荡区间交易策略.txt"]
+    assert state.route_outputs["route"] == "compatibility"
 
 
 def test_pipeline_state_safe_serialization_excludes_runtime_payloads() -> None:

@@ -18,6 +18,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-26（L2：Prompt ID 解耦 M3.2 Pipeline state / route outputs）
+
+- `PipelineState` 新增权威 `strategy_prompt_ids`；构造器、`set_route_outputs()` 与兼容
+  `route_output` setter 同步 ID/file，ID-only 输入由 Catalog 投影 legacy filename，
+  ID/file 不一致或未知 ID 时失败关闭。
+- RouteStep 在现有 filename router 边界解析已注册 ID，并让 `route_outputs` 同时包含
+  `strategy_prompt_ids` 与 `strategy_files`；未知兼容 filename 原样保留且 ID 为空，不据此
+  访问物理路径。
+- Stage 2 继续使用 legacy filename 投影与原 `on_stage2_files` callback，Prompt 字节及
+  GUI/headless callback 行为不变；Stage 2 snapshot、取消 partial 和 PersistStep 显式把
+  ID/file 双合同写入 `AnalysisRecord`。
+- Pipeline 安全摘要与 route lifecycle 日志只新增 Prompt ID 数量，不记录 ID、filename、
+  Prompt 内容或行情；Pipeline import 继续保持 PyQt6-free。
+- Pipeline 聚焦回归 **51 passed**、全终态/legacy 等价专项 **29 passed**、完整非 live unit
+  层 **1,085 passed**、integration 层 **80 passed**；Black、Ruff、`py_compile`、CI target、
+  Prompt golden 和 3,724 条 Ruff baseline 通过。
+- 同步 Prompt ID 方案、`AGENTS.md`、架构路线图和执行计划为“M3.2 已完成，M3.3 待实施”。
+  本切片未修改 `two_stage.py`、orchestrator callback、GUI、Prompt 正文或模型 JSON schema。
+
+---
+
 ## [Unreleased] — 2026-07-26（L2：Prompt ID 解耦 M3.1 AnalysisRecord 双合同）
 
 - `AnalysisRecord` 新增默认空列表 `strategy_prompt_ids_used`；现有调用方只传

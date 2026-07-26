@@ -1,6 +1,6 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1、M2、M3.1 已完成，M3.2 Pipeline state 待实施
+> 状态：M1、M2、M3.1、M3.2 已完成，M3.3 GUI 待实施
 >
 > 日期：2026-07-26
 >
@@ -410,6 +410,23 @@ GUI 默认显示：
   完整非 live unit 层 1,081 项、integration 层 79 项通过，3,724 条 Ruff baseline 保持不变。
 - 本切片未修改 Pipeline state、orchestrator callback、GUI、Prompt 正文、模型 JSON schema
   或 golden。M3.2 继续迁移 Pipeline state/route outputs，M3.3 再处理 GUI 展示。
+
+**M3.2 Pipeline state/route outputs 双合同实施结果（2026-07-26）**：
+
+- `PipelineState` 新增权威 `strategy_prompt_ids`；构造器、`set_route_outputs()` 和兼容
+  `route_output` setter 同步 `strategy_prompt_ids`/`strategy_files`，ID-only 输入由 Catalog
+  投影 legacy filename，ID/file 不一致或未知 ID 时失败关闭。
+- 现有 filename router 结果若全部已注册则在 RouteStep 边界解析为 ID；包含未知兼容 filename
+  时保留原列表且 ID 为空，不把未知值当作 `source_path`。`route_outputs` 同时暴露两个字段。
+- Stage 2 继续使用 legacy filename 投影和原 `on_stage2_files` callback，因此 Prompt 字节与
+  GUI/headless 适配器合同不变；Stage 2 snapshot、取消 partial 与 PersistStep 显式把 ID
+  传入 `AnalysisRecord`，不再依赖持久化模型被动补全。
+- 安全摘要和 route lifecycle 日志只增加 Prompt ID 数量，不记录 ID、filename、Prompt 内容
+  或行情。Pipeline import 继续不加载 PyQt6。
+- Pipeline 聚焦回归 51 项、全终态/legacy 等价专项 29 项、完整非 live unit 层 1,085 项、
+  integration 层 80 项通过；全部 Prompt golden、CI target 和 3,724 条 Ruff baseline 不变。
+- 本切片未修改 `two_stage.py`、orchestrator callback、GUI、Prompt 正文或模型 JSON schema。
+  M3.3 只处理 ID callback 与 GUI 显示名/tooltip。
 
 **退出门禁**：
 
