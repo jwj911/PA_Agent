@@ -4,7 +4,43 @@ Defines the canonical schema for analysis records, followup turns,
 alarm payloads, validation errors, and experience entries.
 """
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+
+def _prompt_ids_for_legacy_files(filenames: list[str]) -> list[str] | None:
+    """Resolve a complete legacy list, preserving unknown old records unchanged."""
+    from pa_agent.ai.prompting import TEMPLATE_CATALOG, PromptCatalogError
+
+    try:
+        return [str(TEMPLATE_CATALOG.resolve_legacy_filename(filename)) for filename in filenames]
+    except PromptCatalogError:
+        return None
+
+
+def _legacy_files_for_prompt_ids(prompt_ids: list[str]) -> list[str]:
+    """Project stable Prompt IDs to immutable legacy filenames."""
+    from pa_agent.ai.prompting import TEMPLATE_CATALOG, PromptId
+
+    return [TEMPLATE_CATALOG.legacy_filename(PromptId(prompt_id)) for prompt_id in prompt_ids]
+
+
+def _synchronize_strategy_prompt_identity(
+    *,
+    prompt_ids: list[str],
+    filenames: list[str],
+) -> tuple[list[str], list[str]]:
+    """Normalize the stable and legacy strategy identities as one contract."""
+    if prompt_ids:
+        projected = _legacy_files_for_prompt_ids(prompt_ids)
+        if filenames and filenames != projected:
+            raise ValueError("Record strategy Prompt IDs and files do not match")
+        return prompt_ids, projected
+    if filenames:
+        resolved = _prompt_ids_for_legacy_files(filenames)
+        if resolved is not None:
+            return resolved, _legacy_files_for_prompt_ids(resolved)
+        return [], filenames
+    return [], []
 
 
 class RecordMeta(BaseModel):
@@ -38,9 +74,41 @@ class AnalysisRecord(BaseModel):
     stage2_response: dict | None
     stage2_decision: dict | None
     strategy_files_used: list[str]
+    strategy_prompt_ids_used: list[str] = Field(default_factory=list)
     experience_loaded: list[dict]
     exception: dict | None  # If error occurred: category + debug info
     usage_total: dict  # Cumulative usage for audit
+
+    @model_validator(mode="after")
+    def _synchronize_strategy_prompt_identity(self) -> "AnalysisRecord":
+        """Keep new Prompt IDs and the legacy filename field mutually consistent."""
+        prompt_ids, filenames = _synchronize_strategy_prompt_identity(
+            prompt_ids=self.strategy_prompt_ids_used,
+            filenames=self.strategy_files_used,
+        )
+        self.strategy_prompt_ids_used = prompt_ids
+        self.strategy_files_used = filenames
+        return self
+
+    def model_copy(
+        self,
+        *,
+        update: dict | None = None,
+        deep: bool = False,
+    ) -> "AnalysisRecord":
+        """Copy a record while preserving the Prompt ID/filename dual contract."""
+        normalized_update = dict(update or {})
+        if {
+            "strategy_prompt_ids_used",
+            "strategy_files_used",
+        } & normalized_update.keys():
+            prompt_ids, filenames = _synchronize_strategy_prompt_identity(
+                prompt_ids=list(normalized_update.get("strategy_prompt_ids_used") or []),
+                filenames=list(normalized_update.get("strategy_files_used") or []),
+            )
+            normalized_update["strategy_prompt_ids_used"] = prompt_ids
+            normalized_update["strategy_files_used"] = filenames
+        return super().model_copy(update=normalized_update, deep=deep)
 
 
 class FollowupTurn(BaseModel):

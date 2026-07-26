@@ -22,7 +22,7 @@
 | 路线 | 当前状态 | 已有基础 | 主要剩余工作 |
 |---|---|---|---|
 | L1 Provider/数据源注册表 | 扩展兼容观察与下线策略/CI 门禁已收口；legacy registrar 按政策 retain | registry、entry point、v1 registrar、失败隔离、并发/lazy-import 和固定样例观察已完成；`compatibility_policy.json` 强制保留未声明版本 callable | 观察真实安装扩展；最早 0.3.0 且具备 v0.2.0 tag、inventory 和迁移报告后才评估删除 |
-| L2 Prompt 模板引擎 | 5 轮等价观察与下线策略/CI 门禁已收口；Prompt ID M1-M2 已完成；旧 loader/fallback 按政策 retain | TemplateStore、29 个稳定 Prompt ID 与 manifest 映射、ID 路由、Stage 1/2 原子 ID loader、TemplateContext ID/filename 双合同、golden snapshot 和回退观察已完成 | 执行 M3 Pipeline/record/GUI 双合同；最早 0.3.0 且具备 v0.2.0 tag、fallback 零命中和 golden 报告后才评估删除旧入口 |
+| L2 Prompt 模板引擎 | 5 轮等价观察与下线策略/CI 门禁已收口；Prompt ID M1-M3.1 已完成；旧 loader/fallback 按政策 retain | TemplateStore、29 个稳定 Prompt ID 与 manifest 映射、ID 路由、Stage 1/2 原子 ID loader、TemplateContext 与 AnalysisRecord ID/filename 双合同、golden snapshot 和回退观察已完成 | 执行 M3.2 Pipeline state/route outputs 与 M3.3 GUI 双合同；最早 0.3.0 且具备 v0.2.0 tag、fallback 零命中和 golden 报告后才评估删除旧入口 |
 | L3 Pipeline Builder | 三轮真实稳定观察与默认 Pipeline 切换已收口，legacy 作为显式回滚保留 | 完整四步 Pipeline、Task 10 全终态矩阵、5 场景×3 轮 fixture 对照；3 个独立真实 pair 的 6 个单体校验和 3 个成对校验均为 `valid=true`；新旧缺失配置默认 `true`，显式 `false` 回滚 | 持续观察 lifecycle/terminal/record 指标；出现未解释偏差先回滚，不删除 legacy facade |
 | L4 性能优化 | v2 hosted baseline 与同环境 10% p95 对照已收口，进入每日持续观察 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；`pa-agent.performance.v1` 报告、`l4.synthetic.v2` 批量折算采样、p50/p95、100/500/5000 bars 基准、版本隔离 baseline cache 和 artifact；run `29975410917`/`29975592352` 完成建基线与 restore 对照 | 维护每日 schedule；runner image、benchmark version 或采样合同变化时重建 baseline |
 | L5 经验库升级 | 记录筛选/review catalog/可核验 outcome 导入、本地 evidence 重核、evidence-backed readiness、固定切分、opaque 标注/报告管道已交付，真实数据评估未收口 | completed record shape-only scan；脱敏 record ID catalog；固定 outcome policy + 本地证据 SHA-256；annotation/export/evaluate envelope 校验与本地文件重哈希门禁；人工 `success|failure` 最小化导入与 digest 去重；全量相关性排序 + K 线相似度；版本化 dataset/split/report；HMAC opaque catalog 和 leave-one-out 对照；不改变线上排序 | 为真实 outcome 提供并保留本地证据文件，导入至少两个不同 symbol 的 instrument group，完成相关性标注和指标报告；证据充分后才评估权重 |
@@ -309,9 +309,12 @@ Pipeline 状态、记录字段和 GUI 展示值。为避免后续重命名或 `.
 
 M1 已新增 29 个稳定 ID、严格 Catalog、ID 依赖关系和 TemplateStore 显式 ID API；M2 已将
 router、shared system、Stage 1/2 builder 和 TemplateContext 切换到 ID，并由 Catalog 生成
-legacy 文件名兼容投影。旧 `TemplateSpec.name`、文件名路由/列表 API、Prompt 正文、JSON schema
-和 golden 保持不变。后续从 M3 Pipeline/record/GUI 双合同继续，仍须按文档中的原子切片逐层
-推进，不得与多 Agent、Prompt 文本优化或经验库权重调整混在同一提交。
+legacy 文件名兼容投影。M3.1 已让 `AnalysisRecord` 双写 `strategy_prompt_ids_used` 与
+`strategy_files_used`：旧 filename 记录在内存中补全 ID，未知 legacy 值保持原样且不用于磁盘
+访问，ID/file 不一致时失败关闭。旧 `TemplateSpec.name`、文件名路由/列表 API、Prompt 正文、
+JSON schema 和 golden 保持不变。后续从 M3.2 Pipeline state/route outputs 继续，再完成 M3.3
+GUI 展示；仍须按文档中的原子切片逐层推进，不得与多 Agent、Prompt 文本优化或经验库权重调整
+混在同一提交。
 
 ## 6. L3：Pipeline Builder / State Machine
 

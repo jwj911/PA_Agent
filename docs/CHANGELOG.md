@@ -18,6 +18,25 @@
 
 ---
 
+## [Unreleased] — 2026-07-26（L2：Prompt ID 解耦 M3.1 AnalysisRecord 双合同）
+
+- `AnalysisRecord` 新增默认空列表 `strategy_prompt_ids_used`；现有调用方只传
+  `strategy_files_used` 时，已知 legacy filename 会通过 Catalog 在内存中解析为稳定 ID，
+  因而新记录序列化时自动双写 ID 与不可变 legacy filename。
+- ID-only 记录自动投影 legacy filename；ID/file 同时存在但不一致或 ID 未注册时失败关闭。
+  `model_copy(update=...)` 使用相同同步合同，覆盖 Pipeline 与 legacy 编排现有的增量更新路径。
+- 旧记录中的未知 legacy filename 原样保留且 ID 列表为空，不把旧字符串解释为物理路径，
+  不回写原记录；demo、history、replay 和 headless 读取器通过共享 schema 保持兼容。
+- 新增 `test_record_prompt_ids.py` 的 8 项双合同/旧记录/失败关闭测试，并纳入 targeted
+  pytest 与 focused Ruff。记录聚焦回归 **49 passed**、完整非 live unit 层 **1,081 passed**、
+  integration 层 **79 passed**；Black、Ruff、`py_compile`、CI target 清单和 3,724 条 Ruff
+  baseline 通过。
+- 同步 Prompt ID 方案、`AGENTS.md`、架构路线图和执行计划为“M3.1 已完成，M3.2 待实施”。
+  本切片未修改 Pipeline state、orchestrator callback、GUI、Prompt 正文、模型 JSON schema
+  或 golden。
+
+---
+
 ## [Unreleased] — 2026-07-26（L2：Prompt ID 解耦 M2.3 Stage 2 / TemplateContext）
 
 - Stage 2 base、全策略库、方向组和 routed strategy 已切换为 Prompt ID；

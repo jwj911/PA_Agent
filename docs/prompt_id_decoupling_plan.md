@@ -1,6 +1,6 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1、M2 已完成，M3 待实施
+> 状态：M1、M2、M3.1 已完成，M3.2 Pipeline state 待实施
 >
 > 日期：2026-07-26
 >
@@ -396,6 +396,20 @@ GUI 默认显示：
 - demo、history、replay、headless 和 GUI 读取器支持新旧记录。
 - Prompt 调试界面改为显示名称 + ID；路径只作为次级诊断信息。
 - 旧 callback、旧记录字段和 GUI 方法保留兼容适配。
+
+**M3.1 AnalysisRecord 双合同实施结果（2026-07-26）**：
+
+- `AnalysisRecord` 新增默认空列表 `strategy_prompt_ids_used`。现有 Pipeline 和 legacy 路径即使
+  仍只传 `strategy_files_used`，已知 legacy filename 也会在模型校验时解析为稳定 ID；序列化
+  后的新记录因此同时包含 ID 与不可变 legacy filename。
+- ID-only 输入由 Catalog 自动投影 `strategy_files_used`；ID/file 同时存在但不一致、或 ID
+  未注册时失败关闭。`model_copy(update=...)` 使用同一同步合同，覆盖现有编排的增量更新路径。
+- 旧记录中的未知 legacy filename 原样保留，ID 列表保持为空；读取过程不把该值解释为
+  `source_path`，也不回写原文件。demo、history、replay 和 headless 通过共享 schema 获得兼容。
+- 新增 8 项记录身份合同测试并纳入 targeted pytest/focused Ruff；记录/兼容聚焦回归 49 项、
+  完整非 live unit 层 1,081 项、integration 层 79 项通过，3,724 条 Ruff baseline 保持不变。
+- 本切片未修改 Pipeline state、orchestrator callback、GUI、Prompt 正文、模型 JSON schema
+  或 golden。M3.2 继续迁移 Pipeline state/route outputs，M3.3 再处理 GUI 展示。
 
 **退出门禁**：
 

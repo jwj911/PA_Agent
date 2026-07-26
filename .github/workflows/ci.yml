@@ -182,6 +182,7 @@ jobs:
           tests/unit/test_retry_policy.py
           tests/unit/test_validation_retry.py
           tests/unit/test_analysis_history.py
+          tests/unit/test_record_prompt_ids.py
           tests/unit/test_experience_reader.py
           tests/unit/test_experience_eval.py
           tests/unit/test_experience_eval_pipeline.py
@@ -497,6 +498,7 @@ jobs:
           tests/unit/test_retry_policy.py
           tests/unit/test_validation_retry.py
           tests/unit/test_analysis_history.py
+          tests/unit/test_record_prompt_ids.py
           tests/unit/test_experience_reader.py
           tests/unit/test_experience_eval.py
           tests/unit/test_experience_eval_pipeline.py
