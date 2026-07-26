@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pa_agent.ai import prompt_assembler, router, strategy_files
+from pa_agent.ai.prompting import TEMPLATE_CATALOG, prompt_ids
 
 
 def _registry_values() -> set[str]:
@@ -40,6 +41,21 @@ def test_router_valid_files_are_derived_from_strategy_registry() -> None:
     assert router._BEARISH_SPIKE_FILES == [
         strategy_files.BEARISH_SPIKE_ID,
         strategy_files.BEARISH_SPIKE_STRATEGY,
+    ]
+    assert (
+        frozenset(
+            TEMPLATE_CATALOG.resolve_legacy_filename(filename)
+            for filename in registry - router_excluded
+        )
+        == router._ALL_VALID_PROMPT_IDS
+    )
+    assert router._BULLISH_CHANNEL_PROMPT_IDS == [
+        prompt_ids.BULLISH_CHANNEL_ID,
+        prompt_ids.BULLISH_CHANNEL_STRATEGY,
+    ]
+    assert router._BEARISH_SPIKE_PROMPT_IDS == [
+        prompt_ids.BEARISH_SPIKE_ID,
+        prompt_ids.BEARISH_SPIKE_STRATEGY,
     ]
 
 

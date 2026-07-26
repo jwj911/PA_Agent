@@ -28,8 +28,8 @@
 - 迭代记录：[`docs/CHANGELOG.md`](./docs/CHANGELOG.md)
 - 架构升级路线图：[`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md)
 - Prompt ID 解耦方案：[`docs/prompt_id_decoupling_plan.md`](./docs/prompt_id_decoupling_plan.md)，
-  规定稳定逻辑 ID、可变存储路径、旧文件名兼容投影和 M1-M5 迁移门禁；M1 Catalog 已完成，
-  M2 路由与组装内部切换尚未实施。
+  规定稳定逻辑 ID、可变存储路径、旧文件名兼容投影和 M1-M5 迁移门禁；M1 Catalog 与
+  M2.1 Router 双入口已完成，M2.2 shared system/Stage 1 尚未实施。
 - 短中期执行计划：[`docs/iteration_plan.md`](./docs/iteration_plan.md)，在长期边界以
   `architecture_roadmap` 为准的前提下，拆解后续若干轮交付物、验收标准和依赖顺序。
 - L6/L3 真实观察手册：[`docs/live_observation_runbook.md`](./docs/live_observation_runbook.md)，
@@ -148,8 +148,8 @@ price_action_agent/
   - `stage1_normalizer.py` / `stage2_normalizer.py` / `trace_normalize.py`：LLM 输出归一化。
   - `decision_node_engine.py` / `decision_nodes.py` / `decision_tree.py` / `decision_stance.py`：决策树、立场、节点逻辑。
   - `decision_thresholds.py` / `bar_geometry.py` / `trace_nodes.py` / `preflight.py` / `signal_bar_judges.py` / `direction_judge.py` / `diagnostic_judges.py` / `always_in_judges.py` / `override_arbiter.py` / `order_method_router.py` / `signal_context.py`：决策节点拆分后的叶子模块。
-  - `strategy_files.py`：当前策略/提示 `.txt` 文件名的单一事实来源；后续按
-    `docs/prompt_id_decoupling_plan.md` 迁移为 Prompt ID 核心身份，兼容期不得提前删除旧接口。
+  - `strategy_files.py`：兼容期策略/提示 `.txt` 文件名注册表；router 主逻辑已改用
+    `prompt_ids.py`，旧 filename API 由 Catalog 投影，兼容期不得提前删除。
   - `prompts/schemas.py`：JSON schema 定义。
   - `session_ledger.py`：Token 用量与上下文窗口追踪。
 
@@ -587,8 +587,9 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     不得顺手重写 `prompt_engineering/` 中文文本。
     Prompt ID 解耦 M1 已新增 29 个稳定 ID、严格 Catalog 和 TemplateStore 显式 ID API；
     `TemplateSpec.name`、旧文件名 load/render/snapshot API、现有路由输出和全部 Prompt golden
-    保持不变。M2 前不得把 `strategy_files.py`、router 或 assembler 切换为 ID，也不得更新
-    golden 来掩盖字节漂移。
+    保持不变。M2.1 已把 router 主实现切换为 `route_strategy_prompt_ids()`，旧
+    `route_strategy_files()` 与私有 filename helper 只做 Catalog 投影；M2.2 前不得切换
+    assembler/shared system/Stage 1，也不得更新 golden 来掩盖字节漂移。
 21. **L1 外部扩展兼容观察当前进度**：外部风格 data source/AI client registrar 已完成 5 轮
     重复观察；versioned registrar 必须声明 `pa-agent.registry-extension.v1`，旧的未声明版本
     callable 继续兼容，未知显式版本只隔离当前扩展。观察样例只使用 marker builder，不连接

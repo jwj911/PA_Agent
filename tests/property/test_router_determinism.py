@@ -8,7 +8,8 @@ from hypothesis import given
 from hypothesis import settings as h_settings
 from hypothesis import strategies as st
 
-from pa_agent.ai.router import route_strategy_files
+from pa_agent.ai.prompting import TEMPLATE_CATALOG
+from pa_agent.ai.router import route_strategy_files, route_strategy_prompt_ids
 
 _CYCLE_POSITIONS = [
     "spike",
@@ -62,6 +63,9 @@ _ALL_VALID_FILES = frozenset(
         "文件28-双重顶底与微型结构.txt",
     ]
 )
+_ALL_VALID_PROMPT_IDS = frozenset(
+    TEMPLATE_CATALOG.resolve_legacy_filename(filename) for filename in _ALL_VALID_FILES
+)
 
 
 def _make_stage1(cp: str, direction: str, patterns: list[str]) -> dict:
@@ -87,6 +91,27 @@ def test_router_deterministic(cp: str, direction: str, patterns: list[str]) -> N
     r1 = route_strategy_files(s)
     r2 = route_strategy_files(copy.deepcopy(s))
     assert r1 == r2, f"Non-deterministic: {r1} != {r2}"
+
+
+@given(
+    cp=st.sampled_from(_CYCLE_POSITIONS),
+    direction=st.sampled_from(_DIRECTIONS),
+    patterns=st.lists(st.sampled_from(_PATTERNS), max_size=2, unique=True),
+)
+@h_settings(max_examples=300)
+def test_prompt_id_router_matches_legacy_projection(
+    cp: str,
+    direction: str,
+    patterns: list[str],
+) -> None:
+    """Prompt ID routing is the sole source for the legacy filename API."""
+    stage1 = _make_stage1(cp, direction, patterns)
+    prompt_ids = route_strategy_prompt_ids(stage1)
+
+    assert prompt_ids == route_strategy_prompt_ids(copy.deepcopy(stage1))
+    assert all(prompt_id in _ALL_VALID_PROMPT_IDS for prompt_id in prompt_ids)
+    assert len(prompt_ids) == len(set(prompt_ids))
+    assert list(TEMPLATE_CATALOG.legacy_filenames(prompt_ids)) == route_strategy_files(stage1)
 
 
 @given(

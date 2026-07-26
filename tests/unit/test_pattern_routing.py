@@ -7,7 +7,8 @@ from pa_agent.ai.pattern_routing import (
     merge_detected_patterns,
     validate_detected_patterns_vs_key_signals,
 )
-from pa_agent.ai.router import route_strategy_files
+from pa_agent.ai.prompting import prompt_ids
+from pa_agent.ai.router import route_strategy_files, route_strategy_prompt_ids
 
 
 def test_merge_detected_patterns_from_entry_setup_wedge() -> None:
@@ -118,6 +119,13 @@ def test_route_loads_spike_files_for_micro_channel_active() -> None:
     assert "极速上涨分析识别.txt" in files
     assert "极速上涨交易策略.txt" in files
     assert "上涨通道分析识别.txt" in files
+    assert route_strategy_prompt_ids(s1)[:5] == [
+        prompt_ids.BULLISH_CHANNEL_ID,
+        prompt_ids.BULLISH_CHANNEL_STRATEGY,
+        prompt_ids.CHANNEL_WIDTH,
+        prompt_ids.BULLISH_SPIKE_ID,
+        prompt_ids.BULLISH_SPIKE_STRATEGY,
+    ]
 
 
 def test_ema_gap_count_does_not_trigger_hl_count_setup() -> None:

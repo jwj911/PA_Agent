@@ -18,6 +18,25 @@
 
 ---
 
+## [Unreleased] — 2026-07-26（L2：Prompt ID 解耦 M2.1 Router 双入口）
+
+- `route_strategy_prompt_ids()` 成为策略路由唯一主实现；周期、方向、近期尖峰、备选周期、
+  pattern overlay 与 stable dedup 全部使用稳定 `PromptId`。
+- `route_strategy_files()`、原私有 filename helper 和兼容常量继续返回原 `.txt` 名称，但全部
+  通过 `TEMPLATE_CATALOG.legacy_filename(s)` 从 ID 投影，不再维护第二份文件名路由规则。
+- `PromptCatalog` 新增有序批量 legacy 投影；router 不读取 `source_path`，后续文件移动不会改变
+  旧 API 与历史记录使用的兼容名称。
+- 新增 300 组 Hypothesis 等价样例，并扩展 pattern/registry 合同测试，验证 ID 路由确定、
+  合法、无重复，且投影后与 legacy 路由逐项同序相等。
+- Normalizer、Pipeline RouteStep、TemplateStore golden 等聚焦回归 **63 passed**；完整非
+  live unit 层 **1,070 passed**。Ruff、Ruff format、`py_compile`、CI target 清单、
+  3,724 条 Ruff baseline 和差异检查通过。
+- 同步 Prompt ID 方案、`AGENTS.md`、架构路线图和执行计划为“M2.1 已完成，M2.2 待实施”。
+  本切片未修改 PromptAssembler、TemplateContext、Prompt 正文、JSON schema、Pipeline state、
+  record 或 golden。
+
+---
+
 ## [Unreleased] — 2026-07-26（L2：Prompt ID 解耦 M1 Catalog）
 
 - 新增 PyQt-free `prompt_ids.py` 与 `prompt_catalog.py`，为 29 个运行时模板固定稳定

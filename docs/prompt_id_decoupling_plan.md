@@ -1,6 +1,6 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1 已完成，M2 待实施
+> 状态：M1、M2.1 已完成，M2.2 待实施
 >
 > 日期：2026-07-26
 >
@@ -341,6 +341,17 @@ GUI 默认显示：
 - `TemplateContext` 新增 `strategy_prompt_ids` 和以 ID 为键的 `template_versions`；
   旧 `strategy_files` 在兼容层生成。
 - 一次只切换 router、shared system、Stage 1、Stage 2 中的一层，每层独立提交。
+
+**M2.1 Router 双入口实施结果（2026-07-26）**：
+
+- `route_strategy_prompt_ids()` 已成为路由逻辑的唯一实现，周期、方向、近期尖峰、备选周期、
+  pattern overlay 和 stable dedup 全部在 `PromptId` 上执行。
+- `route_strategy_files()`、原私有 filename helper 和 filename 常量继续保留，但全部通过
+  `TEMPLATE_CATALOG.legacy_filename(s)` 从 ID 投影，不再维护第二份路由规则。
+- 新增 300 组 property 等价验证：ID 路由确定、只返回合法 ID、无重复，且逐项投影后与
+  legacy filename 路由完全相等。
+- Normalizer、Pipeline RouteStep、现有文件名合同和 Prompt golden 回归通过；本切片未修改
+  PromptAssembler、TemplateContext、Prompt 正文、schema、Pipeline state 或 record。
 
 **退出门禁**：
 

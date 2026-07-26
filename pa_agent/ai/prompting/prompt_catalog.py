@@ -119,6 +119,10 @@ class PromptCatalog:
         """Return the immutable legacy filename projection for a Prompt ID."""
         return self.spec(prompt_id).legacy_filename
 
+    def legacy_filenames(self, prompt_ids: Sequence[PromptId]) -> tuple[str, ...]:
+        """Project Prompt IDs to immutable legacy filenames in caller order."""
+        return tuple(self.legacy_filename(prompt_id) for prompt_id in prompt_ids)
+
     def display_name(self, prompt_id: PromptId) -> str:
         """Return the user-facing display name for a Prompt ID."""
         return self.spec(prompt_id).display_name
