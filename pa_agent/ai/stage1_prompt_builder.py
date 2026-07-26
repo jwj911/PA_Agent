@@ -1,8 +1,7 @@
 """Stage 1 user-prompt builder for :mod:`pa_agent.ai.prompt_assembler`.
 
-This module owns the Stage 1 user turn construction: full Stage 1,
-incremental Stage 1, continuation-mode incremental Stage 1, and the
-program market-feature injection helpers used by those prompts.
+This module owns the Stage 1 user turn construction: full Stage 1, incremental
+Stage 1, continuation-mode incremental Stage 1, and market-feature injection.
 """
 from __future__ import annotations
 
@@ -25,6 +24,7 @@ from pa_agent.ai.program_prefill_hint import render_program_prefill_hint
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from pa_agent.ai.prompting.prompt_ids import PromptId
     from pa_agent.data.base import KlineFrame
     from pa_agent.records.schema import AnalysisRecord
 
@@ -55,9 +55,9 @@ class Stage1PromptBuilder:
     def __init__(
         self,
         *,
-        load: Callable[[str], str],
+        load_prompt_id: Callable[[PromptId], str],
         prompt_settings: Any = None,
-        stage1_task_prompt_txt_files: tuple[str, ...],
+        stage1_task_prompt_ids: tuple[PromptId, ...],
         stage1_output_reminder_for_mode: Callable[[str], str],
         stage1_tail_reminder: str,
         incremental_output_hard_rules: str,
@@ -67,9 +67,9 @@ class Stage1PromptBuilder:
         render_program_prefill_hint_fn: Callable[[KlineFrame], str] = render_program_prefill_hint,
         render_market_features_block_fn: Callable[[KlineFrame], str] = render_simple_market_features_block,
     ) -> None:
-        self._load = load
+        self._load_prompt_id = load_prompt_id
         self._prompt_settings = prompt_settings
-        self._stage1_task_prompt_txt_files = stage1_task_prompt_txt_files
+        self._stage1_task_prompt_ids = stage1_task_prompt_ids
         self._stage1_output_reminder_for_mode = stage1_output_reminder_for_mode
         self._stage1_tail_reminder = stage1_tail_reminder
         self._incremental_output_hard_rules = incremental_output_hard_rules
@@ -94,7 +94,7 @@ class Stage1PromptBuilder:
         pattern_block = self._stage1_pattern_supplement()
         prefill_hint = self._render_program_prefill_hint(frame)
         stage1_parts = [
-            *(self._load(name) for name in self._stage1_task_prompt_txt_files),
+            *(self._load_prompt_id(prompt_id) for prompt_id in self._stage1_task_prompt_ids),
             *([pattern_block] if pattern_block else []),
             self._stage1_output_reminder_for_mode(analysis_mode),
         ]
@@ -157,7 +157,7 @@ class Stage1PromptBuilder:
         pattern_block = self._stage1_pattern_supplement()
         prefill_hint = self._render_program_prefill_hint(frame)
         stage1_parts = [
-            *(self._load(name) for name in self._stage1_task_prompt_txt_files),
+            *(self._load_prompt_id(prompt_id) for prompt_id in self._stage1_task_prompt_ids),
             *([pattern_block] if pattern_block else []),
             self._stage1_output_reminder_for_mode(analysis_mode),
         ]

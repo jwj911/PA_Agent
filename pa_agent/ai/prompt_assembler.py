@@ -18,6 +18,7 @@ from pa_agent.ai.chain_context import (
 from pa_agent.ai.experience_renderer import render_experience
 from pa_agent.ai.kline_table_renderer import render_kline_feature_table, render_kline_table
 from pa_agent.ai.program_prefill_hint import render_program_prefill_hint
+from pa_agent.ai.prompting import prompt_ids as pid
 from pa_agent.ai.stage1_prompt_builder import (
     Stage1PromptBuilder,
     inject_market_features_block,
@@ -35,7 +36,6 @@ from pa_agent.records.schema import AnalysisRecord
 
 logger = logging.getLogger(__name__)
 # ── Language (both stages, thinking + final output) ───────────────────────────
-
 _LANGUAGE_ZH_RULE = """
 ## 语言要求（阶段一、阶段二均必须遵守）
 
@@ -744,16 +744,24 @@ spike | micro_channel | tight_channel | normal_channel | broad_channel | trendin
 7. 此预测**不**进入交易者方程、**不**改变 decision 中任意字段，仅作辅助参考。
 """.strip()
 
-# txt files merged into each stage prompt (order preserved)
-COMMON_SYSTEM_STAGE1_TXT_FILES: tuple[str, ...] = (
-    sf.PERSONA,
-    sf.BINARY_DECISION,       # unified with Stage 2 for prefix caching; §0–§2 gate subset is included
+# Stable IDs merged into shared system and Stage 1 prompts (order preserved).
+COMMON_SYSTEM_STAGE1_PROMPT_IDS = (
+    pid.PERSONA,
+    pid.BINARY_DECISION,      # unified with Stage 2 for prefix caching; §0–§2 gate subset is included
 )
-COMMON_SYSTEM_STAGE2_TXT_FILES: tuple[str, ...] = (
-    sf.PERSONA,
-    sf.BINARY_DECISION,
+COMMON_SYSTEM_STAGE2_PROMPT_IDS = (
+    pid.PERSONA,
+    pid.BINARY_DECISION,
 )
-# Back-compat alias for UI helpers that list “common” files (Stage 2 full tree).
+COMMON_SYSTEM_PROMPT_IDS = COMMON_SYSTEM_STAGE2_PROMPT_IDS
+
+# Immutable compatibility projections for UI, records, and existing callers.
+COMMON_SYSTEM_STAGE1_TXT_FILES: tuple[str, ...] = prompting.TEMPLATE_CATALOG.legacy_filenames(
+    COMMON_SYSTEM_STAGE1_PROMPT_IDS
+)
+COMMON_SYSTEM_STAGE2_TXT_FILES: tuple[str, ...] = prompting.TEMPLATE_CATALOG.legacy_filenames(
+    COMMON_SYSTEM_STAGE2_PROMPT_IDS
+)
 COMMON_SYSTEM_PROMPT_TXT_FILES: tuple[str, ...] = COMMON_SYSTEM_STAGE2_TXT_FILES
 
 # Process-wide system prompt cache: DeepSeek KV hits need byte-identical prefixes
@@ -761,9 +769,12 @@ COMMON_SYSTEM_PROMPT_TXT_FILES: tuple[str, ...] = COMMON_SYSTEM_STAGE2_TXT_FILES
 _SYSTEM_PROMPT_CACHE: dict[str, str] = {}
 _SYSTEM_PROMPT_LOCK = threading.Lock()
 
-STAGE1_TASK_PROMPT_TXT_FILES: tuple[str, ...] = (
-    sf.MARKET_DIAGNOSIS,
-    sf.KLINE_SIGNAL,
+STAGE1_TASK_PROMPT_IDS = (
+    pid.MARKET_DIAGNOSIS,
+    pid.KLINE_SIGNAL,
+)
+STAGE1_TASK_PROMPT_TXT_FILES: tuple[str, ...] = prompting.TEMPLATE_CATALOG.legacy_filenames(
+    STAGE1_TASK_PROMPT_IDS
 )
 
 _CHANNEL_FILE_GROUPS: dict[str, tuple[str, ...]] = {
@@ -830,7 +841,12 @@ STAGE2_TEMPLATE_TXT_FILES: tuple[str, ...] = tuple(
 
 def stage1_prompt_txt_files() -> list[str]:
     """Return ordered .txt filenames injected in the Stage 1 prompt."""
-    return [*COMMON_SYSTEM_STAGE1_TXT_FILES, *STAGE1_TASK_PROMPT_TXT_FILES]
+    return list(prompting.TEMPLATE_CATALOG.legacy_filenames(stage1_prompt_ids()))
+
+
+def stage1_prompt_ids() -> list[pid.PromptId]:
+    """Return ordered stable Prompt IDs injected in the Stage 1 prompt."""
+    return [*COMMON_SYSTEM_STAGE1_PROMPT_IDS, *STAGE1_TASK_PROMPT_IDS]
 
 
 def _directional_channel_files(direction: str) -> list[str]:
@@ -959,7 +975,15 @@ class PromptAssembler:
             _OPENCLAW_AGENT_NO_TOOLS_RULE,
             _THINKING_CONTENT_OUTPUT_RULE,
         ]
-        system_parts.extend(prompting.load_shared_system_templates(self._template_store, self._use_template_store, self._load, COMMON_SYSTEM_PROMPT_TXT_FILES, warning_logger=logger))
+        system_parts.extend(
+            prompting.load_shared_system_prompt_ids(
+                self._template_store,
+                self._use_template_store,
+                self._load,
+                COMMON_SYSTEM_PROMPT_IDS,
+                warning_logger=logger,
+            )
+        )
         return "\n\n---\n\n".join(p for p in system_parts if p)
 
     # ── File loading ──────────────────────────────────────────────────────────
@@ -986,9 +1010,15 @@ class PromptAssembler:
 
     def _stage1_prompt_builder(self) -> Stage1PromptBuilder:
         return Stage1PromptBuilder(
-            load=prompting.make_stage1_template_loader(self._template_store, self._use_template_store, self._load, STAGE1_TASK_PROMPT_TXT_FILES, warning_logger=logger),
+            load_prompt_id=prompting.make_stage1_prompt_id_loader(
+                self._template_store,
+                self._use_template_store,
+                self._load,
+                STAGE1_TASK_PROMPT_IDS,
+                warning_logger=logger,
+            ),
             prompt_settings=self._prompt_settings,
-            stage1_task_prompt_txt_files=STAGE1_TASK_PROMPT_TXT_FILES,
+            stage1_task_prompt_ids=STAGE1_TASK_PROMPT_IDS,
             stage1_output_reminder_for_mode=_stage1_output_reminder_for_mode,
             stage1_tail_reminder=_STAGE1_TAIL_REMINDER,
             incremental_output_hard_rules=_INCREMENTAL_OUTPUT_HARD_RULES,

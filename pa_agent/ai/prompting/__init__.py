@@ -2,7 +2,9 @@
 
 from pa_agent.ai.prompting import prompt_ids
 from pa_agent.ai.prompting.compatibility import (
+    load_shared_system_prompt_ids,
     load_shared_system_templates,
+    make_stage1_prompt_id_loader,
     make_stage1_template_loader,
     make_stage2_template_loader,
     prepare_template_store,
@@ -38,7 +40,9 @@ __all__ = [
     "TemplateSpec",
     "TemplateStore",
     "TemplateStoreError",
+    "load_shared_system_prompt_ids",
     "load_shared_system_templates",
+    "make_stage1_prompt_id_loader",
     "make_stage1_template_loader",
     "make_stage2_template_loader",
     "prepare_template_store",

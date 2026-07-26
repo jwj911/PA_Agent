@@ -18,6 +18,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-26（L2：Prompt ID 解耦 M2.2 Shared System / Stage 1）
+
+- PromptAssembler 新增 shared system/Stage 1 ID 元组与 `stage1_prompt_ids()`；原
+  `COMMON_SYSTEM_*_TXT_FILES`、`STAGE1_TASK_PROMPT_TXT_FILES` 和
+  `stage1_prompt_txt_files()` 改为 Catalog 兼容投影，返回值与顺序不变。
+- compatibility 层新增 shared system 与 Stage 1 原子 ID loader；严格加载失败或显式关闭
+  TemplateStore 时，按 ID 解析 `legacy_filename` 后整组回退旧 `_load()`。
+- `Stage1PromptBuilder` 内部只接收 Prompt ID loader 与 ID tuple；全量、增量和 continuation
+  消息结构不变。Stage 2 的 filename loader 留给 M2.3，旧兼容 helper 未删除。
+- 新增 ID 批次调用、强制失败 fallback、ID/filename 投影测试；shared system、Stage 1、
+  Stage 2 standalone、continuation standalone/prefix-chain 和五轮 compatibility observation
+  保持字节等价，现有 golden 未更新。
+- 聚焦回归 **65 passed**；完整非 live unit 层 **1,071 passed**。导入排序、Prompting
+  focused Ruff/Ruff format、`py_compile`、CI target 清单、3,724 条 Ruff baseline 和差异
+  检查通过。
+- 同步 Prompt ID 方案、`AGENTS.md`、架构路线图和执行计划为“M2.2 已完成，M2.3 待实施”。
+  本切片未修改 Stage 2 builder、TemplateContext、Pipeline state、record、Prompt 正文或 schema。
+
+---
+
 ## [Unreleased] — 2026-07-26（L2：Prompt ID 解耦 M2.1 Router 双入口）
 
 - `route_strategy_prompt_ids()` 成为策略路由唯一主实现；周期、方向、近期尖峰、备选周期、

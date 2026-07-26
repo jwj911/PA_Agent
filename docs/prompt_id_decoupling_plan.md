@@ -1,6 +1,6 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1、M2.1 已完成，M2.2 待实施
+> 状态：M1、M2.1、M2.2 已完成，M2.3 待实施
 >
 > 日期：2026-07-26
 >
@@ -352,6 +352,20 @@ GUI 默认显示：
   legacy filename 路由完全相等。
 - Normalizer、Pipeline RouteStep、现有文件名合同和 Prompt golden 回归通过；本切片未修改
   PromptAssembler、TemplateContext、Prompt 正文、schema、Pipeline state 或 record。
+
+**M2.2 Shared system 与 Stage 1 实施结果（2026-07-26）**：
+
+- PromptAssembler 新增 shared system/Stage 1 ID 元组和 `stage1_prompt_ids()`；原
+  `COMMON_SYSTEM_*_TXT_FILES`、`STAGE1_TASK_PROMPT_TXT_FILES` 与
+  `stage1_prompt_txt_files()` 均由 Catalog 投影，返回值和顺序不变。
+- compatibility 层新增 shared system 与 Stage 1 的原子 ID loader；严格加载失败或显式关闭
+  TemplateStore 时，按 ID 查 `legacy_filename` 后整组回退旧 `_load()`。
+- `Stage1PromptBuilder` 内部只接收 `PromptId` loader 与 ID tuple；全量、增量和 continuation
+  的消息结构及 Prompt 字节保持不变。
+- 增加 ID loader 调用批次、强制失败 fallback、ID/filename 列表投影和五轮 compatibility
+  observation 证据；M2.2 未切换 Stage 2、TemplateContext、Pipeline state 或 record。
+- Prompt/Store/compatibility 聚焦回归 65 项、完整非 live unit 层 1,071 项通过；3,724 条
+  Ruff baseline 与全部 Prompt golden 保持不变。
 
 **退出门禁**：
 

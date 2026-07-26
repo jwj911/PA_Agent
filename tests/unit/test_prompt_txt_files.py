@@ -6,15 +6,20 @@ from pathlib import Path
 
 from pa_agent.ai import strategy_files as sf
 from pa_agent.ai.prompt_assembler import (
+    COMMON_SYSTEM_STAGE1_PROMPT_IDS,
     COMMON_SYSTEM_STAGE1_TXT_FILES,
+    COMMON_SYSTEM_STAGE2_PROMPT_IDS,
     COMMON_SYSTEM_STAGE2_TXT_FILES,
+    STAGE1_TASK_PROMPT_IDS,
     STAGE1_TASK_PROMPT_TXT_FILES,
     STAGE2_BASE_PROMPT_TXT_FILES,
     STAGE2_FULL_STRATEGY_PROMPT_TXT_FILES,
+    stage1_prompt_ids,
     stage1_prompt_txt_files,
     stage2_prompt_txt_files,
     stage2_user_task_txt_files,
 )
+from pa_agent.ai.prompting import TEMPLATE_CATALOG, prompt_ids
 
 PROMPT_DIR = Path(__file__).resolve().parents[2] / "prompt_engineering"
 DEPRECATED_STAGE1_GATE_FILE = "二元决策_闸门.txt"
@@ -31,6 +36,13 @@ def test_stage1_txt_files() -> None:
     assert "二元决策.txt" in files
     assert DEPRECATED_STAGE1_GATE_FILE not in files
     assert "文件13-窄通道与宽通道策略.txt" not in files
+    assert stage1_prompt_ids() == [
+        prompt_ids.PERSONA,
+        prompt_ids.BINARY_DECISION,
+        prompt_ids.MARKET_DIAGNOSIS,
+        prompt_ids.KLINE_SIGNAL,
+    ]
+    assert list(TEMPLATE_CATALOG.legacy_filenames(stage1_prompt_ids())) == files
 
 
 def test_stage_prompt_file_lists_match_audited_order() -> None:
@@ -41,6 +53,15 @@ def test_stage_prompt_file_lists_match_audited_order() -> None:
     assert STAGE1_TASK_PROMPT_TXT_FILES == (
         "市场诊断框架.txt",
         "文件16-K线信号识别.txt",
+    )
+    assert COMMON_SYSTEM_STAGE1_PROMPT_IDS == (
+        prompt_ids.PERSONA,
+        prompt_ids.BINARY_DECISION,
+    )
+    assert COMMON_SYSTEM_STAGE2_PROMPT_IDS == COMMON_SYSTEM_STAGE1_PROMPT_IDS
+    assert STAGE1_TASK_PROMPT_IDS == (
+        prompt_ids.MARKET_DIAGNOSIS,
+        prompt_ids.KLINE_SIGNAL,
     )
     assert COMMON_SYSTEM_STAGE2_TXT_FILES == (
         "提示词大纲_人设与思维方式.txt",
