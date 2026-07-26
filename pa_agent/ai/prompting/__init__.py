@@ -6,6 +6,7 @@ from pa_agent.ai.prompting.compatibility import (
     load_shared_system_templates,
     make_stage1_prompt_id_loader,
     make_stage1_template_loader,
+    make_stage2_prompt_id_loader,
     make_stage2_template_loader,
     prepare_template_store,
 )
@@ -44,6 +45,7 @@ __all__ = [
     "load_shared_system_templates",
     "make_stage1_prompt_id_loader",
     "make_stage1_template_loader",
+    "make_stage2_prompt_id_loader",
     "make_stage2_template_loader",
     "prepare_template_store",
     "prompt_ids",

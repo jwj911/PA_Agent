@@ -12,11 +12,15 @@ from pa_agent.ai.prompt_assembler import (
     COMMON_SYSTEM_STAGE2_TXT_FILES,
     STAGE1_TASK_PROMPT_IDS,
     STAGE1_TASK_PROMPT_TXT_FILES,
+    STAGE2_BASE_PROMPT_IDS,
     STAGE2_BASE_PROMPT_TXT_FILES,
+    STAGE2_FULL_STRATEGY_PROMPT_IDS,
     STAGE2_FULL_STRATEGY_PROMPT_TXT_FILES,
     stage1_prompt_ids,
     stage1_prompt_txt_files,
+    stage2_prompt_ids,
     stage2_prompt_txt_files,
+    stage2_user_task_prompt_ids,
     stage2_user_task_txt_files,
 )
 from pa_agent.ai.prompting import TEMPLATE_CATALOG, prompt_ids
@@ -73,6 +77,15 @@ def test_stage_prompt_file_lists_match_audited_order() -> None:
         "文件17-止损和止盈与仓位管理.txt",
         "文件23-MeasuredMove与结构目标.txt",
     )
+    assert STAGE2_BASE_PROMPT_IDS == (
+        prompt_ids.BAR_CHECKLIST,
+        prompt_ids.KLINE_SIGNAL,
+        prompt_ids.STOP_TARGET_POSITION,
+        prompt_ids.MEASURED_MOVE,
+    )
+    assert list(TEMPLATE_CATALOG.legacy_filenames(STAGE2_FULL_STRATEGY_PROMPT_IDS)) == list(
+        STAGE2_FULL_STRATEGY_PROMPT_TXT_FILES
+    )
 
     routed = ["极速上涨分析识别.txt", "极速上涨交易策略.txt"]
     assert stage2_prompt_txt_files(routed, direction="bullish") == [
@@ -80,6 +93,13 @@ def test_stage_prompt_file_lists_match_audited_order() -> None:
         *routed,
         *STAGE2_BASE_PROMPT_TXT_FILES,
     ]
+    routed_ids = [
+        prompt_ids.BULLISH_SPIKE_ID,
+        prompt_ids.BULLISH_SPIKE_STRATEGY,
+    ]
+    assert list(
+        TEMPLATE_CATALOG.legacy_filenames(stage2_prompt_ids(routed_ids, direction="bullish"))
+    ) == stage2_prompt_txt_files(routed, direction="bullish")
 
 
 def test_prompt_file_helpers_reference_existing_real_txt_files() -> None:
@@ -113,6 +133,11 @@ def test_stage2_routed_only_bullish() -> None:
     for name in STAGE2_FULL_STRATEGY_PROMPT_TXT_FILES:
         if name.startswith("下跌") or name.startswith("极速下跌"):
             assert name not in files
+    prompt_id_files = stage2_user_task_prompt_ids(
+        [prompt_ids.RANGE_STRATEGY, prompt_ids.BULLISH_CHANNEL_ID],
+        direction="bullish",
+    )
+    assert list(TEMPLATE_CATALOG.legacy_filenames(prompt_id_files)) == files
 
 
 def test_stage2_full_library_flag() -> None:

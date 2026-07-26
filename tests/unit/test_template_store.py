@@ -16,6 +16,7 @@ from pa_agent.ai import strategy_files as sf
 from pa_agent.ai.prompt_assembler import (
     COMMON_SYSTEM_PROMPT_IDS,
     STAGE1_TASK_PROMPT_IDS,
+    STAGE2_TEMPLATE_PROMPT_IDS,
     PromptAssembler,
 )
 from pa_agent.ai.prompting import (
@@ -171,6 +172,50 @@ def test_stage1_assembler_uses_prompt_id_loaders_and_legacy_fallback() -> None:
         fallback._build_shared_system_prompt_inner() == legacy._build_shared_system_prompt_inner()
     )
     assert fallback._build_stage1_user_prompt(frame) == legacy._build_stage1_user_prompt(frame)
+
+
+def test_stage2_assembler_uses_prompt_id_loader_and_legacy_fallback() -> None:
+    class TrackingStore(TemplateStore):
+        def __init__(self, root: Path) -> None:
+            super().__init__(root)
+            self.id_batches: list[tuple[PromptId, ...]] = []
+
+        def load_many_ids(self, prompt_ids, *, stage=None):
+            self.id_batches.append(tuple(prompt_ids))
+            return super().load_many_ids(prompt_ids, stage=stage)
+
+    class FailingIdStore:
+        catalog = TEMPLATE_CATALOG
+
+        @staticmethod
+        def load_many_ids(prompt_ids, *, stage=None):
+            raise TemplateStoreError("forced Stage 2 ID loader failure")
+
+    tracking_store = TrackingStore(PROMPT_DIR)
+    assembler = PromptAssembler(prompt_dir=PROMPT_DIR, template_store=tracking_store)
+    legacy = PromptAssembler(prompt_dir=PROMPT_DIR, use_template_store=False)
+    fallback = PromptAssembler(prompt_dir=PROMPT_DIR, template_store=FailingIdStore())
+    frame = build_analysis_frame(
+        make_newest_first_bars(25, with_forming=False),
+        20,
+        "TEST",
+        "5m",
+    )
+    assert frame is not None
+    kwargs = {
+        "frame": frame,
+        "stage1_json": {"direction": "bullish"},
+        "strategy_files": ["上涨通道分析识别.txt"],
+        "experience_entries": [],
+    }
+
+    assert assembler._build_stage2_user_prompt(**kwargs) == legacy._build_stage2_user_prompt(
+        **kwargs
+    )
+    assert tracking_store.id_batches == [STAGE2_TEMPLATE_PROMPT_IDS]
+    assert fallback._build_stage2_user_prompt(**kwargs) == legacy._build_stage2_user_prompt(
+        **kwargs
+    )
 
 
 def test_stage2_and_continuation_match_legacy_template_loading() -> None:

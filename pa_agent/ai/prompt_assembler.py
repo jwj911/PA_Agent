@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any
 
 from pa_agent.ai import prompting
-from pa_agent.ai import strategy_files as sf
 from pa_agent.ai.chain_context import (
     compact_stage1_for_stage2,
     normalize_prev_stage1_assistant_for_incremental,
@@ -19,6 +18,7 @@ from pa_agent.ai.experience_renderer import render_experience
 from pa_agent.ai.kline_table_renderer import render_kline_feature_table, render_kline_table
 from pa_agent.ai.program_prefill_hint import render_program_prefill_hint
 from pa_agent.ai.prompting import prompt_ids as pid
+from pa_agent.ai.prompting.prompt_ids import PromptId
 from pa_agent.ai.stage1_prompt_builder import (
     Stage1PromptBuilder,
     inject_market_features_block,
@@ -777,65 +777,83 @@ STAGE1_TASK_PROMPT_TXT_FILES: tuple[str, ...] = prompting.TEMPLATE_CATALOG.legac
     STAGE1_TASK_PROMPT_IDS
 )
 
-_CHANNEL_FILE_GROUPS: dict[str, tuple[str, ...]] = {
+_CHANNEL_PROMPT_ID_GROUPS = {
     "bullish": (
-        sf.BULLISH_CHANNEL_ID,
-        sf.BULLISH_CHANNEL_STRATEGY,
+        pid.BULLISH_CHANNEL_ID,
+        pid.BULLISH_CHANNEL_STRATEGY,
     ),
     "bearish": (
-        sf.BEARISH_CHANNEL_ID,
-        sf.BEARISH_CHANNEL_STRATEGY,
+        pid.BEARISH_CHANNEL_ID,
+        pid.BEARISH_CHANNEL_STRATEGY,
     ),
 }
-_SPIKE_FILE_GROUPS: dict[str, tuple[str, ...]] = {
+_SPIKE_PROMPT_ID_GROUPS = {
     "bullish": (
-        sf.BULLISH_SPIKE_ID,
-        sf.BULLISH_SPIKE_STRATEGY,
+        pid.BULLISH_SPIKE_ID,
+        pid.BULLISH_SPIKE_STRATEGY,
     ),
     "bearish": (
-        sf.BEARISH_SPIKE_ID,
-        sf.BEARISH_SPIKE_STRATEGY,
+        pid.BEARISH_SPIKE_ID,
+        pid.BEARISH_SPIKE_STRATEGY,
     ),
 }
 
-STAGE2_BASE_PROMPT_TXT_FILES: tuple[str, ...] = (
-    sf.BAR_CHECKLIST,
-    sf.KLINE_SIGNAL,
-    sf.STOP_TARGET_POSITION,
-    sf.MEASURED_MOVE,
+STAGE2_BASE_PROMPT_IDS = (
+    pid.BAR_CHECKLIST,
+    pid.KLINE_SIGNAL,
+    pid.STOP_TARGET_POSITION,
+    pid.MEASURED_MOVE,
 )
 
-STAGE2_FULL_STRATEGY_PROMPT_TXT_FILES: tuple[str, ...] = (
-    sf.BULLISH_CHANNEL_ID,
-    sf.BULLISH_CHANNEL_STRATEGY,
-    sf.BEARISH_CHANNEL_ID,
-    sf.BEARISH_CHANNEL_STRATEGY,
-    sf.BULLISH_SPIKE_ID,
-    sf.BULLISH_SPIKE_STRATEGY,
-    sf.BEARISH_SPIKE_ID,
-    sf.BEARISH_SPIKE_STRATEGY,
-    sf.RANGE_ID,
-    sf.RANGE_STRATEGY,
-    sf.CHANNEL_WIDTH,
-    sf.WEDGE,
-    sf.REVERSAL,
-    sf.BREAKOUT_FAILURE,
-    sf.H1H2,
-    sf.ALWAYS_IN,
-    sf.BARBWIRE,
-    sf.MAGNET,
-    sf.FINAL_FLAG,
-    sf.MTR,
-    sf.TRIANGLE,
-    sf.DOUBLE_TOP_BOTTOM,
+STAGE2_FULL_STRATEGY_PROMPT_IDS = (
+    pid.BULLISH_CHANNEL_ID,
+    pid.BULLISH_CHANNEL_STRATEGY,
+    pid.BEARISH_CHANNEL_ID,
+    pid.BEARISH_CHANNEL_STRATEGY,
+    pid.BULLISH_SPIKE_ID,
+    pid.BULLISH_SPIKE_STRATEGY,
+    pid.BEARISH_SPIKE_ID,
+    pid.BEARISH_SPIKE_STRATEGY,
+    pid.RANGE_ID,
+    pid.RANGE_STRATEGY,
+    pid.CHANNEL_WIDTH,
+    pid.WEDGE,
+    pid.REVERSAL,
+    pid.BREAKOUT_FAILURE,
+    pid.H1H2,
+    pid.ALWAYS_IN,
+    pid.BARBWIRE,
+    pid.MAGNET,
+    pid.FINAL_FLAG,
+    pid.MTR,
+    pid.TRIANGLE,
+    pid.DOUBLE_TOP_BOTTOM,
 )
-STAGE2_TEMPLATE_TXT_FILES: tuple[str, ...] = tuple(
+STAGE2_TEMPLATE_PROMPT_IDS = tuple(
     dict.fromkeys(
         (
-            *STAGE2_BASE_PROMPT_TXT_FILES,
-            *STAGE2_FULL_STRATEGY_PROMPT_TXT_FILES,
+            *STAGE2_BASE_PROMPT_IDS,
+            *STAGE2_FULL_STRATEGY_PROMPT_IDS,
         )
     )
+)
+
+_CHANNEL_FILE_GROUPS: dict[str, tuple[str, ...]] = {
+    key: prompting.TEMPLATE_CATALOG.legacy_filenames(prompt_ids)
+    for key, prompt_ids in _CHANNEL_PROMPT_ID_GROUPS.items()
+}
+_SPIKE_FILE_GROUPS: dict[str, tuple[str, ...]] = {
+    key: prompting.TEMPLATE_CATALOG.legacy_filenames(prompt_ids)
+    for key, prompt_ids in _SPIKE_PROMPT_ID_GROUPS.items()
+}
+STAGE2_BASE_PROMPT_TXT_FILES = prompting.TEMPLATE_CATALOG.legacy_filenames(
+    STAGE2_BASE_PROMPT_IDS
+)
+STAGE2_FULL_STRATEGY_PROMPT_TXT_FILES = prompting.TEMPLATE_CATALOG.legacy_filenames(
+    STAGE2_FULL_STRATEGY_PROMPT_IDS
+)
+STAGE2_TEMPLATE_TXT_FILES = prompting.TEMPLATE_CATALOG.legacy_filenames(
+    STAGE2_TEMPLATE_PROMPT_IDS
 )
 
 
@@ -844,16 +862,66 @@ def stage1_prompt_txt_files() -> list[str]:
     return list(prompting.TEMPLATE_CATALOG.legacy_filenames(stage1_prompt_ids()))
 
 
-def stage1_prompt_ids() -> list[pid.PromptId]:
+def stage1_prompt_ids() -> list[PromptId]:
     """Return ordered stable Prompt IDs injected in the Stage 1 prompt."""
     return [*COMMON_SYSTEM_STAGE1_PROMPT_IDS, *STAGE1_TASK_PROMPT_IDS]
 
 
-def _directional_channel_files(direction: str) -> list[str]:
+def _resolve_strategy_prompt_ids(strategy_files: list[str] | None) -> list[PromptId]:
+    """Resolve legacy strategy filenames at the public compatibility boundary."""
+    return [
+        prompting.TEMPLATE_CATALOG.resolve_legacy_filename(filename)
+        for filename in (strategy_files or [])
+        if filename
+    ]
+
+
+def _directional_channel_prompt_ids(direction: str) -> list[PromptId]:
     key = str(direction or "").strip().lower()
-    if key in _CHANNEL_FILE_GROUPS:
-        return list(_CHANNEL_FILE_GROUPS[key])
+    if key in _CHANNEL_PROMPT_ID_GROUPS:
+        return list(_CHANNEL_PROMPT_ID_GROUPS[key])
     return []
+
+
+def _directional_channel_files(direction: str) -> list[str]:
+    """Return the legacy projection of directional channel Prompt IDs."""
+    return list(
+        prompting.TEMPLATE_CATALOG.legacy_filenames(
+            _directional_channel_prompt_ids(direction)
+        )
+    )
+
+
+def stage2_user_task_prompt_ids(
+    strategy_prompt_ids: list[PromptId] | None = None,
+    *,
+    direction: str = "",
+    load_full_strategy_library: bool = False,
+) -> list[PromptId]:
+    """Return stable Prompt IDs loaded into the Stage 2 user turn."""
+    routed = [prompt_id for prompt_id in (strategy_prompt_ids or []) if prompt_id]
+    if load_full_strategy_library:
+        core = [*STAGE2_FULL_STRATEGY_PROMPT_IDS, *STAGE2_BASE_PROMPT_IDS]
+    else:
+        dir_key = str(direction or "").strip().lower()
+        opposite = (
+            _CHANNEL_PROMPT_ID_GROUPS.get("bearish", ())
+            if dir_key == "bullish"
+            else _CHANNEL_PROMPT_ID_GROUPS.get("bullish", ())
+            if dir_key == "bearish"
+            else ()
+        )
+        opposite_spike = (
+            _SPIKE_PROMPT_ID_GROUPS.get("bearish", ())
+            if dir_key == "bullish"
+            else _SPIKE_PROMPT_ID_GROUPS.get("bullish", ())
+            if dir_key == "bearish"
+            else ()
+        )
+        skip = frozenset((*opposite, *opposite_spike))
+        core = [prompt_id for prompt_id in routed if prompt_id not in skip]
+        core.extend(STAGE2_BASE_PROMPT_IDS)
+    return list(dict.fromkeys(core))
 
 
 def stage2_user_task_txt_files(
@@ -862,34 +930,30 @@ def stage2_user_task_txt_files(
     direction: str = "",
     load_full_strategy_library: bool = False,
 ) -> list[str]:
-    """Return .txt filenames loaded into the Stage 2 user turn only."""
-    routed = [f for f in (strategy_files or []) if f]
-    if load_full_strategy_library:
-        core = [*STAGE2_FULL_STRATEGY_PROMPT_TXT_FILES, *STAGE2_BASE_PROMPT_TXT_FILES]
-    else:
-        dir_key = str(direction or "").strip().lower()
-        opposite = (
-            _CHANNEL_FILE_GROUPS.get("bearish", ())
-            if dir_key == "bullish"
-            else _CHANNEL_FILE_GROUPS.get("bullish", ())
-            if dir_key == "bearish"
-            else ()
-        )
-        opposite_spike = (
-            _SPIKE_FILE_GROUPS.get("bearish", ())
-            if dir_key == "bullish"
-            else _SPIKE_FILE_GROUPS.get("bullish", ())
-            if dir_key == "bearish"
-            else ()
-        )
-        skip = frozenset((*opposite, *opposite_spike))
-        core = [
-            f
-            for f in routed
-            if f not in skip
-        ]
-        core.extend(STAGE2_BASE_PROMPT_TXT_FILES)
-    return list(dict.fromkeys([*core]))
+    """Return legacy filenames loaded into the Stage 2 user turn."""
+    prompt_ids = stage2_user_task_prompt_ids(
+        _resolve_strategy_prompt_ids(strategy_files),
+        direction=direction,
+        load_full_strategy_library=load_full_strategy_library,
+    )
+    return list(prompting.TEMPLATE_CATALOG.legacy_filenames(prompt_ids))
+
+
+def stage2_prompt_ids(
+    strategy_prompt_ids: list[PromptId] | None = None,
+    *,
+    direction: str = "",
+    load_full_strategy_library: bool = False,
+) -> list[PromptId]:
+    """Return all stable Prompt IDs relevant to Stage 2."""
+    return [
+        *COMMON_SYSTEM_STAGE2_PROMPT_IDS,
+        *stage2_user_task_prompt_ids(
+            strategy_prompt_ids,
+            direction=direction,
+            load_full_strategy_library=load_full_strategy_library,
+        ),
+    ]
 
 
 def stage2_prompt_txt_files(
@@ -899,14 +963,15 @@ def stage2_prompt_txt_files(
     load_full_strategy_library: bool = False,
 ) -> list[str]:
     """Return all .txt files relevant to Stage 2 (system common + user task), for UI/debug."""
-    return [
-        *COMMON_SYSTEM_STAGE2_TXT_FILES,
-        *stage2_user_task_txt_files(
-            strategy_files,
-            direction=direction,
-            load_full_strategy_library=load_full_strategy_library,
-        ),
-    ]
+    return list(
+        prompting.TEMPLATE_CATALOG.legacy_filenames(
+            stage2_prompt_ids(
+                _resolve_strategy_prompt_ids(strategy_files),
+                direction=direction,
+                load_full_strategy_library=load_full_strategy_library,
+            )
+        )
+    )
 
 
 # ── PromptAssembler ────────────────────────────────────────────────────────────
@@ -1188,16 +1253,16 @@ class PromptAssembler:
     def _stage2_prompt_builder(self) -> Stage2PromptBuilder:
         return Stage2PromptBuilder(
             build_stage2_system_prompt=self._build_stage2_system_prompt,
-            load=prompting.make_stage2_template_loader(
+            load_prompt_id=prompting.make_stage2_prompt_id_loader(
                 self._template_store,
                 self._use_template_store,
                 self._load,
-                STAGE2_TEMPLATE_TXT_FILES,
+                STAGE2_TEMPLATE_PROMPT_IDS,
                 warning_logger=logger,
             ),
             load_full_strategy_library=self._load_full_strategy_library,
             prompt_settings=self._prompt_settings,
-            stage2_user_task_txt_files=stage2_user_task_txt_files,
+            stage2_user_task_prompt_ids=stage2_user_task_prompt_ids,
             build_next_cycle_prediction_instruction=_build_next_cycle_prediction_instruction,
             stage2_api_task_rule=_STAGE2_API_TASK_RULE,
             stage2_output_contract=_STAGE2_OUTPUT_CONTRACT,
@@ -1229,7 +1294,7 @@ class PromptAssembler:
         return self._stage2_prompt_builder().build_stage2(
             frame,
             stage1_json,
-            strategy_files,
+            _resolve_strategy_prompt_ids(strategy_files),
             experience_entries,
             decision_stance=decision_stance,
         )
@@ -1255,7 +1320,7 @@ class PromptAssembler:
             stage1_messages=stage1_messages,
             stage1_reply_content=stage1_reply_content,
             stage1_json=stage1_json,
-            strategy_files=strategy_files,
+            strategy_prompt_ids=_resolve_strategy_prompt_ids(strategy_files),
             experience_entries=experience_entries,
             decision_stance=decision_stance,
             previous_record=previous_record,
@@ -1281,7 +1346,7 @@ class PromptAssembler:
         return self._stage2_prompt_builder().build_stage2_user_prompt(
             frame=frame,
             stage1_json=stage1_json,
-            strategy_files=strategy_files,
+            strategy_prompt_ids=_resolve_strategy_prompt_ids(strategy_files),
             experience_entries=experience_entries,
             decision_stance=decision_stance,
             previous_record=previous_record,

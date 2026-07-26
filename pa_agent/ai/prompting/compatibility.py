@@ -74,7 +74,7 @@ def load_shared_system_prompt_ids(
             return tuple(store.load_many(legacy_names, stage="stage1"))
         except TemplateStoreError as exc:
             (warning_logger or logger).warning(
-                "TemplateStore system Prompt ID load failed; falling back to legacy loader: %s",
+                "TemplateStore system prompt load failed; falling back to legacy loader: %s",
                 exc,
             )
     return tuple(legacy_load(name) for name in legacy_names)
@@ -139,7 +139,7 @@ def _make_prompt_id_loader(
             templates = dict(zip(ordered_ids, loaded, strict=True))
         except TemplateStoreError as exc:
             (warning_logger or logger).warning(
-                "TemplateStore %s Prompt ID load failed; falling back to legacy loader: %s",
+                "TemplateStore %s prompt load failed; falling back to legacy loader: %s",
                 stage_label,
                 exc,
             )
@@ -215,6 +215,26 @@ def make_stage2_template_loader(
         enabled,
         legacy_load,
         names,
+        stage="stage2",
+        stage_label="Stage 2",
+        warning_logger=warning_logger,
+    )
+
+
+def make_stage2_prompt_id_loader(
+    store: Any,
+    enabled: bool,
+    legacy_load: Callable[[str], str],
+    prompt_ids: Sequence[PromptId],
+    *,
+    warning_logger: logging.Logger | None = None,
+) -> Callable[[PromptId], str]:
+    """Build a Stage 2 ID loader that switches atomically or falls back as a group."""
+    return _make_prompt_id_loader(
+        store,
+        enabled,
+        legacy_load,
+        prompt_ids,
         stage="stage2",
         stage_label="Stage 2",
         warning_logger=warning_logger,

@@ -18,6 +18,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-26（L2：Prompt ID 解耦 M2.3 Stage 2 / TemplateContext）
+
+- Stage 2 base、全策略库、方向组和 routed strategy 已切换为 Prompt ID；
+  `STAGE2_*_TXT_FILES`、`stage2_*_txt_files()` 与 PromptAssembler 公共 `strategy_files`
+  参数继续作为 Catalog 兼容投影。
+- `Stage2PromptBuilder` 仅接收 ID loader 与 `strategy_prompt_ids`；standalone、continuation
+  和 prefix-chain 在 facade 边界解析 legacy filename，Stage 2 内部不再传递物理文件名。
+- TemplateContext 新增权威 `strategy_prompt_ids` 并自动双写 `strategy_files`；
+  `from_stage2_inputs()` 保留兼容，新增 `from_stage2_prompt_ids()`，ID/file 不一致时失败关闭；
+  `template_versions` 的 legacy filename key 规范为稳定 ID。
+- Stage 2 compatibility loader 优先调用 M1 `load_many_ids()`；旧注入 Store protocol 自动投影
+  后调用 `load_many()`，warning 文本、整组 fallback 和显式回滚行为不变。
+- 新增 Stage 2 ID 批次/fallback、ID/filename 选库等价及 TemplateContext 双合同测试；
+  Prompt 聚焦回归 **67 passed**、完整非 live unit 层 **1,073 passed**、关键两阶段/Pipeline
+  集成 **24 passed**。Prompt golden、KV 前缀、CI target 清单和 3,724 条 Ruff baseline 不变。
+- 同步 Prompt ID 方案、`AGENTS.md`、架构路线图和执行计划为“M2 已完成，M3 待实施”。
+  本切片未修改 Pipeline state、record、GUI callback、Prompt 正文或模型 JSON schema。
+
+---
+
 ## [Unreleased] — 2026-07-26（L2：Prompt ID 解耦 M2.2 Shared System / Stage 1）
 
 - PromptAssembler 新增 shared system/Stage 1 ID 元组与 `stage1_prompt_ids()`；原

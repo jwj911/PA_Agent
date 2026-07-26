@@ -1,6 +1,6 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1、M2.1、M2.2 已完成，M2.3 待实施
+> 状态：M1、M2 已完成，M3 待实施
 >
 > 日期：2026-07-26
 >
@@ -366,6 +366,20 @@ GUI 默认显示：
   observation 证据；M2.2 未切换 Stage 2、TemplateContext、Pipeline state 或 record。
 - Prompt/Store/compatibility 聚焦回归 65 项、完整非 live unit 层 1,071 项通过；3,724 条
   Ruff baseline 与全部 Prompt golden 保持不变。
+
+**M2.3 Stage 2 与 TemplateContext 实施结果（2026-07-26）**：
+
+- Stage 2 base、全策略库、方向组和 routed strategy 全部使用 Prompt ID；旧
+  `STAGE2_*_TXT_FILES`、`stage2_*_txt_files()` 和 PromptAssembler 公共 `strategy_files`
+  参数继续作为 Catalog 兼容投影。
+- `Stage2PromptBuilder` 仅接收 ID loader 与 `strategy_prompt_ids`；standalone、continuation
+  和 prefix-chain 在进入 builder 前完成 legacy filename 解析。
+- TemplateContext 新增权威 `strategy_prompt_ids`，自动双写 `strategy_files`；旧
+  `from_stage2_inputs()` 保留，新 `from_stage2_prompt_ids()` 供内部使用，不一致双合同失败关闭。
+- Stage 2 ID loader 优先使用 M1 Store protocol；旧注入 Store 自动投影为 filename 后调用
+  `load_many()`，warning 文本和整组 fallback 行为不变。
+- Prompt 聚焦回归 67 项、完整非 live unit 层 1,073 项、关键两阶段/Pipeline 集成 24 项通过；
+  全部 golden、KV 前缀和 3,724 条 Ruff baseline 保持不变。
 
 **退出门禁**：
 

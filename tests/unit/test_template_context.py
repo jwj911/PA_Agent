@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from pa_agent.ai.prompting import TemplateContext
+from pa_agent.ai.prompting import PromptId, TemplateContext, prompt_ids
 from tests.unit.test_prompt_assembler import _make_frame
 
 
@@ -31,10 +31,45 @@ def test_stage2_context_is_json_serializable_and_does_not_keep_runtime_objects()
     assert payload["stage"] == "stage2"
     assert payload["symbol"] == "XAUUSD"
     assert payload["bar_count"] == len(frame.bars)
+    assert payload["strategy_prompt_ids"] == ["pa.channel.bullish.identification"]
     assert payload["strategy_files"] == ["上涨通道分析识别.txt"]
     assert payload["feature_flags"] == {"prefix_chain": True}
+    assert payload["template_versions"] == {"pa.channel.bullish.identification": "v1"}
     assert not hasattr(context, "settings")
     assert not hasattr(context, "client")
+
+
+def test_stage2_context_from_ids_projects_legacy_files_and_rejects_mismatch() -> None:
+    frame = _make_frame()
+    context = TemplateContext.from_stage2_prompt_ids(
+        frame,
+        {"direction": "bullish"},
+        [prompt_ids.BULLISH_CHANNEL_ID],
+        [],
+        decision_stance="balanced",
+    )
+
+    assert context.strategy_prompt_ids == (prompt_ids.BULLISH_CHANNEL_ID,)
+    assert context.strategy_files == ("上涨通道分析识别.txt",)
+
+    with pytest.raises(ValueError, match="strategy IDs and files do not match"):
+        TemplateContext(
+            stage="stage2",
+            symbol="TEST",
+            timeframe="5m",
+            bar_count=1,
+            strategy_prompt_ids=(prompt_ids.BULLISH_CHANNEL_ID,),
+            strategy_files=("下跌通道分析识别.txt",),
+        )
+
+    with pytest.raises(ValueError, match="Unknown prompt ID"):
+        TemplateContext(
+            stage="stage2",
+            symbol="TEST",
+            timeframe="5m",
+            bar_count=1,
+            strategy_prompt_ids=(PromptId("pa.unknown"),),
+        )
 
 
 def test_template_context_rejects_invalid_stage_and_bar_count() -> None:

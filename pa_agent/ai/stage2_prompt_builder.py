@@ -1,8 +1,7 @@
 """Stage 2 prompt builder for :mod:`pa_agent.ai.prompt_assembler`.
 
-This module owns Stage 2 message construction and Stage 2 user-turn rendering.
-``PromptAssembler`` keeps the public facade, system prompt cache, and legacy
-private wrapper names.
+This module owns Stage 2 message construction and rendering. ``PromptAssembler``
+keeps the public facade, system prompt cache, and legacy private wrappers.
 """
 
 from __future__ import annotations
@@ -16,6 +15,7 @@ from pa_agent.ai.prompting.template_context import TemplateContext
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from pa_agent.ai.prompting.prompt_ids import PromptId
     from pa_agent.data.base import KlineFrame
 
 
@@ -26,10 +26,10 @@ class Stage2PromptBuilder:
         self,
         *,
         build_stage2_system_prompt: Callable[[], str],
-        load: Callable[[str], str],
+        load_prompt_id: Callable[[PromptId], str],
         load_full_strategy_library: Callable[[], bool],
         prompt_settings: Any = None,
-        stage2_user_task_txt_files: Callable[..., list[str]],
+        stage2_user_task_prompt_ids: Callable[..., list[PromptId]],
         build_next_cycle_prediction_instruction: Callable[..., str],
         stage2_api_task_rule: str,
         stage2_output_contract: str,
@@ -49,10 +49,10 @@ class Stage2PromptBuilder:
         normalize_stage1_assistant_for_chain: Callable[[dict, str], str],
     ) -> None:
         self._build_stage2_system_prompt = build_stage2_system_prompt
-        self._load = load
+        self._load_prompt_id = load_prompt_id
         self._load_full_strategy_library = load_full_strategy_library
         self._prompt_settings = prompt_settings
-        self._stage2_user_task_txt_files = stage2_user_task_txt_files
+        self._stage2_user_task_prompt_ids = stage2_user_task_prompt_ids
         self._build_next_cycle_prediction_instruction = build_next_cycle_prediction_instruction
         self._stage2_api_task_rule = stage2_api_task_rule
         self._stage2_output_contract = stage2_output_contract
@@ -75,16 +75,16 @@ class Stage2PromptBuilder:
         self,
         frame: KlineFrame,
         stage1_json: dict,
-        strategy_files: list[str],
+        strategy_prompt_ids: list[PromptId],
         experience_entries: list[Any],
         *,
         decision_stance: str = "conservative",
     ) -> list[dict]:
         """Build a standalone Stage 2 request (kept for tests/tools)."""
-        template_context = TemplateContext.from_stage2_inputs(
+        template_context = TemplateContext.from_stage2_prompt_ids(
             frame,
             stage1_json,
-            strategy_files,
+            strategy_prompt_ids,
             experience_entries,
             decision_stance=decision_stance,
         )
@@ -92,7 +92,7 @@ class Stage2PromptBuilder:
         user_content = self.build_stage2_user_prompt(
             frame=frame,
             stage1_json=stage1_json,
-            strategy_files=strategy_files,
+            strategy_prompt_ids=strategy_prompt_ids,
             experience_entries=experience_entries,
             decision_stance=decision_stance,
             enable_next_bar_prediction=False,
@@ -110,7 +110,7 @@ class Stage2PromptBuilder:
         stage1_messages: list[dict],
         stage1_reply_content: str,
         stage1_json: dict,
-        strategy_files: list[str],
+        strategy_prompt_ids: list[PromptId],
         experience_entries: list[Any],
         decision_stance: str = "conservative",
         previous_record: Any | None = None,
@@ -133,10 +133,10 @@ class Stage2PromptBuilder:
             use_prefix_chain = supports_kv_prefix_chain(provider_settings)
 
         chain_after_s1 = bool(use_prefix_chain and stage1_messages)
-        template_context = TemplateContext.from_stage2_inputs(
+        template_context = TemplateContext.from_stage2_prompt_ids(
             frame,
             stage1_json,
-            strategy_files,
+            strategy_prompt_ids,
             experience_entries,
             decision_stance=decision_stance,
             previous_record=previous_record,
@@ -148,7 +148,7 @@ class Stage2PromptBuilder:
         stage2_user_content = self.build_stage2_user_prompt(
             frame=frame,
             stage1_json=stage1_json,
-            strategy_files=strategy_files,
+            strategy_prompt_ids=strategy_prompt_ids,
             experience_entries=experience_entries,
             decision_stance=decision_stance,
             previous_record=previous_record,
@@ -179,7 +179,7 @@ class Stage2PromptBuilder:
         *,
         frame: KlineFrame,
         stage1_json: dict,
-        strategy_files: list[str],
+        strategy_prompt_ids: list[PromptId],
         experience_entries: list[Any],
         decision_stance: str = "conservative",
         previous_record: Any | None = None,
@@ -194,10 +194,10 @@ class Stage2PromptBuilder:
             render_continuity_prompt_block,
         )
 
-        context = template_context or TemplateContext.from_stage2_inputs(
+        context = template_context or TemplateContext.from_stage2_prompt_ids(
             frame,
             stage1_json,
-            strategy_files,
+            strategy_prompt_ids,
             experience_entries,
             decision_stance=decision_stance,
             previous_record=previous_record,
@@ -207,7 +207,7 @@ class Stage2PromptBuilder:
             },
         )
         stage1_json = context.stage1_diagnosis
-        strategy_files = list(context.strategy_files)
+        strategy_prompt_ids = list(context.strategy_prompt_ids)
         decision_stance = context.decision_stance
 
         stance_block = build_decision_stance_guidance(normalize_stance(decision_stance))
@@ -228,9 +228,9 @@ class Stage2PromptBuilder:
             transition_block,
             planned_limit_block,
             *(
-                self._load(name)
-                for name in self._stage2_user_task_txt_files(
-                    strategy_files,
+                self._load_prompt_id(prompt_id)
+                for prompt_id in self._stage2_user_task_prompt_ids(
+                    strategy_prompt_ids,
                     direction=str(stage1_json.get("direction", "") or ""),
                     load_full_strategy_library=self._load_full_strategy_library(),
                 )

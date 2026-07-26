@@ -13,6 +13,9 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
+from pa_agent.ai.prompting.prompt_ids import PromptId
+from pa_agent.ai.prompting.template_manifest import TEMPLATE_CATALOG
+
 if TYPE_CHECKING:
     from pa_agent.data.base import KlineFrame
 
@@ -38,6 +41,14 @@ def _jsonable(value: Any) -> Any:
     return str(value)
 
 
+def _prompt_id_key(value: Any) -> str:
+    """Normalize a Prompt ID or legacy filename to the stable ID string."""
+    candidate = PromptId(str(value))
+    if candidate in TEMPLATE_CATALOG.by_id:
+        return str(candidate)
+    return str(TEMPLATE_CATALOG.resolve_legacy_filename(str(value)))
+
+
 @dataclass(frozen=True, slots=True)
 class TemplateContext:
     """Immutable prompt inputs safe to serialize or snapshot."""
@@ -47,6 +58,7 @@ class TemplateContext:
     timeframe: str
     bar_count: int
     stage1_diagnosis: dict[str, Any] = field(default_factory=dict)
+    strategy_prompt_ids: tuple[PromptId, ...] = ()
     strategy_files: tuple[str, ...] = ()
     experience_entries: tuple[Any, ...] = ()
     decision_stance: str = "conservative"
@@ -66,11 +78,19 @@ class TemplateContext:
             "stage1_diagnosis",
             _jsonable(self.stage1_diagnosis),
         )
-        object.__setattr__(
-            self,
-            "strategy_files",
-            tuple(str(name) for name in self.strategy_files),
-        )
+        prompt_ids = tuple(PromptId(str(prompt_id)) for prompt_id in self.strategy_prompt_ids)
+        legacy_files = tuple(str(name) for name in self.strategy_files)
+        if prompt_ids:
+            projected_files = TEMPLATE_CATALOG.legacy_filenames(prompt_ids)
+            if legacy_files and legacy_files != projected_files:
+                raise ValueError("Template context strategy IDs and files do not match")
+            legacy_files = projected_files
+        elif legacy_files:
+            prompt_ids = tuple(
+                TEMPLATE_CATALOG.resolve_legacy_filename(name) for name in legacy_files
+            )
+        object.__setattr__(self, "strategy_prompt_ids", prompt_ids)
+        object.__setattr__(self, "strategy_files", legacy_files)
         object.__setattr__(
             self,
             "experience_entries",
@@ -90,7 +110,7 @@ class TemplateContext:
             self,
             "template_versions",
             {
-                str(name): str(version)
+                _prompt_id_key(name): str(version)
                 for name, version in sorted(
                     self.template_versions.items(),
                     key=lambda pair: str(pair[0]),
@@ -111,14 +131,44 @@ class TemplateContext:
         feature_flags: Mapping[str, bool] | None = None,
         template_versions: Mapping[str, str] | None = None,
     ) -> TemplateContext:
-        """Build a Stage 2 context without retaining runtime service objects."""
+        """Build a Stage 2 context from legacy strategy filenames."""
+        strategy_prompt_ids = tuple(
+            TEMPLATE_CATALOG.resolve_legacy_filename(name) for name in strategy_files
+        )
+        return cls.from_stage2_prompt_ids(
+            frame,
+            stage1_diagnosis,
+            strategy_prompt_ids,
+            experience_entries,
+            decision_stance=decision_stance,
+            previous_record=previous_record,
+            feature_flags=feature_flags,
+            template_versions=template_versions,
+        )
+
+    @classmethod
+    def from_stage2_prompt_ids(
+        cls,
+        frame: KlineFrame,
+        stage1_diagnosis: Mapping[str, Any],
+        strategy_prompt_ids: Sequence[PromptId],
+        experience_entries: Sequence[Any],
+        *,
+        decision_stance: str,
+        previous_record: Any | None = None,
+        feature_flags: Mapping[str, bool] | None = None,
+        template_versions: Mapping[str, str] | None = None,
+    ) -> TemplateContext:
+        """Build a Stage 2 context from stable IDs without retaining services."""
+        ordered_ids = tuple(strategy_prompt_ids)
         return cls(
             stage="stage2",
             symbol=frame.symbol,
             timeframe=frame.timeframe,
             bar_count=len(frame.bars),
             stage1_diagnosis=dict(stage1_diagnosis),
-            strategy_files=tuple(strategy_files),
+            strategy_prompt_ids=ordered_ids,
+            strategy_files=TEMPLATE_CATALOG.legacy_filenames(ordered_ids),
             experience_entries=tuple(experience_entries),
             decision_stance=decision_stance,
             previous_record=previous_record,
@@ -134,6 +184,7 @@ class TemplateContext:
             "timeframe": self.timeframe,
             "bar_count": self.bar_count,
             "stage1_diagnosis": _jsonable(self.stage1_diagnosis),
+            "strategy_prompt_ids": list(self.strategy_prompt_ids),
             "strategy_files": list(self.strategy_files),
             "experience_entries": _jsonable(self.experience_entries),
             "decision_stance": self.decision_stance,
