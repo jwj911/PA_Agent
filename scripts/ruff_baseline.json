@@ -1,6 +1,6 @@
 {
   "ruff_version": "ruff 0.15.13",
-  "issue_count": 3724,
+  "issue_count": 3712,
   "issues": [
     {
       "path": "pa_agent/ai/always_in_judges.py",
@@ -28378,114 +28378,6 @@
       "end_row": 80,
       "end_column": 29,
       "message": "String contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?"
-    },
-    {
-      "path": "pa_agent/gui/prompt_files_panel.py",
-      "code": "RUF001",
-      "row": 34,
-      "column": 52,
-      "end_row": 34,
-      "end_column": 53,
-      "message": "String contains ambiguous `（` (FULLWIDTH LEFT PARENTHESIS). Did you mean `(` (LEFT PARENTHESIS)?"
-    },
-    {
-      "path": "pa_agent/gui/prompt_files_panel.py",
-      "code": "RUF001",
-      "row": 34,
-      "column": 58,
-      "end_row": 34,
-      "end_column": 59,
-      "message": "String contains ambiguous `）` (FULLWIDTH RIGHT PARENTHESIS). Did you mean `)` (RIGHT PARENTHESIS)?"
-    },
-    {
-      "path": "pa_agent/gui/prompt_files_panel.py",
-      "code": "RUF001",
-      "row": 63,
-      "column": 58,
-      "end_row": 63,
-      "end_column": 59,
-      "message": "String contains ambiguous `（` (FULLWIDTH LEFT PARENTHESIS). Did you mean `(` (LEFT PARENTHESIS)?"
-    },
-    {
-      "path": "pa_agent/gui/prompt_files_panel.py",
-      "code": "RUF001",
-      "row": 63,
-      "column": 66,
-      "end_row": 63,
-      "end_column": 67,
-      "message": "String contains ambiguous `）` (FULLWIDTH RIGHT PARENTHESIS). Did you mean `)` (RIGHT PARENTHESIS)?"
-    },
-    {
-      "path": "pa_agent/gui/prompt_files_panel.py",
-      "code": "RUF001",
-      "row": 66,
-      "column": 58,
-      "end_row": 66,
-      "end_column": 59,
-      "message": "String contains ambiguous `（` (FULLWIDTH LEFT PARENTHESIS). Did you mean `(` (LEFT PARENTHESIS)?"
-    },
-    {
-      "path": "pa_agent/gui/prompt_files_panel.py",
-      "code": "RUF001",
-      "row": 66,
-      "column": 66,
-      "end_row": 66,
-      "end_column": 67,
-      "message": "String contains ambiguous `）` (FULLWIDTH RIGHT PARENTHESIS). Did you mean `)` (RIGHT PARENTHESIS)?"
-    },
-    {
-      "path": "pa_agent/gui/prompt_files_panel.py",
-      "code": "RUF001",
-      "row": 77,
-      "column": 46,
-      "end_row": 77,
-      "end_column": 47,
-      "message": "String contains ambiguous `（` (FULLWIDTH LEFT PARENTHESIS). Did you mean `(` (LEFT PARENTHESIS)?"
-    },
-    {
-      "path": "pa_agent/gui/prompt_files_panel.py",
-      "code": "RUF001",
-      "row": 77,
-      "column": 52,
-      "end_row": 77,
-      "end_column": 53,
-      "message": "String contains ambiguous `）` (FULLWIDTH RIGHT PARENTHESIS). Did you mean `)` (RIGHT PARENTHESIS)?"
-    },
-    {
-      "path": "pa_agent/gui/prompt_files_panel.py",
-      "code": "RUF001",
-      "row": 79,
-      "column": 44,
-      "end_row": 79,
-      "end_column": 45,
-      "message": "String contains ambiguous `（` (FULLWIDTH LEFT PARENTHESIS). Did you mean `(` (LEFT PARENTHESIS)?"
-    },
-    {
-      "path": "pa_agent/gui/prompt_files_panel.py",
-      "code": "RUF001",
-      "row": 79,
-      "column": 50,
-      "end_row": 79,
-      "end_column": 51,
-      "message": "String contains ambiguous `）` (FULLWIDTH RIGHT PARENTHESIS). Did you mean `)` (RIGHT PARENTHESIS)?"
-    },
-    {
-      "path": "pa_agent/gui/prompt_files_panel.py",
-      "code": "RUF001",
-      "row": 81,
-      "column": 58,
-      "end_row": 81,
-      "end_column": 59,
-      "message": "String contains ambiguous `（` (FULLWIDTH LEFT PARENTHESIS). Did you mean `(` (LEFT PARENTHESIS)?"
-    },
-    {
-      "path": "pa_agent/gui/prompt_files_panel.py",
-      "code": "RUF001",
-      "row": 81,
-      "column": 64,
-      "end_row": 81,
-      "end_column": 65,
-      "message": "String contains ambiguous `）` (FULLWIDTH RIGHT PARENTHESIS). Did you mean `)` (RIGHT PARENTHESIS)?"
     },
     {
       "path": "pa_agent/gui/settings_dialog.py",

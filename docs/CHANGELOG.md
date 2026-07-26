@@ -18,6 +18,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-26（L2：Prompt ID 解耦 M3.3 GUI 显示合同）
+
+- `PromptFilesPanel` 默认显示 `display_name [prompt_id]`，不再把 `.txt` filename 当作用户可见
+  模板身份；tooltip 仅显示稳定 ID、相对 `source_path`、不可变 `legacy_filename` 和 manifest
+  版本，不显示 Prompt 正文。
+- 旧 `set_stage1_files()`、`set_stage2_files()`、`set_latest_run()` 和
+  `on_stage2_files` callback 保持兼容，由面板通过 Catalog 解析 ID；新增显式 Prompt ID
+  setter。未知旧 filename 原样显示并标记 `[unresolved]`，不据此访问磁盘。
+- 内置 JSON 合同和经验库说明改用“非 Prompt 模板”，不再把 `.txt` 物理格式写入界面说明。
+- 新增 `test_prompt_files_panel.py` 的 3 项 Qt 测试并纳入 targeted pytest/focused Ruff；
+  GUI/headless/demo 专项 **11 passed**、Prompt/Catalog/Context 聚焦回归 **38 passed**、
+  完整非 live unit 层 **1,088 passed**、integration 层 **80 passed**。
+- `prompt_files_panel.py` 纳入 focused Ruff；12 条已审查的历史中文标点诊断以行级
+  `RUF001` 豁免收口，全仓 baseline 从 3,724 降至 3,712。Black、Ruff、`py_compile`、
+  CI target 和差异检查通过。
+- 同步 Prompt ID 方案、`AGENTS.md`、架构路线图和执行计划为“M1-M3 已完成，M4 待实施”。
+  本切片未修改 orchestrator、Prompt 正文、模型 JSON schema、golden 或 KV-cache 前缀。
+
+---
+
 ## [Unreleased] — 2026-07-26（L2：Prompt ID 解耦 M3.2 Pipeline state / route outputs）
 
 - `PipelineState` 新增权威 `strategy_prompt_ids`；构造器、`set_route_outputs()` 与兼容

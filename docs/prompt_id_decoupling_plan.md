@@ -1,6 +1,6 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1、M2、M3.1、M3.2 已完成，M3.3 GUI 待实施
+> 状态：M1-M3 已完成，M4 模型合同清理待实施
 >
 > 日期：2026-07-26
 >
@@ -426,7 +426,25 @@ GUI 默认显示：
 - Pipeline 聚焦回归 51 项、全终态/legacy 等价专项 29 项、完整非 live unit 层 1,085 项、
   integration 层 80 项通过；全部 Prompt golden、CI target 和 3,724 条 Ruff baseline 不变。
 - 本切片未修改 `two_stage.py`、orchestrator callback、GUI、Prompt 正文或模型 JSON schema。
-  M3.3 只处理 ID callback 与 GUI 显示名/tooltip。
+  M3.3 只处理 GUI 显示名/tooltip，并保留旧 filename callback 兼容入口。
+
+**M3.3 GUI 显示合同实施结果（2026-07-26）**：
+
+- `PromptFilesPanel` 默认显示 `display_name [prompt_id]`，不再把 `.txt` filename 当作用户可见
+  身份；tooltip 仅显示稳定 ID、相对 `source_path`、不可变 `legacy_filename` 和 manifest 版本，
+  不显示 Prompt 正文。
+- 旧 `set_stage1_files()`、`set_stage2_files()`、`set_latest_run()` 和
+  `on_stage2_files` callback 保持兼容，由面板通过 Catalog 解析 ID；新增显式 Prompt ID setter，
+  为后续调用方提供不依赖 filename 的入口。
+- 未知旧 filename 原样显示并标记 `[unresolved]`，不据此访问磁盘；内置 JSON 合同和经验库
+  说明改用“非 Prompt 模板”，不再绑定 `.txt` 物理格式。
+- 新增 3 项 Qt 面板测试并纳入 targeted pytest/focused Ruff，覆盖 legacy filename 解析、
+  ID 直传、显示文本、tooltip 和 unresolved fallback；GUI/headless/demo 专项 11 项、
+  完整非 live unit 层 1,088 项、integration 层 80 项通过。
+- `prompt_files_panel.py` 纳入 focused Ruff；该文件 12 条已审查的历史中文标点诊断以行级
+  `RUF001` 豁免收口，全仓 baseline 从 3,724 降至 3,712，未引入其他诊断漂移。
+- 本切片未修改 orchestrator、Prompt 正文、模型 JSON schema、golden 或 KV-cache 前缀。
+  M1-M3 字节等价约束保持满足，下一阶段 M4 才允许有意修改模型输出合同。
 
 **退出门禁**：
 

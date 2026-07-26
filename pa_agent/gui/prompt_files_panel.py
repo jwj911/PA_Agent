@@ -1,5 +1,8 @@
-"""Sidebar panel: which .txt prompt files were sent to AI in the latest run."""
+"""Sidebar panel for stable Prompt identities used by the latest analysis."""
+
 from __future__ import annotations
+
+from collections.abc import Sequence
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -10,20 +13,66 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from pa_agent.ai.prompting import TEMPLATE_CATALOG, PromptCatalogError, PromptId
 
-def _fill_list(widget: QListWidget, files: list[str], *, empty_hint: str) -> None:
+
+def _prompt_display(prompt_id: PromptId) -> tuple[str, str]:
+    spec = TEMPLATE_CATALOG.spec(prompt_id)
+    return (
+        f"{spec.display_name} [{spec.prompt_id}]",
+        "\n".join(
+            (
+                f"prompt_id: {spec.prompt_id}",
+                f"source_path: {spec.source_path}",
+                f"legacy_filename: {spec.legacy_filename}",
+                f"version: {spec.version}",
+            )
+        ),
+    )
+
+
+def _prompt_displays_from_ids(prompt_ids: Sequence[PromptId]) -> list[tuple[str, str]]:
+    return [_prompt_display(PromptId(str(prompt_id))) for prompt_id in prompt_ids]
+
+
+def _prompt_displays_from_legacy(filenames: Sequence[str]) -> list[tuple[str, str]]:
+    displays: list[tuple[str, str]] = []
+    for filename in filenames:
+        legacy_filename = str(filename)
+        try:
+            prompt_id = TEMPLATE_CATALOG.resolve_legacy_filename(legacy_filename)
+        except PromptCatalogError:
+            displays.append(
+                (
+                    f"{legacy_filename} [unresolved]",
+                    f"legacy_filename: {legacy_filename}\nstatus: unresolved",
+                )
+            )
+            continue
+        displays.append(_prompt_display(prompt_id))
+    return displays
+
+
+def _fill_list(
+    widget: QListWidget,
+    displays: Sequence[tuple[str, str]],
+    *,
+    empty_hint: str,
+) -> None:
     widget.clear()
-    if not files:
+    if not displays:
         item = QListWidgetItem(empty_hint)
         item.setFlags(Qt.ItemFlag.NoItemFlags)
         widget.addItem(item)
         return
-    for i, name in enumerate(files, 1):
-        widget.addItem(QListWidgetItem(f"{i}. {name}"))
+    for i, (text, tooltip) in enumerate(displays, 1):
+        item = QListWidgetItem(f"{i}. {text}")
+        item.setToolTip(tooltip)
+        widget.addItem(item)
 
 
 class PromptFilesPanel(QWidget):
-    """Shows ordered .txt files injected into Stage 1 / Stage 2 for the latest analysis."""
+    """Show ordered Prompt display names and stable IDs for the latest analysis."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -31,7 +80,9 @@ class PromptFilesPanel(QWidget):
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(10)
 
-        hint = QLabel("本次分析注入到 system 提示词中的 .txt 文件（按发送顺序）")
+        hint = QLabel(
+            "本次分析使用的 Prompt 模板（显示名称 + 稳定 ID；悬停查看存储路径）"  # noqa: RUF001
+        )
         hint.setObjectName("mutedLabel")
         hint.setWordWrap(True)
         layout.addWidget(hint)
@@ -60,10 +111,32 @@ class PromptFilesPanel(QWidget):
         self.clear()
 
     def set_stage1_files(self, files: list[str]) -> None:
-        _fill_list(self._stage1_list, files, empty_hint="（尚未开始阶段一）")
+        _fill_list(
+            self._stage1_list,
+            _prompt_displays_from_legacy(files),
+            empty_hint="（尚未开始阶段一）",  # noqa: RUF001
+        )
 
     def set_stage2_files(self, files: list[str]) -> None:
-        _fill_list(self._stage2_list, files, empty_hint="（阶段二尚未开始）")
+        _fill_list(
+            self._stage2_list,
+            _prompt_displays_from_legacy(files),
+            empty_hint="（阶段二尚未开始）",  # noqa: RUF001
+        )
+
+    def set_stage1_prompt_ids(self, prompt_ids: Sequence[PromptId]) -> None:
+        _fill_list(
+            self._stage1_list,
+            _prompt_displays_from_ids(prompt_ids),
+            empty_hint="（尚未开始阶段一）",  # noqa: RUF001
+        )
+
+    def set_stage2_prompt_ids(self, prompt_ids: Sequence[PromptId]) -> None:
+        _fill_list(
+            self._stage2_list,
+            _prompt_displays_from_ids(prompt_ids),
+            empty_hint="（阶段二尚未开始）",  # noqa: RUF001
+        )
 
     def set_extras(
         self,
@@ -74,11 +147,13 @@ class PromptFilesPanel(QWidget):
     ) -> None:
         parts: list[str] = []
         if stage1_builtin:
-            parts.append("阶段一另含内置 JSON 输出格式说明（非 txt）")
+            parts.append("阶段一另含内置 JSON 输出格式说明（非 Prompt 模板）")  # noqa: RUF001
         if stage2_builtin:
-            parts.append("阶段二另含内置 JSON 决策契约（非 txt）")
+            parts.append("阶段二另含内置 JSON 决策契约（非 Prompt 模板）")  # noqa: RUF001
         if experience_count > 0:
-            parts.append(f"阶段二另注入经验库 {experience_count} 条（非 txt）")
+            parts.append(
+                f"阶段二另注入经验库 {experience_count} 条（非 Prompt 模板）"  # noqa: RUF001
+            )
         self._extra_label.setText(" · ".join(parts))
 
     def clear(self) -> None:
@@ -98,5 +173,20 @@ class PromptFilesPanel(QWidget):
         self.set_extras(
             stage1_builtin=bool(stage1_files),
             stage2_builtin=bool(stage2_files),
+            experience_count=experience_count,
+        )
+
+    def set_latest_run_prompt_ids(
+        self,
+        stage1_prompt_ids: Sequence[PromptId],
+        stage2_prompt_ids: Sequence[PromptId],
+        *,
+        experience_count: int = 0,
+    ) -> None:
+        self.set_stage1_prompt_ids(stage1_prompt_ids)
+        self.set_stage2_prompt_ids(stage2_prompt_ids)
+        self.set_extras(
+            stage1_builtin=bool(stage1_prompt_ids),
+            stage2_builtin=bool(stage2_prompt_ids),
             experience_count=experience_count,
         )
