@@ -1,185 +1,185 @@
 {
-  "manifest_version": "v1",
+  "manifest_version": "v2",
   "templates": [
     {
       "name": "提示词大纲_人设与思维方式.txt",
-      "version": "v1",
-      "byte_length": 5608,
-      "sha256": "98f4f54a98ae524441f3c155d584e6294a4008fccf3e6602dd536bc0d2f0b12b"
+      "version": "v2",
+      "byte_length": 5604,
+      "sha256": "1bb0b0ccc326ef6170624dc8d64f1dc0509abaa4f14538c14153c4b5b14f853b"
     },
     {
       "name": "二元决策.txt",
-      "version": "v1",
-      "byte_length": 42207,
-      "sha256": "875a1a210b990ff2ade05c01fdfa8e93abccd87480e0e5dcd3d76f68e9d0fda5"
+      "version": "v2",
+      "byte_length": 42164,
+      "sha256": "723111253fa41d732e123943ab12dc94e2c459988978f2fad807699ff704525c"
     },
     {
       "name": "市场诊断框架.txt",
-      "version": "v1",
-      "byte_length": 85580,
-      "sha256": "6a74866dbd377f7511ab16d5811419fec5e6a7a2140e9a7ae3cf0427e421999c"
+      "version": "v2",
+      "byte_length": 85359,
+      "sha256": "d2144886a1b17a779df822fe0ce22075366104c733a67570999e5b15e3ff6147"
     },
     {
       "name": "文件16-K线信号识别.txt",
-      "version": "v1",
+      "version": "v2",
       "byte_length": 20995,
       "sha256": "9b61ac25b6d6d235ae282164d4e9e3eefcf6b46cd20bdb972d8bc4a6fb40728e"
     },
     {
       "name": "逐棒分析检查单.txt",
-      "version": "v1",
+      "version": "v2",
       "byte_length": 2304,
       "sha256": "4e867202df9cba4dcb5a74a6c122bb112880534f9cfeeb24e6ca25df8ab996ea"
     },
     {
       "name": "文件17-止损和止盈与仓位管理.txt",
-      "version": "v1",
+      "version": "v2",
       "byte_length": 3979,
       "sha256": "e953072fccb182bd391511132fa924ca5b2c5711292051348446df1da7b2a805"
     },
     {
       "name": "文件23-MeasuredMove与结构目标.txt",
-      "version": "v1",
+      "version": "v2",
       "byte_length": 5371,
       "sha256": "07dbc646c2764230f580e91473ce5e7721283f0cc04366491500cef99ccc4f35"
     },
     {
       "name": "上涨通道分析识别.txt",
-      "version": "v1",
-      "byte_length": 15551,
-      "sha256": "0d0b0fe15d13609f74f3f436158484dbae42ef0938b031c62f6038acc1924282"
+      "version": "v2",
+      "byte_length": 15549,
+      "sha256": "6693c26cb41280c70173812486e7260b7dbc9041419b797e9fe9c71bd13e6017"
     },
     {
       "name": "上涨通道交易策略.txt",
-      "version": "v1",
-      "byte_length": 12688,
-      "sha256": "ded76e748fa9ab2298b1933610c79acb8a14e2a9433921ced86dea0b357fd604"
+      "version": "v2",
+      "byte_length": 12658,
+      "sha256": "c3e8820eee43ca94b62397fb4849696aa9879e305cc0859a1ef2bb854dd7432c"
     },
     {
       "name": "下跌通道分析识别.txt",
-      "version": "v1",
+      "version": "v2",
       "byte_length": 16597,
-      "sha256": "f560ec415902f586a0127c6cbc32c648c0e450516f8e0b6f42e97b60b579fe7b"
+      "sha256": "99af681990d1f2f67a073ae7dac35299bc0797c24ee3984004a1f72796ba11aa"
     },
     {
       "name": "下跌通道交易策略.txt",
-      "version": "v1",
-      "byte_length": 14651,
-      "sha256": "ef5e84e3955d84ccabc53b3d65bda90a0f9f1a19d5a2dff2aa422a2bb32b1a83"
+      "version": "v2",
+      "byte_length": 14629,
+      "sha256": "a4f3b7aaae7384cb2b37f1a31934bd2d86b0c93cdc44773189f3e1e2e505b043"
     },
     {
       "name": "极速上涨分析识别.txt",
-      "version": "v1",
-      "byte_length": 19778,
-      "sha256": "e1614870b72bbbfbe06028dbf982dacb2630dfff83e6513c6aa1f694f5c11594"
+      "version": "v2",
+      "byte_length": 19750,
+      "sha256": "31aa1db7cd0e44e439708d43591779806197437c04d08a892036af7d22dadb5a"
     },
     {
       "name": "极速上涨交易策略.txt",
-      "version": "v1",
+      "version": "v2",
       "byte_length": 7519,
       "sha256": "ad01f837949956ab22224e6b46bd7834d4b2fe5479c36ffb623e04fab5606e7b"
     },
     {
       "name": "极速下跌分析识别.txt",
-      "version": "v1",
-      "byte_length": 20396,
-      "sha256": "3ec57723e60a4168b18da61d515c9547d1ed9a2a3e0d75ab63dcbc38209c3f96"
+      "version": "v2",
+      "byte_length": 20372,
+      "sha256": "1e9d95177c9c0490f0308a9ae5e949a8413b3288ce8c6f729d69074d9bc12ee5"
     },
     {
       "name": "极速下跌交易策略.txt",
-      "version": "v1",
+      "version": "v2",
       "byte_length": 7293,
       "sha256": "ab982e20c0f0086887832b539e6af4c344b71526f26fb801111b2c187b107b5b"
     },
     {
       "name": "震荡区间分析识别.txt",
-      "version": "v1",
-      "byte_length": 17328,
-      "sha256": "97b09de0b0740e3a421a24f133018cc877389fd0e79f4743960110c275427c16"
+      "version": "v2",
+      "byte_length": 17342,
+      "sha256": "8906b083b9390d0f00dc61139182a8684bc2586792cec38d34f275e7e01c2a59"
     },
     {
       "name": "震荡区间交易策略.txt",
-      "version": "v1",
-      "byte_length": 16746,
-      "sha256": "a402d82f0920828607f701fc4401a903588ef3650388f15deafb5f7850a054b0"
+      "version": "v2",
+      "byte_length": 16718,
+      "sha256": "0b6d3db3e282559243a238c3bc9bafc20d0f4bad3ebc61ab9e3efcfab3dde58b"
     },
     {
       "name": "文件13-窄通道与宽通道策略.txt",
-      "version": "v1",
-      "byte_length": 15111,
-      "sha256": "b24cb01cad6baa2581c4b6fc99e1b17a8fcc442ea2db538872433128f9e0f93c"
+      "version": "v2",
+      "byte_length": 15103,
+      "sha256": "1f0369c6cc7a7ee7472d8099a71d5fe330887f952b4123d66b688cf748eed608"
     },
     {
       "name": "文件14-楔形形态分析交易.txt",
-      "version": "v1",
+      "version": "v2",
       "byte_length": 16596,
       "sha256": "739a7cfb6ae95b8b23180a68d67fae8f8c7e918488217805d350a556849db1fe"
     },
     {
       "name": "文件15-二次入场机会.txt",
-      "version": "v1",
-      "byte_length": 13952,
-      "sha256": "8abf3a4fa6dec5f8123f1925544da2b36f57cc496c7ff072f1a09f8f105e7dfa"
+      "version": "v2",
+      "byte_length": 13946,
+      "sha256": "e4768f3c7cfe2c9895111cae5f18813b5516eee9d963b04bcefe45d2b9b7a43f"
     },
     {
       "name": "文件18-突破失败与突破测试.txt",
-      "version": "v1",
+      "version": "v2",
       "byte_length": 4705,
       "sha256": "77a233d15d9a3bd3154fcfaa9694c043cd11b1221012c57fedc7ed07b2930d72"
     },
     {
       "name": "文件19-H1H2-L1L2计数.txt",
-      "version": "v1",
+      "version": "v2",
       "byte_length": 3288,
       "sha256": "a56eb7cebc929cdbca8ad529f410f03fb3efb59c4cdf6bd9af592f0d78e52f57"
     },
     {
       "name": "文件20-AlwaysIn与20GB.txt",
-      "version": "v1",
+      "version": "v2",
       "byte_length": 3690,
       "sha256": "04654e63a90917664e62094f480ae1bfaeffd2e693249ad75d27a433c0cef683"
     },
     {
       "name": "文件21-铁丝网与无交易环境.txt",
-      "version": "v1",
+      "version": "v2",
       "byte_length": 4204,
       "sha256": "344e69a655f7a29bba121ce0cdd864310acbbcfb1012e9e16ae4dbb99b5ee984"
     },
     {
       "name": "文件22-信号失败后的磁力位.txt",
-      "version": "v1",
+      "version": "v2",
       "byte_length": 2916,
       "sha256": "561e029dd934e2c8fdbae83df40b962c82c3c65c1e5c7e981a3a1717bf46e773"
     },
     {
       "name": "文件24-最终旗形与趋势末端.txt",
-      "version": "v1",
+      "version": "v2",
       "byte_length": 4105,
       "sha256": "8d081612af686239d22a706833b0bf0a999687c8223cb88917ae599df4592c23"
     },
     {
       "name": "文件25-主要趋势反转MTR.txt",
-      "version": "v1",
+      "version": "v2",
       "byte_length": 4323,
       "sha256": "fb63ae3c5820ee04458f28644a64e5acdf978bf6f69b66b0da103990553a09cf"
     },
     {
       "name": "文件27-三角形与收敛形态.txt",
-      "version": "v1",
-      "byte_length": 3144,
-      "sha256": "1729a8d229f63a7a83be4d82f12af7713cadb109521a24f536968cca3245a60d"
+      "version": "v2",
+      "byte_length": 3151,
+      "sha256": "0c77d80007ece9a2512ef3b0a3f289c8e496019f697539391309c6dde1c2eca7"
     },
     {
       "name": "文件28-双重顶底与微型结构.txt",
-      "version": "v1",
+      "version": "v2",
       "byte_length": 2401,
       "sha256": "6047bac659692aace621d476abe5d172c5336124a5efa6eab7d82950efe7306a"
     }
   ],
   "shared_system_prompt": {
-    "byte_length": 52298,
-    "char_length": 24820,
-    "sha256": "214f59d1027c3eae6eca646d374cea426a6fdff8596d348d837aad8d2948269f"
+    "byte_length": 52251,
+    "char_length": 24775,
+    "sha256": "39c2c6ba4c38088f96d309c225d34b0a15d29014a50585010d2fba031e62980c"
   },
   "stage2_fixture": {
     "symbol": "TEST",
@@ -201,37 +201,37 @@
       "standalone": [
         {
           "role": "system",
-          "byte_length": 52298,
-          "sha256": "214f59d1027c3eae6eca646d374cea426a6fdff8596d348d837aad8d2948269f"
+          "byte_length": 52251,
+          "sha256": "39c2c6ba4c38088f96d309c225d34b0a15d29014a50585010d2fba031e62980c"
         },
         {
           "role": "user",
-          "byte_length": 95059,
-          "sha256": "8358244af4f906e632656f271db2a079f269418e76c47f7133fef08b08e2ab75"
+          "byte_length": 95065,
+          "sha256": "2d9b90762e5314b158d485c263d3209a0a97eddbe562ee9db916feaf03e60d81"
         }
       ],
       "continuation_standalone": [
         {
           "role": "system",
-          "byte_length": 52298,
-          "sha256": "214f59d1027c3eae6eca646d374cea426a6fdff8596d348d837aad8d2948269f"
+          "byte_length": 52251,
+          "sha256": "39c2c6ba4c38088f96d309c225d34b0a15d29014a50585010d2fba031e62980c"
         },
         {
           "role": "user",
-          "byte_length": 95059,
-          "sha256": "8358244af4f906e632656f271db2a079f269418e76c47f7133fef08b08e2ab75"
+          "byte_length": 95065,
+          "sha256": "2d9b90762e5314b158d485c263d3209a0a97eddbe562ee9db916feaf03e60d81"
         }
       ],
       "continuation_prefix": [
         {
           "role": "system",
-          "byte_length": 52298,
-          "sha256": "214f59d1027c3eae6eca646d374cea426a6fdff8596d348d837aad8d2948269f"
+          "byte_length": 52251,
+          "sha256": "39c2c6ba4c38088f96d309c225d34b0a15d29014a50585010d2fba031e62980c"
         },
         {
           "role": "user",
-          "byte_length": 137456,
-          "sha256": "eb95029dd24b2f4428f69d6e5b689b133d41f55cbbefb4b1c5aafe95cd4e51b3"
+          "byte_length": 137350,
+          "sha256": "e62b05c21aff94572a3e570798c3955379550cbb3cf618d434a1d5fd8f79e387"
         },
         {
           "role": "assistant",
@@ -240,8 +240,8 @@
         },
         {
           "role": "user",
-          "byte_length": 88587,
-          "sha256": "af62f74a3f6c6ee07fcf52954856fb352700e352ecf13c2c422769103552c11a"
+          "byte_length": 88593,
+          "sha256": "79d7b25ccff0ecdaf6aee459e3a815225cc45e686547b232098255834f912840"
         }
       ]
     }

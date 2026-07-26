@@ -1,8 +1,8 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1-M3、M4.1 已完成，M4.2 Prompt/golden 待实施
+> 状态：M1-M4.2 已完成，M4.3 离线评估与真实 Provider 观察待实施
 >
-> 日期：2026-07-26
+> 日期：2026-07-27
 >
 > 适用范围：L2 Prompt 模板引擎、策略路由、两阶段 Pipeline、分析记录与 Prompt 调试界面
 >
@@ -477,6 +477,24 @@ GUI 默认显示：
 - 本切片未修改 Prompt 正文、增量合同、Stage 2 carryover、golden 或 Provider 行为。M4.2
   单独移除模型可见字段与物理 filename 交叉引用，并更新预期 Prompt/golden。
 
+**M4.2 Prompt、carryover 与 golden 实施结果（2026-07-27）**：
+
+- 29 个运行时模板正文不再暴露 `.txt` 交叉引用、`strategy_files_needed` 或
+  `recommended_strategy_files`；Python 生成的 Stage 1/Stage 2 提醒、特殊形态路由表和
+  二元决策引用统一改用稳定显示标题。
+- Stage 1 增量上下文、prefix-chain assistant 历史和 Stage 2 compact context 在进入模型前
+  剥离程序路由字段；上一轮 `strategy_files_used` 不再进入模型上下文。兼容记录、Pipeline
+  状态、router 投影和旧 callback 合同保持不变。
+- Prompt manifest 统一升级到 `v2`。29 个 Prompt ID 的版本均更新，实际正文 SHA-256 只在
+  预期的 14 个模板发生变化；共享 system、Stage 1、Stage 2 standalone 和 continuation
+  golden 已按受控漂移更新。
+- 新增运行时模板和组装 Prompt 不泄漏 filename/路由字段的合同断言。Prompt/Normalizer
+  聚焦回归 89 项、完整非 live unit 层 1,092 项、integration 层 80 项、property 层 55 项
+  通过；CI 目标清单、`py_compile`、focused Ruff、Black 24.10.0 受影响目标、
+  3,712 条 Ruff baseline 和差异检查通过。
+- 本切片不包含真实 Provider 调用，也不据固定 golden 推断模型质量。M4.3 必须独立比较
+  校验失败率、重试率、Token 和语义冲突率，并按 L6 runbook 留存脱敏观察证据。
+
 **退出门禁**：
 
 - Stage 1/Stage 2 schema、normalizer、retry 和路由测试通过；
@@ -527,6 +545,8 @@ GUI 默认显示：
 - shared system、Stage 1 full/incremental/continuation、Stage 2 standalone/prefix-chain
   均做 SHA-256 或完整消息相等比较。
 - M1-M3 不更新 golden digest；若 digest 变化则迁移失败。
+- M4.2 只更新已审计的 manifest v2 和预期 Prompt 漂移；模板正文摘要变化必须与修改清单
+  一一对应。
 
 ### 9.3 记录与 Pipeline
 

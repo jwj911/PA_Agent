@@ -218,7 +218,7 @@ Barbwire是整个Al Brooks体系中最强的信号之一。Barbwire之后，通�
 第三步：设定边界区域
 - 边界不是一条精确的线，而是一个区域，由多次波段极点、尾线刺穿和收盘反应共同定义
 - 边界区域只用于识别位置和目标，不用于设置止损
-- 止损一律回到「二元决策.txt §10.1」：普通区间用信号棒极点外1跳；Barbwire/TTR 不交易或等突破后以突破棒极点外1跳
+- 止损一律回到《交易二元决策树》§10.1：普通区间用信号棒极点外1跳；Barbwire/TTR 不交易或等突破后以突破棒极点外1跳
 
 【边界质量评估】
 高质量边界（刮头皮的首选）：
@@ -238,10 +238,10 @@ Barbwire是整个Al Brooks体系中最强的信号之一。Barbwire之后，通�
 
 - 步骤0：确认已通过统一判定树进入区间态
 - 确认波段序列不满足3组 HH+HL 或 LL+LH 且无法画稳定通道线（否则应走通道策略）；若只有2组且有轻微方向偏好，输出 trending_tr
-- 确认 EMA 水平或斜率极小（≤15°，与 `市场诊断框架.txt` trending_tr / `二元决策.txt` §6.1 一致）
+- 确认 EMA 水平或斜率极小（≤15°，与《市场诊断框架》trending_tr /《交易二元决策树》§6.1 一致）
 - 若边界模糊但有轻微方向偏好 → 输出 trending_tr（共享本文策略框架；顺势方向用 trade_confidence 加权，**禁止**写 70% 仓位）
 
-⚠️ 三角形路由：若识别到三角形形态（上升/下降/对称/扩张三角形），按「二元决策.txt §6.6」三角形分支处理。detected_patterns 写入对应枚举值（ascending_triangle / descending_triangle / symmetrical_triangle / expanding_triangle）。
+⚠️ 三角形路由：若识别到三角形形态（上升/下降/对称/扩张三角形），按《交易二元决策树》§6.6 三角形分支处理。detected_patterns 写入对应枚举值（ascending_triangle / descending_triangle / symmetrical_triangle / expanding_triangle）。
 
 步骤1：识别是否存在交易区间
 - 检查是否存在清晰的上下边界（各有2次以上测试）

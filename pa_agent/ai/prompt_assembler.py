@@ -41,7 +41,7 @@ _LANGUAGE_ZH_RULE = """
 
 - **思考过程**：扩展思考、内部推理、以及写入 JSON 的 `reason`、`diagnosis_confidence_reasoning`、`trade_confidence_reasoning`、`estimated_win_rate_reasoning` 等说明，**全程使用简体中文**。禁止用英文写推理段落或中英混杂的长句（常见缩写如 HH、HL、Spike、TR 可保留）。
 - **最终输出**：阶段一诊断 JSON、阶段二决策 JSON 中所有面向用户的字符串（含 `reasoning`、`key_factors`、`risk_assessment`、`watch_points`、`gate_trace`/`decision_trace` 的 `question` 与 `reason` 等）**一律使用简体中文**。
-- **仅允许英文或固定英文枚举**：JSON 字段名（schema 键名）、规定的枚举取值（如 `proceed`、`wait`、`bullish`、`bearish`）、策略文件名、K 线序号格式（如 `K1`、`K42-K1`）。
+- **仅允许英文或固定英文枚举**：JSON 字段名（schema 键名）、规定的枚举取值（如 `proceed`、`wait`、`bullish`、`bearish`）、特征来源名、K 线序号格式（如 `K1`、`K42-K1`）。
 - **价格行为术语**：思考与 JSON 说明中优先使用下列简体中文 PA 术语（见下节），避免自造词或仅用英文描述。
 """.strip()
 
@@ -187,7 +187,7 @@ JSON 字符串内不要用英文双引号强调，改用「」或不用引号。
   "entry_setup": "",
   "support_levels": ["5402", "5119"],
   "resistance_levels": ["6147", "6300"],
-  "strategy_files_needed": ["下跌通道分析识别.txt", "下跌通道交易策略.txt"],
+
   "risk_warning": "",
   "bar_analysis": {
     "always_in": "long|short|neutral",
@@ -238,7 +238,7 @@ JSON 字符串内不要用英文双引号强调，改用「」或不用引号。
 
 ## 阶段一闸门（二元决策树 §1–§2，必须执行）
 
-在输出诊断 JSON 前，按《二元决策.txt》与内置提示文本**依次**评估以下节点，并写入 gate_trace：
+在输出诊断 JSON 前，按《交易二元决策树》以及内置提示文本**依次**评估以下节点，并写入 gate_trace：
 **当 gate_result=proceed 时，必须包含节点 1.2、1.3、2.1、2.2、2.5 共 5 条（§1.1/§2.3/§2.4 由程序判定，AI 不输出）**（每条须填 bar_range；中间节点 reason 可留空，见下）：
 §1：**§1.1 由程序判定**（数据量已通过前置闸门确认）→ 1.2 识别周期 → 1.3 极端混乱
 - **节点 1.2**：answer 用 是/否；识别出的周期类型写在 **branch**（如 `broad_channel`、`trading_range`），**禁止** branch 写 `yes`/`no`。

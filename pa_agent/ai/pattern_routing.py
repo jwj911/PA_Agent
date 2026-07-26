@@ -60,26 +60,26 @@ _HL_PATTERN_KEYWORDS: dict[str, str] = {
 STAGE1_DETECTED_PATTERNS_GUIDE = """
 ## detected_patterns 判定表（阶段一必填标签）
 
-在 `detected_patterns` 中填写**英文 key**（可多个）。程序据此在阶段二加载对应策略文件。
+在 `detected_patterns` 中填写**英文 key**（可多个）。程序据此在阶段二加载对应策略模板。
 若 `bar_analysis.entry_setup_type` 已判定为 wedge / breakout_pullback 等，**必须**在 `detected_patterns` 中写入对应 key（程序也会从 entry_setup_type 补全路由，但字段仍须一致）。
 
-| key | 何时填写 | 阶段二加载 |
+| key | 何时填写 | 阶段二参考模板 |
 |-----|----------|------------|
-| wedge | 三次同向推进、幅度递减、趋势线/通道收敛；含楔形回撤与楔形反转 | 文件14-楔形形态分析交易.txt |
-| reversal_attempt | 反转尝试、MTR 前后结构、final flag、明显二次测试失败 | 文件15-二次入场机会.txt |
-| mtr | 主要趋势反转结构已成型（常与 reversal_attempt 同现） | 文件15（叠加）、文件25 |
-| final_flag | 趋势末段 final flag / 末端旗形 | 文件15（叠加）、文件24 |
-| h1 / h2 / l1 / l2 | 计数入场结构（High1/High2/Low1/Low2） | 文件19-H1H2-L1L2计数.txt |
-| breakout_test | 突破后回测突破位、突破测试棒 | 文件18 |
-| breakout_pullback | 突破失败后的再次失败（突破回踩）顺势机会 | 文件18 |
-| breakout_failure / failed_breakout | 普通突破失败、假突破 | 文件18、文件22 |
-| always_in / ail / ais / 20gb / gap_bar | Always In、20GB、缺口棒等 | 文件20-AlwaysIn与20GB.txt |
-| barbwire / wire / overlap / middle_range | 铁丝网、重叠、区间中部 | 文件21-铁丝网与无交易环境.txt |
-| failed_signal / magnet / trapped_traders | 信号失败后磁力位、交易者被套 | 文件22-信号失败后的磁力位.txt |
-| ascending_triangle / descending_triangle / symmetrical_triangle / expanding_triangle | 三角形收敛形态 | 文件27-三角形与收敛形态.txt |
-| double_top_bottom | 双顶、双底、微型双顶底 | 文件28-双重顶底与微型结构.txt |
+| wedge | 三次同向推进、幅度递减、趋势线/通道收敛；含楔形回撤与楔形反转 | 《楔形》 |
+| reversal_attempt | 反转尝试、MTR 前后结构、final flag、明显二次测试失败 | 《二次入场》 |
+| mtr | 主要趋势反转结构已成型（常与 reversal_attempt 同现） | 二次入场（叠加）、《主要趋势反转 MTR》 |
+| final_flag | 趋势末段 final flag / 末端旗形 | 二次入场（叠加）、《最终旗形与趋势末端》 |
+| h1 / h2 / l1 / l2 | 计数入场结构（High1/High2/Low1/Low2） | 《H1/H2/L1/L2 计数》 |
+| breakout_test | 突破后回测突破位、突破测试棒 | 《突破失败与突破测试》 |
+| breakout_pullback | 突破失败后的再次失败（突破回踩）顺势机会 | 《突破失败与突破测试》 |
+| breakout_failure / failed_breakout | 普通突破失败、假突破 | 《突破失败与突破测试》、《失败信号与磁力位》 |
+| always_in / ail / ais / 20gb / gap_bar | Always In、20GB、缺口棒等 | 《Always In 与 20GB》 |
+| barbwire / wire / overlap / middle_range | 铁丝网、重叠、区间中部 | 《铁丝网与无交易环境》 |
+| failed_signal / magnet / trapped_traders | 信号失败后磁力位、交易者被套 | 《失败信号与磁力位》 |
+| ascending_triangle / descending_triangle / symmetrical_triangle / expanding_triangle | 三角形收敛形态 | 《三角形与收敛形态》 |
+| double_top_bottom | 双顶、双底、微型双顶底 | 《双重顶底与微型结构》 |
 
-阶段二常驻（非 pattern 触发）：文件23（Measured Move）。
+阶段二常驻（非 pattern 触发）：结构目标（Measured Move）。
 
 **与 entry_setup_type 对齐：**
 - entry_setup_type=wedge → detected_patterns 须含 wedge
@@ -102,8 +102,8 @@ STAGE1_PATTERN_BRIEFS_BLOCK = """
 **barbwire / overlap / middle_range**：铁丝网、重叠、区间中部或边界；entry_setup_type=tr_boundary 时两者均应写入 detected_patterns。
 **always_in / 20gb**：强趋势连续同向棒；逆势需双确认。
 **failed_signal / magnet**：信号棒失败后价格被吸向磁力位。
-**final_flag / mtr**：最终旗形、主要趋势反转见文件24/25。
-**double_top_bottom / 三角形**：见文件28/27。
+**final_flag / mtr**：最终旗形、主要趋势反转见《最终旗形与趋势末端》《主要趋势反转 MTR》。
+**double_top_bottom / 三角形**：见《双重顶底与微型结构》《三角形与收敛形态》。
 """.strip()
 
 

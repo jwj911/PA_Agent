@@ -28,8 +28,8 @@
 - 迭代记录：[`docs/CHANGELOG.md`](./docs/CHANGELOG.md)
 - 架构升级路线图：[`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md)
 - Prompt ID 解耦方案：[`docs/prompt_id_decoupling_plan.md`](./docs/prompt_id_decoupling_plan.md)，
-  规定稳定逻辑 ID、可变存储路径、旧文件名兼容投影和 M1-M5 迁移门禁；M1-M3、M4.1
-  已完成，下一阶段为 M4.2 Prompt/golden 清理。
+  规定稳定逻辑 ID、可变存储路径、旧文件名兼容投影和 M1-M5 迁移门禁；M1-M4.2
+  已完成，下一阶段为 M4.3 离线评估与真实 Provider 观察。
 - 短中期执行计划：[`docs/iteration_plan.md`](./docs/iteration_plan.md)，在长期边界以
   `architecture_roadmap` 为准的前提下，拆解后续若干轮交付物、验收标准和依赖顺序。
 - L6/L3 真实观察手册：[`docs/live_observation_runbook.md`](./docs/live_observation_runbook.md)，
@@ -600,7 +600,11 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     legacy filename 和版本只进入 tooltip；未知旧值显示 `[unresolved]`，不用于磁盘访问。
     M1-M3 均不得更新 golden 来掩盖字节漂移。M4.1 已升级 Stage 1 schema v2，移除
     `strategy_files_needed` 的模型必填/property；Normalizer 仍接受旧字段与 alias，但兼容字段
-    始终由 router 重建。M4.2 才修改 Prompt/golden，M4.3 必须独立评估并保留旧 schema 兼容。
+    始终由 router 重建。M4.2 已从运行时模板、增量/prefix-chain carryover 和 Stage 2 compact
+    context 中移除模型可见 filename/路由字段，引用统一使用稳定显示标题；manifest 已升级
+    到 `v2`，29 个模板版本同步更新，实际正文 SHA-256 只在预期的 14 个模板变化。M4.3 必须
+    独立评估校验失败率、重试率、Token、语义冲突率和真实 Provider 行为，并保留旧 schema
+    与 filename API 兼容。
 21. **L1 外部扩展兼容观察当前进度**：外部风格 data source/AI client registrar 已完成 5 轮
     重复观察；versioned registrar 必须声明 `pa-agent.registry-extension.v1`，旧的未声明版本
     callable 继续兼容，未知显式版本只隔离当前扩展。观察样例只使用 marker builder，不连接

@@ -18,6 +18,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-27（L2：Prompt ID 解耦 M4.2 Prompt/carryover/golden）
+
+- 清理 29 个运行时模板的模型可见物理身份：模板正文不再包含 `.txt` 交叉引用、
+  `strategy_files_needed` 或 `recommended_strategy_files`，特殊形态路由表与二元决策引用
+  统一使用稳定显示标题。
+- Stage 1 增量上下文、prefix-chain assistant 历史和 Stage 2 compact context 在送入模型前
+  剥离程序路由字段；上一轮 `strategy_files_used` 不再进入模型上下文。旧记录、Pipeline
+  双合同、router filename 投影、Stage 2 参数和 callback 兼容行为保持不变。
+- Prompt manifest 升级到 `v2`：29 个 Prompt ID 的版本统一更新，实际正文 SHA-256 只在
+  预期的 14 个模板变化；同步更新 shared system、Stage 1、Stage 2 standalone 和
+  continuation golden。
+- 新增运行时模板和组装 Prompt 不泄漏 filename/路由字段的合同断言。Prompt/Normalizer
+  聚焦回归 **89 passed**、完整非 live unit 层 **1,092 passed**、integration 层
+  **80 passed**、property 层 **55 passed**。
+- `py_compile`、CI target、focused Ruff、Black 24.10.0 受影响目标、3,712 条 Ruff baseline
+  和差异检查通过。
+- 同步 Prompt ID 方案、`AGENTS.md`、架构路线图和执行计划为“M1-M4.2 已完成，M4.3
+  待实施”。本切片未调用真实 Provider；模型质量、Token 与重试指标留给 M4.3 独立评估。
+
+---
+
 ## [Unreleased] — 2026-07-26（L2：Prompt ID 解耦 M4.1 Stage 1 schema v2）
 
 - Stage 1 schema 新增 `pa-agent.stage1-output.v2` 标识，并从 `required` 与 `properties`

@@ -354,6 +354,7 @@ def test_stage2_user_prompt_includes_gate_trace(assembler: PromptAssembler):
         "cycle_position": "normal_channel",
         "direction": "bullish",
         "gate_result": "proceed",
+        "strategy_files_needed": ["上涨通道分析识别.txt"],
         "gate_trace": [{"node_id": "0.1", "question": "q", "answer": "是", "reason": "r"}],
     }
     messages = assembler.build_stage2(frame, stage1_json, [], [])
@@ -361,6 +362,7 @@ def test_stage2_user_prompt_includes_gate_trace(assembler: PromptAssembler):
     # gate_trace and gate_result are embedded inside the compact stage1 JSON block
     assert "gate_result" in user
     assert "gate_trace" in user or "0.1" in user
+    assert "strategy_files_needed" not in user
     # The redundant separate gate_block section should no longer exist
     assert "## 阶段一闸门路径" not in user
 
@@ -507,6 +509,8 @@ def test_real_stage1_stage2_boundary_contracts(real_assembler: PromptAssembler):
     stage1_schema = _stage1_json_contract(stage1_user)
     assert '"gate_trace"' in stage1_schema
     assert '"gate_result"' in stage1_schema
+    assert '"strategy_files_needed"' not in stage1_schema
+    assert ".txt" not in stage1_user
     for field in [
         '"decision"',
         '"entry_price"',
@@ -523,6 +527,8 @@ def test_real_stage1_stage2_boundary_contracts(real_assembler: PromptAssembler):
     assert '"direction": "bullish"' in stage2_user
     assert '"decision_trace"' in stage2_user
     assert '"terminal": {' in stage2_user
+    assert '"strategy_files_needed"' not in stage2_user
+    assert ".txt" not in stage2_user
     assert "当 order_type 为“不下单”时" in stage2_user
     no_order_null_rule = (
         "entry_price、take_profit_price、take_profit_price_2、"
@@ -658,6 +664,7 @@ def test_stage2_continuation_prefix_chain_reuses_stage1(assembler: PromptAssembl
         "cycle_position": "normal_channel",
         "direction": "bullish",
         "gate_result": "proceed",
+        "strategy_files_needed": ["上涨通道分析识别.txt"],
     }
 
     messages = assembler.build_stage2_continuation(
@@ -722,7 +729,10 @@ def test_incremental_stage1_prompt_includes_previous_record_and_new_bars(
         htf_text="",
         stage1_messages=full_s1_messages,
         stage1_response={"content": prev_assistant},
-        stage1_diagnosis={"cycle_position": "normal_channel"},
+        stage1_diagnosis={
+            "cycle_position": "normal_channel",
+            "strategy_files_needed": ["上涨通道分析识别.txt"],
+        },
         stage2_messages=[],
         stage2_response=None,
         stage2_decision={"decision": {"order_type": "不下单"}},
@@ -743,6 +753,7 @@ def test_incremental_stage1_prompt_includes_previous_record_and_new_bars(
     # Message [2] is normalized bare JSON from validated stage1_diagnosis
     assert messages[2]["content"].startswith("{")
     assert "cycle_position" in messages[2]["content"]
+    assert "strategy_files_needed" not in messages[2]["content"]
     assert "JSON 校验通过" not in messages[2]["content"]
     assert "```" not in messages[2]["content"]
     # Message [3] is the incremental task
@@ -753,6 +764,8 @@ def test_incremental_stage1_prompt_includes_previous_record_and_new_bars(
     assert "新增已收盘K线:2" in incremental_user
     assert "上一轮已完成分析" in incremental_user
     assert "normal_channel" in incremental_user
+    assert "strategy_files_needed" not in incremental_user
+    assert "strategy_files_used" not in incremental_user
     # Anti-anchoring directives must be present
     assert "反锚定要求" in incremental_user
     assert "不要因为上一轮已得出结论就倾向于延续它" in incremental_user
@@ -780,6 +793,8 @@ def test_incremental_stage1_normalizes_fenced_previous_response(
         "cycle_position": "trending_tr",
         "direction": "bullish",
         "gate_result": "proceed",
+        "strategy_files_needed": ["上涨通道分析识别.txt"],
+        "recommended_strategy_files": ["文件14-楔形形态分析交易.txt"],
     }
     fenced = (
         "JSON 校验通过。以下是修正后的完整阶段一诊断 JSON：\n\n"
@@ -798,7 +813,7 @@ def test_incremental_stage1_normalizes_fenced_previous_response(
         htf_text="",
         stage1_messages=full_s1_messages,
         stage1_response={"content": fenced},
-        stage1_diagnosis=diagnosis,
+        stage1_diagnosis={},
         stage2_messages=[],
         stage2_response=None,
         stage2_decision={"decision": {"order_type": "不下单"}},
@@ -816,6 +831,23 @@ def test_incremental_stage1_normalizes_fenced_previous_response(
     assert "```" not in assistant
     parsed = json.loads(assistant)
     assert parsed["cycle_position"] == "trending_tr"
+    assert "strategy_files_needed" not in parsed
+    assert "recommended_strategy_files" not in parsed
+
+
+def test_stage1_legacy_text_fallback_does_not_expose_routing_identity() -> None:
+    from types import SimpleNamespace
+
+    from pa_agent.ai.chain_context import (
+        normalize_prev_stage1_assistant_for_incremental,
+        normalize_stage1_assistant_for_chain,
+    )
+
+    raw = 'legacy strategy_files_needed: ["上涨通道分析识别.txt"]'
+    previous = SimpleNamespace(stage1_diagnosis={})
+
+    assert normalize_prev_stage1_assistant_for_incremental(previous, raw) == "{}"
+    assert normalize_stage1_assistant_for_chain({}, raw) == "{}"
 
 
 def test_incremental_stage1_raises_without_previous_messages(
@@ -998,9 +1030,11 @@ def test_previous_prediction_rendered_in_incremental_mode(assembler: PromptAssem
         strategy_files=["上涨通道分析识别.txt"],
         experience_entries=[],
         previous_record=previous,
+        use_prefix_chain=True,
     )
 
     user = messages[-1]["content"]  # Stage 2 user prompt (last turn)
+    assert all("strategy_files_needed" not in message["content"] for message in messages)
     assert "上一轮下一根K线预测" in user
     assert "阳线" in user
     assert "60%" in user

@@ -53,18 +53,18 @@ def normalize_prev_stage1_assistant_for_incremental(
 
     diag = getattr(previous_record, "stage1_diagnosis", None) or {}
     if isinstance(diag, dict) and diag:
-        return json.dumps(diag, ensure_ascii=False, indent=2)
+        return json.dumps(stage1_model_context(diag), ensure_ascii=False, indent=2)
 
-    formatted = format_model_json_for_context(raw_content)
+    formatted = _stage1_text_for_model(raw_content, format_model_json_for_context)
     if formatted:
         return formatted
 
     logger.warning(
         "incremental stage1: could not normalize previous assistant to JSON; "
-        "using raw stage1_response content (%d chars)",
+        "using empty JSON context instead of raw content (%d chars)",
         len(raw_content or ""),
     )
-    return raw_content
+    return "{}"
 
 
 def render_previous_prediction(previous_record: Any) -> str:
@@ -109,11 +109,11 @@ def normalize_stage1_assistant_for_chain(
     from pa_agent.ai.json_validator import format_model_json_for_context
 
     if isinstance(stage1_json, dict) and stage1_json:
-        return json.dumps(stage1_json, ensure_ascii=False, indent=2)
-    formatted = format_model_json_for_context(stage1_reply_content)
+        return json.dumps(stage1_model_context(stage1_json), ensure_ascii=False, indent=2)
+    formatted = _stage1_text_for_model(stage1_reply_content, format_model_json_for_context)
     if formatted:
         return formatted
-    return stage1_reply_content or ""
+    return "{}"
 
 
 def compact_stage1_for_stage2(stage1_json: dict) -> dict:
@@ -133,7 +133,7 @@ def compact_stage1_for_stage2(stage1_json: dict) -> dict:
         "entry_setup",
         "support_levels",
         "resistance_levels",
-        "strategy_files_needed",
+        # Prompt routing identity is program-owned.
         "risk_warning",
         "bar_analysis",
         "bar_by_bar_summary",
@@ -141,3 +141,28 @@ def compact_stage1_for_stage2(stage1_json: dict) -> dict:
         "gate_result",
     )
     return {k: stage1_json[k] for k in keys if k in stage1_json}
+
+
+def stage1_model_context(value: Any) -> dict[str, Any]:
+    """Return Stage 1 context without program-owned Prompt routing fields."""
+    if not isinstance(value, dict):
+        return {}
+    return {
+        key: item
+        for key, item in value.items()
+        if key not in {"strategy_files_needed", "recommended_strategy_files"}
+    }
+
+
+def _stage1_text_for_model(raw_text: str, formatter: Any) -> str | None:
+    """Filter program-owned fields from a legacy Stage 1 JSON response."""
+    formatted = formatter(raw_text)
+    if not formatted:
+        return None
+    try:
+        value = json.loads(formatted)
+    except json.JSONDecodeError:
+        return "{}"
+    if not isinstance(value, dict):
+        return formatted
+    return json.dumps(stage1_model_context(value), ensure_ascii=False, indent=2)

@@ -23,7 +23,7 @@ from pa_agent.ai.prompt_assembler import (
     stage2_user_task_prompt_ids,
     stage2_user_task_txt_files,
 )
-from pa_agent.ai.prompting import TEMPLATE_CATALOG, prompt_ids
+from pa_agent.ai.prompting import TEMPLATE_CATALOG, TemplateStore, prompt_ids
 
 PROMPT_DIR = Path(__file__).resolve().parents[2] / "prompt_engineering"
 DEPRECATED_STAGE1_GATE_FILE = "二元决策_闸门.txt"
@@ -31,6 +31,16 @@ DEPRECATED_STAGE1_GATE_FILE = "二元决策_闸门.txt"
 
 def _strategy_registry_values() -> set[str]:
     return {value for name, value in vars(sf).items() if name.isupper() and isinstance(value, str)}
+
+
+def test_runtime_prompt_content_does_not_expose_physical_filenames() -> None:
+    store = TemplateStore(PROMPT_DIR)
+
+    for spec in TEMPLATE_CATALOG.manifest:
+        content = store.load_id(spec.prompt_id)
+        assert ".txt" not in content, spec.prompt_id
+        assert "strategy_files_needed" not in content, spec.prompt_id
+        assert "recommended_strategy_files" not in content, spec.prompt_id
 
 
 def test_stage1_txt_files() -> None:

@@ -120,7 +120,7 @@ class Stage1PromptBuilder:
             f"（K线序号：1=最新已收盘，最大 K{n_bars}；"
             f"每个决策节点的 bar_range 由你自行选择子区间，勿超出 K{n_bars}-K1）\n\n"
             f"## ⚠️ 分析窗口分层规则（与程序 §2.2/§2.3/§2.4 预填一致，必须遵守）\n\n"
-            f"你收到全部 {n_bars} 根 K 线数据；下列分层与 `市场诊断框架.txt`、程序三窗口摘要**同一标准**：\n\n"
+            f"你收到全部 {n_bars} 根 K 线数据；下列分层与《市场诊断框架》所定义规则、程序三窗口摘要**同一标准**：\n\n"
             f"{bg_window}"
             f"- swing 高低点、磁力位参考 → 写入 `htf_context`；§2.2 背景方向\n"
             f"- **禁止**用背景方向否决近期 `direction`；冲突时近期为主、背景作风险参考\n\n"
@@ -171,9 +171,9 @@ class Stage1PromptBuilder:
         simple_features_block = self._render_simple_market_features_block(frame)
         previous_summary = {
             "meta": previous_record.meta.model_dump(),
-            "stage1_diagnosis": previous_record.stage1_diagnosis or {},
+            "stage1_diagnosis": _stage1_diagnosis_for_model(previous_record.stage1_diagnosis),
             "stage2_decision": previous_record.stage2_decision or {},
-            "strategy_files_used": previous_record.strategy_files_used or [],
+            # Prompt routing identity is program-owned and excluded from model context.
         }
         return (
             "## 阶段一增量任务\n\n"
@@ -241,9 +241,9 @@ class Stage1PromptBuilder:
         new_feature_table = self._render_kline_feature_table(frame, limit=new_count)
         previous_summary = {
             "meta": previous_record.meta.model_dump(),
-            "stage1_diagnosis": previous_record.stage1_diagnosis or {},
+            "stage1_diagnosis": _stage1_diagnosis_for_model(previous_record.stage1_diagnosis),
             "stage2_decision": previous_record.stage2_decision or {},
-            "strategy_files_used": previous_record.strategy_files_used or [],
+            # Prompt routing identity is program-owned and excluded from model context.
         }
         return (
             "## 阶段一增量更新任务\n\n"
@@ -286,3 +286,10 @@ class Stage1PromptBuilder:
             + "请基于上方完整K线数据、上一轮结论和新增K线，严格输出更新后的阶段一 JSON 诊断结果。\n\n"
             f"{self._stage1_tail_reminder}"
         )
+
+
+def _stage1_diagnosis_for_model(value: Any) -> dict[str, Any]:
+    """Remove program-owned routing fields from model-visible history."""
+    from pa_agent.ai.chain_context import stage1_model_context
+
+    return stage1_model_context(value)

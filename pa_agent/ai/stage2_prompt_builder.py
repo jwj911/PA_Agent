@@ -322,7 +322,7 @@ class Stage2PromptBuilder:
             f"\n```\n\n"
             f"{kline_block}"
             f"{prev_pred_block + chr(10) if prev_pred_block else ''}"
-            f"请根据以上诊断和K线数据,按《二元决策.txt》§3–§11、§14 输出 JSON 决策结果"
+            f"请根据以上诊断和K线数据,按《交易二元决策树》从§3–§11、§14 输出 JSON 决策结果"
             f"(含 decision_trace 与 terminal)。\n"
             f"注意:如果判断不下单,entry_price、take_profit_price、take_profit_price_2、stop_loss_price、order_direction 必须全部为 null。\n\n"
             f"{self._stage2_tail_reminder}"

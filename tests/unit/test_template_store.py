@@ -80,7 +80,7 @@ def test_manifest_covers_strategy_registry_and_stage_contracts() -> None:
         prompt_ids.MARKET_DIAGNOSIS,
         prompt_ids.KLINE_SIGNAL,
     )
-    assert all(spec.version == "v1" for spec in TEMPLATE_MANIFEST)
+    assert all(spec.version == "v2" for spec in TEMPLATE_MANIFEST)
 
 
 def test_template_store_matches_utf8_golden_snapshots() -> None:
@@ -90,7 +90,7 @@ def test_template_store_matches_utf8_golden_snapshots() -> None:
     actual = [asdict(snapshot) for snapshot in store.snapshots(names)]
     id_snapshots = store.snapshots_ids(tuple(spec.prompt_id for spec in TEMPLATE_MANIFEST))
 
-    assert golden["manifest_version"] == "v1"
+    assert golden["manifest_version"] == "v2"
     assert names == [spec.name for spec in TEMPLATE_MANIFEST]
     assert actual == golden["templates"]
     for spec, legacy, by_id in zip(

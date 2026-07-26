@@ -12,7 +12,7 @@ from pa_agent.ai.prompting.prompt_ids import PromptId
 
 StageName = Literal["stage1", "stage2"]
 TemplateRole = Literal["system", "task", "base", "strategy"]
-MANIFEST_VERSION = "v1"
+MANIFEST_VERSION = "v2"
 
 
 @dataclass(frozen=True, slots=True)
