@@ -1,0 +1,486 @@
+# Prompt ID 与文件名解耦方案
+
+> 状态：M1 已完成，M2 待实施
+>
+> 日期：2026-07-26
+>
+> 适用范围：L2 Prompt 模板引擎、策略路由、两阶段 Pipeline、分析记录与 Prompt 调试界面
+>
+> 前置基线：29 个运行时 Prompt 已纳入 `TemplateStore`、manifest 与 UTF-8 golden snapshot
+
+## 1. 决策摘要
+
+当前系统把 `.txt` 文件名同时用作模板身份、文件定位、路由结果、模型输出值、Pipeline 状态、
+分析记录字段和 GUI 展示文本。任何重命名、移动或后缀迁移都会跨越上述边界，不能只修改
+`TemplateStore`。
+
+本方案采用三层身份模型：
+
+1. **`prompt_id`**：程序内部唯一、稳定、不可由文件路径推导的逻辑身份。
+2. **`source_path`**：相对 `prompt_engineering/` 的可变存储位置。
+3. **`display_name`**：面向文档、GUI 和诊断界面的可变显示名称。
+
+另保留 **`legacy_filename`** 作为旧 API 和旧记录的不可变兼容投影。它不再用于定位文件，
+也不会随 `source_path` 迁移为 `.prompt.md`。
+
+迁移遵循以下决策：
+
+- 路由器、Prompt 组装器、Pipeline 和新记录最终只以 `prompt_id` 传递模板身份。
+- 文件系统访问只能由 manifest/catalog 将 `prompt_id` 解析为 `source_path` 后执行。
+- `prompt_id` 由程序路由产生，模型不得选择、拼写或输出 `prompt_id`。
+- 现有 `strategy_files_needed` 和 `strategy_files_used` 在兼容期保留；新旧字段双读、双写，
+  但内部核心不再把文件名当作身份。
+- M1-M3 必须保持 Stage 1、Stage 2、standalone、continuation 和共享 system prompt
+  **字节完全一致**；任何 Prompt 文本或 JSON 输出合同变化推迟到 M4 单独评估。
+- `.txt` 改为 `.prompt.md` 仅是 M5 可选存储迁移，不是本方案的前置条件。
+
+## 2. 当前耦合面
+
+| 边界 | 当前合同 | 风险 |
+|---|---|---|
+| `ai/strategy_files.py` | 常量值是中文 `.txt` 文件名 | 重命名会改变路由和调用方输入 |
+| `prompting/template_manifest.py` | `TemplateSpec.name` 同时是主键和路径，强制 `.txt` | 无法独立演进逻辑身份与存储格式 |
+| `prompting/template_store.py` | 文件名用于查 manifest、缓存、加载和 snapshot | 缓存与审计身份随路径变化 |
+| `ai/router.py` | 返回 `list[str]` 文件名 | 路由结果携带存储细节 |
+| `PromptAssembler` / builders | 静态列表、loader 和 `TemplateContext` 传递文件名 | 文件名扩散到所有组装路径 |
+| Stage 1 JSON | 模型必填 `strategy_files_needed` | 模型承担本应由程序负责的存储路由 |
+| Pipeline / `AnalysisRecord` | `strategy_files`、`strategy_files_used` | 历史记录在重命名后失去稳定语义 |
+| GUI | 显示“注入的 `.txt` 文件” | 展示层与物理格式绑定 |
+| 测试与 golden | 大量断言固定 `.txt` 名称和顺序 | 一次重命名会造成高噪声迁移 |
+
+## 3. 目标与非目标
+
+### 3.1 目标
+
+- Prompt 文件可以重命名、移动或迁移为 `.prompt.md`，而不改变路由身份和历史记录语义。
+- manifest 成为 `prompt_id -> source_path` 的唯一映射来源。
+- 依赖关系、模板版本、缓存、snapshot 和安全日志以 `prompt_id` 为主键。
+- 旧 API、旧 Stage 1 输出和旧记录在兼容期继续可读。
+- 路由顺序、Prompt 内容、Provider 行为、JSON 校验和 KV-cache 前缀在 M1-M3 保持不变。
+- 未知 ID、别名冲突、路径逃逸和未注册模板全部失败关闭。
+
+### 3.2 非目标
+
+- 本轮不改任何 Prompt 正文，不执行 `.txt` 到 `.md` 的批量重命名。
+- 本轮不修改 Stage 1/Stage 2 JSON schema、Provider 路由或决策逻辑。
+- 本方案不引入多 Agent，也不改变当前两阶段调用次数。
+- 不借此删除 `TemplateStore` 旧 loader、`route_strategy_files()` 或旧记录字段。
+- 不把任意文件扫描、自动发现或目录 glob 引入 Prompt 加载路径。
+
+## 4. 身份模型
+
+### 4.1 `PromptId`
+
+建议新增 `pa_agent/ai/prompting/prompt_ids.py`：
+
+```python
+from typing import NewType
+
+PromptId = NewType("PromptId", str)
+
+PERSONA = PromptId("pa.persona")
+BINARY_DECISION = PromptId("pa.binary_decision")
+MARKET_DIAGNOSIS = PromptId("pa.market_diagnosis")
+```
+
+采用 `NewType` 而不是封闭 `Enum`：
+
+- 静态检查能区分 ID 与普通文件名字符串；
+- JSON、日志和记录仍可稳定序列化为字符串；
+- 后续新增模板不需要修改中央枚举类或引入插件继承问题。
+
+ID 规则：
+
+- 仅允许小写 ASCII、数字、点和下划线，正则为
+  `^[a-z][a-z0-9]*(?:[._][a-z0-9]+)*$`。
+- ID 不包含后缀、目录、版本号、阶段号或中文显示名称。
+- ID 发布后不可复用；模板废弃时保留 tombstone 或兼容别名，不把旧 ID 分配给新语义。
+- 内容修订只增加 `TemplateSpec.version`，不更换 ID。
+- 模板职责发生不兼容变化时创建新 ID，并显式声明迁移关系。
+
+### 4.2 初始 ID 映射
+
+M1 初始状态下，`legacy_filename` 与表中的 `source_path` 相同；M5 只改变 `source_path`。
+
+| `prompt_id` | 当前 `source_path` | `display_name` |
+|---|---|---|
+| `pa.persona` | `提示词大纲_人设与思维方式.txt` | 人设与思维方式 |
+| `pa.binary_decision` | `二元决策.txt` | 交易二元决策树 |
+| `pa.market_diagnosis` | `市场诊断框架.txt` | 市场诊断框架 |
+| `pa.kline_signal` | `文件16-K线信号识别.txt` | K 线信号识别 |
+| `pa.bar_checklist` | `逐棒分析检查单.txt` | 逐棒分析检查单 |
+| `pa.stop_target_position` | `文件17-止损和止盈与仓位管理.txt` | 止损、止盈与仓位约束 |
+| `pa.measured_move` | `文件23-MeasuredMove与结构目标.txt` | Measured Move 与结构目标 |
+| `pa.channel.bullish.identification` | `上涨通道分析识别.txt` | 上涨通道识别 |
+| `pa.channel.bullish.strategy` | `上涨通道交易策略.txt` | 上涨通道策略 |
+| `pa.channel.bearish.identification` | `下跌通道分析识别.txt` | 下跌通道识别 |
+| `pa.channel.bearish.strategy` | `下跌通道交易策略.txt` | 下跌通道策略 |
+| `pa.spike.bullish.identification` | `极速上涨分析识别.txt` | 极速上涨识别 |
+| `pa.spike.bullish.strategy` | `极速上涨交易策略.txt` | 极速上涨策略 |
+| `pa.spike.bearish.identification` | `极速下跌分析识别.txt` | 极速下跌识别 |
+| `pa.spike.bearish.strategy` | `极速下跌交易策略.txt` | 极速下跌策略 |
+| `pa.range.identification` | `震荡区间分析识别.txt` | 震荡区间识别 |
+| `pa.range.strategy` | `震荡区间交易策略.txt` | 震荡区间策略 |
+| `pa.channel.width` | `文件13-窄通道与宽通道策略.txt` | 窄通道与宽通道 |
+| `pa.pattern.wedge` | `文件14-楔形形态分析交易.txt` | 楔形 |
+| `pa.pattern.second_entry` | `文件15-二次入场机会.txt` | 二次入场 |
+| `pa.pattern.breakout_failure` | `文件18-突破失败与突破测试.txt` | 突破失败与突破测试 |
+| `pa.pattern.h1_h2_l1_l2` | `文件19-H1H2-L1L2计数.txt` | H1/H2/L1/L2 计数 |
+| `pa.context.always_in_20gb` | `文件20-AlwaysIn与20GB.txt` | Always In 与 20GB |
+| `pa.context.barbwire` | `文件21-铁丝网与无交易环境.txt` | 铁丝网与无交易环境 |
+| `pa.context.failed_signal_magnet` | `文件22-信号失败后的磁力位.txt` | 失败信号与磁力位 |
+| `pa.pattern.final_flag` | `文件24-最终旗形与趋势末端.txt` | 最终旗形与趋势末端 |
+| `pa.pattern.mtr` | `文件25-主要趋势反转MTR.txt` | 主要趋势反转 MTR |
+| `pa.pattern.triangle` | `文件27-三角形与收敛形态.txt` | 三角形与收敛形态 |
+| `pa.pattern.double_top_bottom` | `文件28-双重顶底与微型结构.txt` | 双重顶底与微型结构 |
+
+### 4.3 `TemplateSpec`
+
+目标数据结构：
+
+```python
+@dataclass(frozen=True, slots=True)
+class TemplateSpec:
+    prompt_id: PromptId
+    source_path: str
+    legacy_filename: str
+    display_name: str
+    stages: tuple[StageName, ...]
+    role: TemplateRole
+    output_contract: str | None = None
+    dependencies: tuple[PromptId, ...] = ()
+    legacy_aliases: tuple[str, ...] = ()
+    version: str = MANIFEST_VERSION
+```
+
+约束：
+
+- `prompt_id`、`source_path`、`legacy_filename` 和所有 `legacy_aliases` 分别唯一。
+- `dependencies` 只能引用已注册 ID。
+- `source_path` 必须是相对 POSIX 路径，不得包含绝对路径、`..`、空组件或反斜杠。
+- 运行时解析后的路径必须仍位于 `PROMPT_DIR` 内。
+- 允许的运行时格式仅为 `.txt` 和 `.prompt.md`；普通 `_reference/*.md` 不会因后缀匹配被加载。
+- `legacy_filename` 固定为迁移前公开的 `.txt` 名称，供旧 API 和旧记录投影。
+- `legacy_aliases` 仅供额外的精确兼容映射；两者都不参与文件系统拼接，也不得包含目录分隔符。
+
+## 5. 目标模块与接口
+
+```text
+ai/prompting/
+├── prompt_ids.py          # PromptId 类型与稳定 ID 常量
+├── template_manifest.py   # ID、路径、显示名、阶段、依赖、版本
+├── prompt_catalog.py      # 严格 ID 查询与 legacy 精确映射
+├── template_store.py      # ID 核心加载、缓存、渲染和 snapshot
+└── compatibility.py       # 文件名 API、旧 loader 和旧记录适配
+```
+
+核心 API：
+
+```python
+catalog.spec(prompt_id) -> TemplateSpec
+catalog.source_path(prompt_id) -> str
+catalog.legacy_filename(prompt_id) -> str
+catalog.display_name(prompt_id) -> str
+catalog.resolve_legacy_filename(filename) -> PromptId
+
+store.load_id(prompt_id, stage=...) -> str
+store.load_many_ids(prompt_ids, stage=...) -> tuple[str, ...]
+store.render_id(prompt_id, context, stage=...) -> str
+store.snapshot_id(prompt_id, stage=...) -> TemplateIdSnapshot
+store.snapshots_ids(prompt_ids, stage=...) -> tuple[TemplateIdSnapshot, ...]
+
+route_strategy_prompt_ids(stage1_json) -> list[PromptId]
+```
+
+`NewType` 在运行时仍是 `str`，因此禁止让同一个方法猜测参数是 ID 还是文件名。核心路径使用
+显式 `*_id` 方法；现有无后缀方法在兼容期只接受 legacy 文件名。
+
+M1 新增的 `TemplateIdSnapshot` 字段：
+
+```text
+prompt_id
+version
+byte_length
+sha256
+```
+
+`source_path` 可以作为诊断元数据查询，但不得参与 snapshot 身份或 digest 比较。这样只改变物理路径
+不会改变历史模板身份。旧 `TemplateSnapshot(name=...)` 在兼容期保持不变，继续用于现有
+golden 文件和旧调用方。
+
+兼容 API：
+
+```python
+route_strategy_files(stage1_json) -> list[str]
+stage1_prompt_txt_files() -> list[str]
+stage2_prompt_txt_files(...) -> list[str]
+TemplateStore.load(filename, ...)
+TemplateStore.load_many(filenames, ...)
+TemplateStore.snapshot(filename, ...)
+```
+
+兼容 API 必须通过 catalog 投影，不能维护第二份独立文件名常量表。
+其中 `route_strategy_files()` 和 `*_txt_files()` 返回 `legacy_filename`，不得返回可变的
+`source_path`；只有 `TemplateStore` 可以把 ID 解析为实际存储路径。
+
+## 6. 各边界的目标合同
+
+### 6.1 路由与 Prompt 组装
+
+- `router.py` 的主实现返回有序 `PromptId` 列表。
+- `route_strategy_files()` 只作为 `PromptId -> legacy_filename` 的兼容投影。
+- `PromptAssembler`、`Stage1PromptBuilder`、`Stage2PromptBuilder` 的新内部列表使用 ID。
+- 在 M1-M3，为保持 Prompt 字节不变，写入模型上下文的旧字段仍投影为当前文件名。
+- 去重以 ID 为准，禁止同一 ID 因多个 legacy 文件名重复注入。
+- Stage 1/Stage 2 的顺序继续由显式 tuple 定义，不按 ID 或路径排序。
+
+### 6.2 模型输出
+
+`prompt_id` 是程序内部身份，不应成为模型推理结果。目标状态是：
+
+1. Stage 1 只输出 `cycle_position`、`direction`、`detected_patterns` 等诊断事实。
+2. 程序根据已校验的诊断调用 `route_strategy_prompt_ids()`。
+3. `strategy_files_needed` 在 M4 前继续保留，Normalizer 仍可用 router 补全。
+4. M4 经独立评估后，从新 schema 中移除 `strategy_files_needed`；旧 schema 和旧记录继续兼容读取。
+
+不建议把 `strategy_files_needed` 简单替换成 `strategy_prompt_ids_needed`，否则只是把“模型拼写文件名”
+改成“模型拼写内部 ID”，并没有消除职责错位。
+
+### 6.3 Pipeline 与记录
+
+Pipeline 目标字段：
+
+```text
+strategy_prompt_ids: list[PromptId]
+```
+
+新记录在兼容期双写：
+
+```json
+{
+  "strategy_prompt_ids_used": ["pa.channel.bullish.identification"],
+  "strategy_files_used": ["上涨通道分析识别.txt"]
+}
+```
+
+规则：
+
+- 新代码读取记录时优先使用 `strategy_prompt_ids_used`。
+- 旧记录只有 `strategy_files_used` 时，通过精确 legacy map 在内存中解析 ID，不回写原文件。
+- 未知 legacy 值保留原字符串用于展示，但不得据此访问磁盘；诊断只记录 unresolved 数量。
+- M1-M3 的增量 Prompt 仍只渲染旧 `strategy_files_used` 投影，避免新增字段改变 Prompt 字节。
+- 最终移除旧字段必须遵循 `compatibility_removal_policy`，不得随 M1-M5 一并删除。
+
+### 6.4 GUI 与可观测性
+
+GUI 默认显示：
+
+```text
+市场诊断框架 [pa.market_diagnosis]
+```
+
+调试 tooltip 可显示当前相对 `source_path`、版本和摘要前缀，但不得显示完整 Prompt 内容。
+
+日志只允许记录：
+
+- `prompt_id`
+- stage / role / version
+- 模板数量、字节长度、SHA-256
+- legacy 解析成功/失败计数
+
+日志继续禁止记录完整 Prompt、K 线原文、Provider Token 和模板变量值。
+
+## 7. 分阶段迁移
+
+### M0：冻结基线（已完成）
+
+- 固定 29 个模板当前 ID 映射、加载顺序和 UTF-8 digest。
+- 保留现有 shared system、Stage 1、Stage 2 standalone、continuation standalone 和
+  continuation prefix-chain golden。
+- 统计文件名进入模型输出、Pipeline、记录和 GUI 的全部调用点。
+
+**退出门禁**：现有 L2 golden、Prompt 合同测试和 Pipeline 等价测试通过。
+
+### M1：引入 ID 与 Catalog，保持旧调用方（已完成）
+
+- 新增 `prompt_ids.py`、`PromptCatalog` 和带 `prompt_id/source_path` 的 manifest。
+- `TemplateSpec.name` 暂时作为只读兼容属性返回 `legacy_filename`。
+- `TemplateStore` 增加 `load_id()`、`load_many_ids()` 和 `snapshot_id()`；
+  旧 `load()`、`load_many()`、`snapshot()` 委托 compatibility。
+- 依赖关系由文件名改为 ID。
+- manifest 不再以 `.txt` 后缀定义模板身份。
+
+**退出门禁**：
+
+- 29 个 ID、路径、legacy alias 一一对应且无冲突；
+- ID 加载与旧文件名加载内容逐字节相等；
+- 所有 Prompt 消息 golden 不变；
+- 路径逃逸、未知 ID 和 alias 冲突失败关闭。
+
+**实施结果（2026-07-26）**：
+
+- 新增 `prompt_ids.py` 与 `prompt_catalog.py`，29 个稳定 ID、当前路径、legacy 文件名和显示名
+  已进入 manifest；依赖关系已改用 ID。
+- `TemplateStore` 已增加 ID 版 load/render/snapshot/cache API；旧文件名 API、`TemplateSpec.name`
+  和 legacy `TemplateSnapshot` 保持兼容，并与 ID API 共用按 ID 建立的缓存。
+- Catalog 已拒绝非法 ID、不安全路径、非运行时扩展名、非法 legacy 名、重复 ID/路径/alias、
+  跨模板路径冲突和未知依赖。
+- Prompt/Catalog/Store/Assembler 聚焦单测 93 项通过；L2 compatibility observation 与 router
+  property 测试 8 项通过；完整非 live unit 层 1,070 项通过。现有 29 个模板 digest、
+  shared system、Stage 1、Stage 2 standalone 和 continuation golden 均未更新。
+- Ruff、Ruff format、`py_compile`、CI target 清单、3,724 条 Ruff baseline 和
+  `git diff --check` 通过。本地 Black 完成格式化后在当前 Windows 环境的退出阶段挂起；
+  最终 Black 权威验收仍由 CI 固定环境执行。
+
+### M2：路由与组装内部切换到 ID
+
+- 新增 `route_strategy_prompt_ids()`，以 ID 完成路由、去重和方向过滤。
+- `route_strategy_files()` 通过 `legacy_filename` 生成兼容投影，并保持当前返回值和顺序。
+- PromptAssembler 新增 `stage1_prompt_ids()`、`stage2_prompt_ids()`；
+  旧 `*_txt_files()` helper 继续返回路径。
+- `TemplateContext` 新增 `strategy_prompt_ids` 和以 ID 为键的 `template_versions`；
+  旧 `strategy_files` 在兼容层生成。
+- 一次只切换 router、shared system、Stage 1、Stage 2 中的一层，每层独立提交。
+
+**退出门禁**：
+
+- 对所有 cycle/direction/pattern fixture，
+  `map_ids_to_legacy_filenames(route_strategy_prompt_ids(x)) == route_strategy_files(x)`；
+- 新旧 assembler 在五类 golden 上字节完全相等；
+- KV-cache 共享 system 前缀 digest 不变；
+- Provider、schema、normalizer 和重试行为不变。
+
+### M3：Pipeline、记录与 GUI 双合同
+
+- Pipeline state 和 orchestrator callback 增加 `strategy_prompt_ids`。
+- `AnalysisRecord` 增加可选 `strategy_prompt_ids_used`，新记录双写旧文件名字段。
+- demo、history、replay、headless 和 GUI 读取器支持新旧记录。
+- Prompt 调试界面改为显示名称 + ID；路径只作为次级诊断信息。
+- 旧 callback、旧记录字段和 GUI 方法保留兼容适配。
+
+**退出门禁**：
+
+- 新记录 round-trip 同时保留 ID 与 legacy 投影；
+- 旧记录不改盘即可加载、回放和显示；
+- legacy/Pipeline 固定终态矩阵的事件、Prompt 和记录业务字段等价；
+- 日志与记录脱敏扫描无新增泄漏。
+
+### M4：移除模型对文件名的职责
+
+此阶段会有意改变 Prompt 字节，必须与 M1-M3 分开。
+
+- 新 Stage 1 输出合同不再要求 `strategy_files_needed`。
+- router 成为策略模板选择的唯一权威来源。
+- Normalizer 继续兼容旧模型输出和旧记录，但忽略其文件名建议作为路由权威。
+- Prompt 正文中的 ``*.txt`` 交叉引用改为稳定文档标题，例如 `《市场诊断框架》`；
+  不向模型暴露物理路径或要求模型输出 `prompt_id`。
+- 更新 schema 版本、golden、使用文档和兼容策略。
+
+**退出门禁**：
+
+- Stage 1/Stage 2 schema、normalizer、retry 和路由测试通过；
+- 固定 fixture 下除预期字段/文案外无非预期 Prompt 漂移；
+- 校验失败率、重试率、Token 和语义冲突率不劣于 M3 基线；
+- 真实 Provider 观察按 L6 runbook 完成，产物脱敏检查通过。
+
+### M5：可选 `.prompt.md` 存储迁移
+
+- 使用 `git mv` 分批把运行时模板改为 `.prompt.md`。
+- 每批只修改 manifest 的 `source_path`，`prompt_id`、版本、路由和记录身份不变。
+- 旧 `.txt` 名称继续作为 `legacy_filename`，但不得保留重复实体文件。
+- `_reference/*.md` 继续是参考层，不进入运行时 manifest。
+
+**退出门禁**：
+
+- 文件移动前后每个 ID 的内容 SHA-256 不变；
+- 所有 assembled Prompt digest 不变；
+- 旧记录和 legacy API 仍能通过 alias 解析；
+- 确认 Markdown lint/预览收益后，再决定是否继续迁移剩余文件。
+
+## 8. 兼容矩阵
+
+| 输入 | M1-M3 行为 | M4+ 目标行为 |
+|---|---|---|
+| 新 `PromptId` | 核心路径直接接受 | 唯一核心输入 |
+| 当前 `.txt` 文件名 | compatibility 精确映射 | 仅旧 API/旧记录接受 |
+| 已重命名的 legacy 文件名 | manifest alias 精确映射 | 同左，禁止磁盘直读 |
+| 未知 ID | 抛出明确错误 | 同左 |
+| 未知旧文件名 | 不加载，记录 unresolved 数量 | 同左 |
+| Stage 1 `strategy_files_needed` | 保留并归一化，router 仍为运行时权威 | 新 schema 不再要求，旧 schema 可读 |
+| 旧 `strategy_files_used` 记录 | 内存映射为 ID | 继续兼容至移除政策满足 |
+
+## 9. 测试与验收
+
+### 9.1 Catalog 与安全
+
+- 29 个 ID 唯一、格式合法、路径唯一、显示名非空。
+- dependencies 全部引用有效 ID。
+- `legacy_filename` 与 legacy alias 全局唯一，不与其他模板 ID 或兼容名称冲突。
+- 拒绝绝对路径、`..`、反斜杠逃逸、普通未注册 `.md` 和未知 ID。
+- manifest import 保持 PyQt-free。
+
+### 9.2 路由与 Prompt 等价
+
+- ID 路由映射为 `legacy_filename` 后与现有文件路由逐项、逐序相等。
+- bullish/bearish 排除、full library、pattern overlays 和 stable dedup 行为不变。
+- shared system、Stage 1 full/incremental/continuation、Stage 2 standalone/prefix-chain
+  均做 SHA-256 或完整消息相等比较。
+- M1-M3 不更新 golden digest；若 digest 变化则迁移失败。
+
+### 9.3 记录与 Pipeline
+
+- 新/旧记录字段 round-trip 和旧 fixture 读取。
+- legacy/Pipeline 的 route output、事件、终态和持久化边界等价。
+- GUI/headless 使用相同 ID 列表，显示层不影响运行时路由。
+- 未知 legacy 名称不会触发文件系统读取。
+
+### 9.4 建议聚焦命令
+
+```powershell
+pytest -q tests/unit/test_template_store.py
+pytest -q tests/unit/test_strategy_files.py tests/unit/test_prompt_txt_files.py
+pytest -q tests/unit/test_template_context.py tests/unit/test_prompt_assembler.py
+pytest -q tests/property/test_router_determinism.py
+pytest -q tests/unit/test_pipeline.py tests/integration/test_route_pipeline_step.py
+pytest -q tests/integration/test_two_stage_pipeline_equivalence.py
+ruff check pa_agent/ai/prompting pa_agent/ai/router.py pa_agent/ai/prompt_assembler.py
+```
+
+M4 另需按 `docs/live_observation_runbook.md` 执行真实 Provider 对照；M1-M3 若全部 Prompt
+digest 不变，不要求用 live 调用替代确定性等价证据。
+
+## 10. 原子实施切片
+
+1. **Catalog 基础**：`PromptId`、29 个 manifest 映射、验证器和 catalog 单测。
+2. **Store 双入口**：按 ID 加载/snapshot，旧文件名适配，Prompt golden 不变。
+3. **Router 双入口**：ID 路由为主，filename wrapper 等价，属性测试不变。
+4. **Assembler 内部 ID**：shared system、Stage 1、Stage 2 分层切换，每层独立提交。
+5. **Pipeline/Record 双写**：新增 ID 字段、旧记录回读和 GUI 展示。
+6. **模型合同清理**：单独修改 Stage 1 schema/Prompt，执行离线和真实观察。
+7. **可选后缀迁移**：按模板组 `git mv`，只改变 `source_path`。
+
+每个切片必须同步 `docs/CHANGELOG.md`、`AGENTS.md` 和本方案状态；不得把 Prompt 文本优化、
+多 Agent、经验库权重调整或无关重构混入同一提交。
+
+## 11. 回滚与停止条件
+
+- M1-M3 任一 Prompt digest 变化：立即停止，不更新 golden，不进入下一层。
+- ID 路由映射为 legacy 文件名后与旧路由不一致：保留旧 router 为运行时权威，修复映射后重试。
+- 旧记录无法无损读取：停止 M3，不启用新记录写入。
+- M4 校验失败率、重试率、Token、p95 延迟或语义冲突显著回退：恢复 M3 输出合同。
+- M5 内容 digest 变化：撤销该批路径迁移，确认换行符、编码和编辑器格式化设置。
+
+不新增用户可见 feature flag 作为 M1 的前提：M1 是纯增量 catalog。M2-M3 通过兼容入口和
+逐层原子提交回滚；只有实际实现无法维持字节等价时，才评估增加临时内部 rollout flag，
+避免把永久配置债务暴露给用户。
+
+## 12. 完成定义
+
+只有同时满足以下条件，才算完成“Prompt ID 与文件名解耦”：
+
+- 核心路由、组装、Pipeline 和新记录均使用 `PromptId`。
+- manifest 是 ID 到物理路径的唯一映射来源。
+- 模型不负责输出文件名或 Prompt ID。
+- 修改某个 `source_path` 不需要修改 router、schema、历史记录或 GUI 业务逻辑。
+- 旧 API 和旧记录在兼容期可用，且移除计划受兼容政策约束。
+- M1-M3 有字节等价证据，M4 有合同评估证据，M5 有内容摘要不变证据。

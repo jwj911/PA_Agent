@@ -8,6 +8,7 @@ import subprocess
 import sys
 from dataclasses import asdict
 from pathlib import Path
+from typing import Literal
 
 import pytest
 
@@ -15,11 +16,14 @@ from pa_agent.ai import strategy_files as sf
 from pa_agent.ai.prompt_assembler import PromptAssembler
 from pa_agent.ai.prompting import (
     TEMPLATE_MANIFEST,
+    PromptId,
     TemplateContext,
     TemplateSpec,
     TemplateStore,
     TemplateStoreError,
+    prompt_ids,
     template_files_for_stage,
+    template_ids_for_stage,
 )
 from pa_agent.data.snapshot import build_analysis_frame
 from tests.fixtures.kline_bars import make_newest_first_bars
@@ -32,10 +36,30 @@ def _strategy_registry_values() -> set[str]:
     return {value for name, value in vars(sf).items() if name.isupper() and isinstance(value, str)}
 
 
+def _fixture_spec(
+    prompt_id: str,
+    source_path: str,
+    *,
+    stage: Literal["stage1", "stage2"],
+    legacy_filename: str | None = None,
+) -> TemplateSpec:
+    return TemplateSpec(
+        prompt_id=PromptId(prompt_id),
+        source_path=source_path,
+        legacy_filename=legacy_filename or source_path,
+        display_name="测试模板",
+        stages=(stage,),
+        role="task",
+    )
+
+
 def test_manifest_covers_strategy_registry_and_stage_contracts() -> None:
     manifest_names = {spec.name for spec in TEMPLATE_MANIFEST}
+    manifest_ids = {spec.prompt_id for spec in TEMPLATE_MANIFEST}
 
     assert manifest_names == _strategy_registry_values()
+    assert manifest_ids == set(prompt_ids.ALL_PROMPT_IDS)
+    assert len(manifest_ids) == len(TEMPLATE_MANIFEST) == 29
     assert template_files_for_stage("stage1") == (
         sf.PERSONA,
         sf.BINARY_DECISION,
@@ -44,6 +68,12 @@ def test_manifest_covers_strategy_registry_and_stage_contracts() -> None:
     )
     assert sf.PERSONA in template_files_for_stage("stage2")
     assert sf.MARKET_DIAGNOSIS not in template_files_for_stage("stage2")
+    assert template_ids_for_stage("stage1") == (
+        prompt_ids.PERSONA,
+        prompt_ids.BINARY_DECISION,
+        prompt_ids.MARKET_DIAGNOSIS,
+        prompt_ids.KLINE_SIGNAL,
+    )
     assert all(spec.version == "v1" for spec in TEMPLATE_MANIFEST)
 
 
@@ -52,10 +82,22 @@ def test_template_store_matches_utf8_golden_snapshots() -> None:
     store = TemplateStore(PROMPT_DIR)
     names = [entry["name"] for entry in golden["templates"]]
     actual = [asdict(snapshot) for snapshot in store.snapshots(names)]
+    id_snapshots = store.snapshots_ids(tuple(spec.prompt_id for spec in TEMPLATE_MANIFEST))
 
     assert golden["manifest_version"] == "v1"
     assert names == [spec.name for spec in TEMPLATE_MANIFEST]
     assert actual == golden["templates"]
+    for spec, legacy, by_id in zip(
+        TEMPLATE_MANIFEST,
+        actual,
+        id_snapshots,
+        strict=True,
+    ):
+        assert by_id.prompt_id == spec.prompt_id
+        assert by_id.version == legacy["version"]
+        assert by_id.byte_length == legacy["byte_length"]
+        assert by_id.sha256 == legacy["sha256"]
+        assert store.load_id(spec.prompt_id) == store.load(spec.name)
 
     assembler = PromptAssembler(prompt_dir=PROMPT_DIR)
     system_prompt = assembler._build_stage1_system_prompt()
@@ -153,8 +195,12 @@ def test_template_store_rejects_unknown_template_and_wrong_stage() -> None:
 
     with pytest.raises(TemplateStoreError, match="Unknown prompt template"):
         store.load("unknown.txt")
+    with pytest.raises(TemplateStoreError, match="Unknown prompt ID"):
+        store.load_id(PromptId("pa.unknown"))
     with pytest.raises(TemplateStoreError, match="not assigned to stage"):
         store.load(sf.MARKET_DIAGNOSIS, stage="stage2")
+    with pytest.raises(TemplateStoreError, match="not assigned to stage"):
+        store.load_id(prompt_ids.MARKET_DIAGNOSIS, stage="stage2")
 
 
 def test_template_store_import_is_pyqt_free(tmp_path: Path) -> None:
@@ -180,13 +226,14 @@ def test_template_store_cache_is_explicitly_invalidated(tmp_path: Path) -> None:
     template_name = "fixture.txt"
     template_path = tmp_path / template_name
     template_path.write_text("one", encoding="utf-8")
-    manifest = (TemplateSpec(name=template_name, stages=("stage1",), role="task"),)
+    prompt_id = PromptId("test.fixture")
+    manifest = (_fixture_spec(str(prompt_id), template_name, stage="stage1"),)
     store = TemplateStore(tmp_path, manifest=manifest)
 
     assert store.load(template_name) == "one"
     template_path.write_text("two", encoding="utf-8")
-    assert store.load(template_name) == "one"
-    store.clear_cache(template_name)
+    assert store.load_id(prompt_id) == "one"
+    store.clear_cache_id(prompt_id)
     assert store.load(template_name) == "two"
 
 
@@ -198,11 +245,15 @@ def test_template_store_render_is_strict_and_non_executable(tmp_path: Path) -> N
     )
     store = TemplateStore(
         tmp_path,
-        manifest=(TemplateSpec(name=template_name, stages=("stage2",), role="task"),),
+        manifest=(_fixture_spec("test.fixture", template_name, stage="stage2"),),
     )
     context = TemplateContext(stage="stage2", symbol="TEST", timeframe="5m", bar_count=1)
 
     assert store.render(template_name, context, stage="stage2") == "symbol=TEST stage=stage2"
+    assert (
+        store.render_id(PromptId("test.fixture"), context, stage="stage2")
+        == "symbol=TEST stage=stage2"
+    )
 
     with pytest.raises(TemplateStoreError, match="Missing template variable"):
         store.render(template_name, {"symbol": "TEST"}, stage="stage2")
@@ -224,7 +275,7 @@ def test_template_store_render_logs_safe_variable_diagnostics(
     )
     store = TemplateStore(
         tmp_path,
-        manifest=(TemplateSpec(name=template_name, stages=("stage2",), role="task"),),
+        manifest=(_fixture_spec("test.fixture", template_name, stage="stage2"),),
     )
     secret_value = "SECRET-VALUE"
 
@@ -270,8 +321,8 @@ def test_template_store_render_logs_safe_variable_diagnostics(
 
 def test_template_store_reports_missing_and_invalid_utf8(tmp_path: Path) -> None:
     manifest = (
-        TemplateSpec(name="missing.txt", stages=("stage1",), role="task"),
-        TemplateSpec(name="invalid.txt", stages=("stage1",), role="task"),
+        _fixture_spec("test.missing", "missing.txt", stage="stage1"),
+        _fixture_spec("test.invalid", "invalid.txt", stage="stage1"),
     )
     store = TemplateStore(tmp_path, manifest=manifest)
     (tmp_path / "invalid.txt").write_bytes(b"\xff")
@@ -283,7 +334,14 @@ def test_template_store_reports_missing_and_invalid_utf8(tmp_path: Path) -> None
 
 
 def test_manifest_rejects_path_escape(tmp_path: Path) -> None:
-    manifest = (TemplateSpec(name="../escape.txt", stages=("stage1",), role="task"),)
+    manifest = (
+        _fixture_spec(
+            "test.escape",
+            "../escape.txt",
+            stage="stage1",
+            legacy_filename="escape.txt",
+        ),
+    )
 
-    with pytest.raises(ValueError, match="Invalid template name"):
+    with pytest.raises(ValueError, match="Invalid prompt source path"):
         TemplateStore(tmp_path, manifest=manifest)

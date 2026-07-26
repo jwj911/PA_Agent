@@ -1,212 +1,324 @@
-"""Manifest for the existing prompt-engineering text templates.
-
-The manifest is intentionally metadata-only. It does not alter the ordered
-lists consumed by ``PromptAssembler``; it gives the next template-engineering
-slice an explicit, validated description of stage ownership and contracts.
-"""
+"""Manifest mapping stable Prompt IDs to runtime template files."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Literal
 
 from pa_agent.ai import strategy_files as sf
+from pa_agent.ai.prompting import prompt_ids as pid
+from pa_agent.ai.prompting.prompt_catalog import PromptCatalog
+from pa_agent.ai.prompting.prompt_ids import PromptId
 
 StageName = Literal["stage1", "stage2"]
 TemplateRole = Literal["system", "task", "base", "strategy"]
 MANIFEST_VERSION = "v1"
-_VALID_STAGES = frozenset(("stage1", "stage2"))
-_VALID_ROLES = frozenset(("system", "task", "base", "strategy"))
 
 
 @dataclass(frozen=True, slots=True)
 class TemplateSpec:
-    """Static metadata for one prompt-engineering text file."""
+    """Static metadata separating logical identity from physical storage."""
 
-    name: str
+    prompt_id: PromptId
+    source_path: str
+    legacy_filename: str
+    display_name: str
     stages: tuple[StageName, ...]
     role: TemplateRole
     output_contract: str | None = None
-    dependencies: tuple[str, ...] = ()
+    dependencies: tuple[PromptId, ...] = ()
+    legacy_aliases: tuple[str, ...] = ()
     version: str = MANIFEST_VERSION
+
+    @property
+    def name(self) -> str:
+        """Return the immutable filename used by pre-ID callers."""
+        return self.legacy_filename
 
 
 def _spec(
-    name: str,
+    prompt_id: PromptId,
+    source_path: str,
+    display_name: str,
     stages: tuple[StageName, ...],
     role: TemplateRole,
     *,
     output_contract: str | None = None,
-    dependencies: tuple[str, ...] = (),
+    dependencies: tuple[PromptId, ...] = (),
+    legacy_filename: str | None = None,
+    legacy_aliases: tuple[str, ...] = (),
 ) -> TemplateSpec:
     return TemplateSpec(
-        name=name,
+        prompt_id=prompt_id,
+        source_path=source_path,
+        legacy_filename=source_path if legacy_filename is None else legacy_filename,
+        display_name=display_name,
         stages=stages,
         role=role,
         output_contract=output_contract,
         dependencies=dependencies,
+        legacy_aliases=legacy_aliases,
     )
 
 
 TEMPLATE_MANIFEST: tuple[TemplateSpec, ...] = (
-    _spec(sf.PERSONA, ("stage1", "stage2"), "system"),
+    _spec(pid.PERSONA, sf.PERSONA, "人设与思维方式", ("stage1", "stage2"), "system"),
     _spec(
+        pid.BINARY_DECISION,
         sf.BINARY_DECISION,
+        "交易二元决策树",
         ("stage1", "stage2"),
         "system",
         output_contract="stage1_diagnosis",
     ),
     _spec(
+        pid.MARKET_DIAGNOSIS,
         sf.MARKET_DIAGNOSIS,
+        "市场诊断框架",
         ("stage1",),
         "task",
         output_contract="stage1_diagnosis",
-        dependencies=(sf.BINARY_DECISION,),
+        dependencies=(pid.BINARY_DECISION,),
     ),
     _spec(
+        pid.KLINE_SIGNAL,
         sf.KLINE_SIGNAL,
+        "K 线信号识别",
         ("stage1", "stage2"),
         "base",
         output_contract="stage1_diagnosis|stage2_decision",
-        dependencies=(sf.BINARY_DECISION,),
+        dependencies=(pid.BINARY_DECISION,),
     ),
     _spec(
+        pid.BAR_CHECKLIST,
         sf.BAR_CHECKLIST,
+        "逐棒分析检查单",
         ("stage2",),
         "base",
         output_contract="stage2_decision",
-        dependencies=(sf.BINARY_DECISION,),
+        dependencies=(pid.BINARY_DECISION,),
     ),
     _spec(
+        pid.STOP_TARGET_POSITION,
         sf.STOP_TARGET_POSITION,
+        "止损、止盈与仓位约束",
         ("stage2",),
         "base",
         output_contract="stage2_decision",
-        dependencies=(sf.BINARY_DECISION,),
+        dependencies=(pid.BINARY_DECISION,),
     ),
     _spec(
+        pid.MEASURED_MOVE,
         sf.MEASURED_MOVE,
+        "Measured Move 与结构目标",
         ("stage2",),
         "base",
         output_contract="stage2_decision",
-        dependencies=(sf.BINARY_DECISION,),
+        dependencies=(pid.BINARY_DECISION,),
     ),
     _spec(
+        pid.BULLISH_CHANNEL_ID,
         sf.BULLISH_CHANNEL_ID,
+        "上涨通道识别",
         ("stage2",),
         "strategy",
         output_contract="stage2_decision",
     ),
     _spec(
+        pid.BULLISH_CHANNEL_STRATEGY,
         sf.BULLISH_CHANNEL_STRATEGY,
+        "上涨通道策略",
         ("stage2",),
         "strategy",
         output_contract="stage2_decision",
-        dependencies=(sf.BULLISH_CHANNEL_ID,),
+        dependencies=(pid.BULLISH_CHANNEL_ID,),
     ),
     _spec(
+        pid.BEARISH_CHANNEL_ID,
         sf.BEARISH_CHANNEL_ID,
+        "下跌通道识别",
         ("stage2",),
         "strategy",
         output_contract="stage2_decision",
     ),
     _spec(
+        pid.BEARISH_CHANNEL_STRATEGY,
         sf.BEARISH_CHANNEL_STRATEGY,
+        "下跌通道策略",
         ("stage2",),
         "strategy",
         output_contract="stage2_decision",
-        dependencies=(sf.BEARISH_CHANNEL_ID,),
+        dependencies=(pid.BEARISH_CHANNEL_ID,),
     ),
     _spec(
+        pid.BULLISH_SPIKE_ID,
         sf.BULLISH_SPIKE_ID,
+        "极速上涨识别",
         ("stage2",),
         "strategy",
         output_contract="stage2_decision",
     ),
     _spec(
+        pid.BULLISH_SPIKE_STRATEGY,
         sf.BULLISH_SPIKE_STRATEGY,
+        "极速上涨策略",
         ("stage2",),
         "strategy",
         output_contract="stage2_decision",
-        dependencies=(sf.BULLISH_SPIKE_ID,),
+        dependencies=(pid.BULLISH_SPIKE_ID,),
     ),
     _spec(
+        pid.BEARISH_SPIKE_ID,
         sf.BEARISH_SPIKE_ID,
+        "极速下跌识别",
         ("stage2",),
         "strategy",
         output_contract="stage2_decision",
     ),
     _spec(
+        pid.BEARISH_SPIKE_STRATEGY,
         sf.BEARISH_SPIKE_STRATEGY,
+        "极速下跌策略",
         ("stage2",),
         "strategy",
         output_contract="stage2_decision",
-        dependencies=(sf.BEARISH_SPIKE_ID,),
+        dependencies=(pid.BEARISH_SPIKE_ID,),
     ),
-    _spec(sf.RANGE_ID, ("stage2",), "strategy", output_contract="stage2_decision"),
     _spec(
-        sf.RANGE_STRATEGY,
+        pid.RANGE_ID,
+        sf.RANGE_ID,
+        "震荡区间识别",
         ("stage2",),
         "strategy",
         output_contract="stage2_decision",
-        dependencies=(sf.RANGE_ID,),
     ),
-    _spec(sf.CHANNEL_WIDTH, ("stage2",), "strategy", output_contract="stage2_decision"),
-    _spec(sf.WEDGE, ("stage2",), "strategy", output_contract="stage2_decision"),
-    _spec(sf.REVERSAL, ("stage2",), "strategy", output_contract="stage2_decision"),
-    _spec(sf.BREAKOUT_FAILURE, ("stage2",), "strategy", output_contract="stage2_decision"),
-    _spec(sf.H1H2, ("stage2",), "strategy", output_contract="stage2_decision"),
-    _spec(sf.ALWAYS_IN, ("stage2",), "strategy", output_contract="stage2_decision"),
-    _spec(sf.BARBWIRE, ("stage2",), "strategy", output_contract="stage2_decision"),
-    _spec(sf.MAGNET, ("stage2",), "strategy", output_contract="stage2_decision"),
-    _spec(sf.FINAL_FLAG, ("stage2",), "strategy", output_contract="stage2_decision"),
-    _spec(sf.MTR, ("stage2",), "strategy", output_contract="stage2_decision"),
-    _spec(sf.TRIANGLE, ("stage2",), "strategy", output_contract="stage2_decision"),
-    _spec(sf.DOUBLE_TOP_BOTTOM, ("stage2",), "strategy", output_contract="stage2_decision"),
+    _spec(
+        pid.RANGE_STRATEGY,
+        sf.RANGE_STRATEGY,
+        "震荡区间策略",
+        ("stage2",),
+        "strategy",
+        output_contract="stage2_decision",
+        dependencies=(pid.RANGE_ID,),
+    ),
+    _spec(
+        pid.CHANNEL_WIDTH,
+        sf.CHANNEL_WIDTH,
+        "窄通道与宽通道",
+        ("stage2",),
+        "strategy",
+        output_contract="stage2_decision",
+    ),
+    _spec(
+        pid.WEDGE,
+        sf.WEDGE,
+        "楔形",
+        ("stage2",),
+        "strategy",
+        output_contract="stage2_decision",
+    ),
+    _spec(
+        pid.REVERSAL,
+        sf.REVERSAL,
+        "二次入场",
+        ("stage2",),
+        "strategy",
+        output_contract="stage2_decision",
+    ),
+    _spec(
+        pid.BREAKOUT_FAILURE,
+        sf.BREAKOUT_FAILURE,
+        "突破失败与突破测试",
+        ("stage2",),
+        "strategy",
+        output_contract="stage2_decision",
+    ),
+    _spec(
+        pid.H1H2,
+        sf.H1H2,
+        "H1/H2/L1/L2 计数",
+        ("stage2",),
+        "strategy",
+        output_contract="stage2_decision",
+    ),
+    _spec(
+        pid.ALWAYS_IN,
+        sf.ALWAYS_IN,
+        "Always In 与 20GB",
+        ("stage2",),
+        "strategy",
+        output_contract="stage2_decision",
+    ),
+    _spec(
+        pid.BARBWIRE,
+        sf.BARBWIRE,
+        "铁丝网与无交易环境",
+        ("stage2",),
+        "strategy",
+        output_contract="stage2_decision",
+    ),
+    _spec(
+        pid.MAGNET,
+        sf.MAGNET,
+        "失败信号与磁力位",
+        ("stage2",),
+        "strategy",
+        output_contract="stage2_decision",
+    ),
+    _spec(
+        pid.FINAL_FLAG,
+        sf.FINAL_FLAG,
+        "最终旗形与趋势末端",
+        ("stage2",),
+        "strategy",
+        output_contract="stage2_decision",
+    ),
+    _spec(
+        pid.MTR,
+        sf.MTR,
+        "主要趋势反转 MTR",
+        ("stage2",),
+        "strategy",
+        output_contract="stage2_decision",
+    ),
+    _spec(
+        pid.TRIANGLE,
+        sf.TRIANGLE,
+        "三角形与收敛形态",
+        ("stage2",),
+        "strategy",
+        output_contract="stage2_decision",
+    ),
+    _spec(
+        pid.DOUBLE_TOP_BOTTOM,
+        sf.DOUBLE_TOP_BOTTOM,
+        "双重顶底与微型结构",
+        ("stage2",),
+        "strategy",
+        output_contract="stage2_decision",
+    ),
 )
 
 
 def validate_template_manifest(
     manifest: tuple[TemplateSpec, ...] = TEMPLATE_MANIFEST,
 ) -> dict[str, TemplateSpec]:
-    """Validate and index a manifest, failing closed on contract mistakes."""
-    indexed: dict[str, TemplateSpec] = {}
-    for spec in manifest:
-        template_path = Path(spec.name)
-        if (
-            not spec.name
-            or spec.name != spec.name.strip()
-            or template_path.name != spec.name
-            or template_path.suffix.lower() != ".txt"
-        ):
-            raise ValueError(f"Invalid template name: {spec.name!r}")
-        if spec.name in indexed:
-            raise ValueError(f"Duplicate template name: {spec.name}")
-        if not spec.stages or any(stage not in _VALID_STAGES for stage in spec.stages):
-            raise ValueError(f"Invalid stages for template {spec.name}: {spec.stages!r}")
-        if spec.role not in _VALID_ROLES:
-            raise ValueError(f"Invalid role for template {spec.name}: {spec.role!r}")
-        if not spec.version:
-            raise ValueError(f"Missing version for template {spec.name}")
-        indexed[spec.name] = spec
-
-    for spec in manifest:
-        missing_dependencies = sorted(
-            dependency for dependency in spec.dependencies if dependency not in indexed
-        )
-        if missing_dependencies:
-            raise ValueError(
-                f"Unknown dependencies for template {spec.name}: {missing_dependencies}"
-            )
-    return indexed
+    """Validate and return the legacy filename index used by old callers."""
+    return dict(PromptCatalog(manifest).by_legacy_filename)
 
 
-TEMPLATE_MANIFEST_BY_NAME = validate_template_manifest()
+TEMPLATE_CATALOG = PromptCatalog(TEMPLATE_MANIFEST)
+TEMPLATE_MANIFEST_BY_ID = TEMPLATE_CATALOG.by_id
+TEMPLATE_MANIFEST_BY_NAME = dict(TEMPLATE_CATALOG.by_legacy_filename)
+
+
+def template_ids_for_stage(stage: StageName) -> tuple[PromptId, ...]:
+    """Return manifest-ordered stable Prompt IDs assigned to *stage*."""
+    return TEMPLATE_CATALOG.prompt_ids_for_stage(stage)
 
 
 def template_files_for_stage(stage: StageName) -> tuple[str, ...]:
-    """Return manifest-ordered template names assigned to *stage*."""
-    if stage not in _VALID_STAGES:
-        raise ValueError(f"Unknown template stage: {stage!r}")
-    return tuple(spec.name for spec in TEMPLATE_MANIFEST if stage in spec.stages)
+    """Return manifest-ordered legacy filenames assigned to *stage*."""
+    return tuple(
+        TEMPLATE_CATALOG.legacy_filename(prompt_id) for prompt_id in template_ids_for_stage(stage)
+    )

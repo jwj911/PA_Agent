@@ -18,6 +18,48 @@
 
 ---
 
+## [Unreleased] — 2026-07-26（L2：Prompt ID 解耦 M1 Catalog）
+
+- 新增 PyQt-free `prompt_ids.py` 与 `prompt_catalog.py`，为 29 个运行时模板固定稳定
+  `PromptId`，并严格校验 ID 格式、`source_path`、`legacy_filename`、显示名、阶段、角色、
+  alias 唯一性和 ID 依赖关系。
+- `TemplateSpec` 已拆分逻辑 ID、物理路径、兼容文件名和显示名；`name` 继续作为只读兼容属性
+  返回原 `.txt` 名称。manifest 依赖已由文件名改为 ID，但现有顺序、版本和文件内容不变。
+- `TemplateStore` 新增 `load_id`/`load_many_ids`、`render_id`/`render_many_ids`、
+  `snapshot_id`/`snapshots_ids` 和 `clear_cache_id`；ID 与 legacy 文件名入口共用按 ID 建立的
+  缓存。旧 load/render/snapshot API 和 legacy `TemplateSnapshot` 保持不变。
+- Catalog 与 Store 拒绝未知 ID、路径逃逸、绝对/Windows 风格路径、未注册 `.md`、非法
+  legacy 名、重复 ID/路径/alias、跨模板路径冲突和未知依赖；普通 `_reference/*.md` 不会进入
+  运行时加载。
+- 新增 `test_prompt_catalog.py` 并纳入 targeted pytest/focused Ruff；扩展 TemplateStore 测试，
+  证明 29 个 ID 与 29 个文件一一对应、ID/legacy/alias 加载字节相等、缓存共享且现有 Prompt
+  golden 无变化。
+- 验证：Prompt/Catalog/Store/Assembler 聚焦单测 **93 passed**；L2 compatibility observation
+  与 router property 测试 **8 passed**；完整非 live unit 层 **1,070 passed**。Ruff、
+  Ruff format、`py_compile`、CI target 清单、3,724 条 Ruff baseline 和 `git diff --check`
+  通过。本地 Black 已完成本轮文件格式化，但在当前 Windows 环境的进程退出阶段挂起并被终止；
+  最终 Black 权威验收留给 CI 固定环境。
+- 同步 Prompt ID 方案、`AGENTS.md`、架构路线图和执行计划状态为“M1 已完成，M2 待实施”。
+  本轮未修改 router、PromptAssembler、Pipeline/record、Prompt 正文、JSON schema 或 golden。
+
+---
+
+## [Unreleased] — 2026-07-26（L2：Prompt ID 与文件名解耦方案）
+
+- 新增 `docs/prompt_id_decoupling_plan.md`，梳理 `.txt` 文件名在 manifest、TemplateStore、
+  router、PromptAssembler、Stage 1 输出、Pipeline、记录和 GUI 中的跨层耦合。
+- 固定 29 个运行时模板的初始 `PromptId` 映射，明确稳定 `prompt_id`、可变 `source_path`、
+  不可变 `legacy_filename` 和可变 `display_name` 四类职责。
+- 规划 M0-M5 顺序迁移：M1-M3 必须保持 Prompt 字节与 KV-cache 前缀不变；M4 单独移除模型
+  输出文件名的职责；M5 才可选执行 `.prompt.md` 物理迁移。
+- 明确旧 API、旧 Stage 1 输出和旧记录的双读/双写策略，以及未知 ID、路径逃逸、alias 冲突、
+  日志脱敏、golden、Pipeline 等价和真实 Provider 观察门禁。
+- 同步 `AGENTS.md`、`docs/architecture_roadmap.md` 与 `docs/iteration_plan.md`；等待 L5
+  真实 evidence 期间，下一项可执行内部迭代调整为 L2/M1 Catalog 基础。本轮仅完成方案设计，
+  未修改运行时代码、Prompt 正文、JSON schema、测试 fixture 或 golden。
+
+---
+
 ## [Unreleased] — 2026-07-25（L5：本地 outcome evidence 重核门禁）
 
 - 修复离线 evaluator 只校验 evidence envelope 和 64 位摘要格式、却不确认本地原始证据仍存在

@@ -164,6 +164,7 @@ jobs:
           tests/unit/test_kv_prefix_cache.py
           tests/unit/test_token_counter.py
           tests/unit/test_strategy_files.py
+          tests/unit/test_prompt_catalog.py
           tests/unit/test_prompt_txt_files.py
           tests/unit/test_template_store.py
           tests/unit/test_template_context.py
@@ -478,6 +479,7 @@ jobs:
           tests/unit/test_kv_prefix_cache.py
           tests/unit/test_token_counter.py
           tests/unit/test_strategy_files.py
+          tests/unit/test_prompt_catalog.py
           tests/unit/test_prompt_txt_files.py
           tests/unit/test_template_store.py
           tests/unit/test_template_context.py

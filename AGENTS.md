@@ -27,6 +27,9 @@
 - 安全策略：[`SECURITY.md`](./SECURITY.md)
 - 迭代记录：[`docs/CHANGELOG.md`](./docs/CHANGELOG.md)
 - 架构升级路线图：[`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md)
+- Prompt ID 解耦方案：[`docs/prompt_id_decoupling_plan.md`](./docs/prompt_id_decoupling_plan.md)，
+  规定稳定逻辑 ID、可变存储路径、旧文件名兼容投影和 M1-M5 迁移门禁；M1 Catalog 已完成，
+  M2 路由与组装内部切换尚未实施。
 - 短中期执行计划：[`docs/iteration_plan.md`](./docs/iteration_plan.md)，在长期边界以
   `architecture_roadmap` 为准的前提下，拆解后续若干轮交付物、验收标准和依赖顺序。
 - L6/L3 真实观察手册：[`docs/live_observation_runbook.md`](./docs/live_observation_runbook.md)，
@@ -132,18 +135,21 @@ price_action_agent/
   - `qclaw_connector.py` / `qclaw_relay.py` / `qclaw_relay_manager.py`：QClaw 本地网关。
   - `workbuddy_connector.py`：WorkBuddy / CodeBuddy 环境检测与 DPAPI 解密取 token。
   - `prompt_assembler.py`：阶段一/阶段二 prompt 组装总入口。
-  - `prompting/template_manifest.py` / `prompting/template_store.py` / `prompting/template_context.py` /
-    `prompting/compatibility.py`：PyQt-free 模板元数据、显式 JSON 可序列化上下文、严格 UTF-8 加载、
-    缓存和 golden snapshot 契约；共享 system、Stage 1 user prompt、Stage 2/continuation 均支持
-    TemplateStore 整组加载、旧路径回退和 `use_template_store=False` 回滚。关键 render 路径只记录
-    模板/阶段/键名/占位符/长度等安全元数据，不记录变量值或完整 prompt。
+  - `prompting/prompt_ids.py` / `prompting/prompt_catalog.py` / `prompting/template_manifest.py` /
+    `prompting/template_store.py` / `prompting/template_context.py` / `prompting/compatibility.py`：
+    PyQt-free 稳定 Prompt ID、ID/路径/legacy 文件名/显示名映射、显式 JSON 可序列化上下文、
+    严格 UTF-8 加载、缓存和 golden snapshot 契约；共享 system、Stage 1 user prompt、
+    Stage 2/continuation 均支持 TemplateStore 整组加载、旧路径回退和 `use_template_store=False`
+    回滚。关键 render 路径只记录模板/阶段/键名/占位符/长度等安全元数据，不记录变量值或完整
+    prompt。
   - `stage1_prompt_builder.py` / `stage2_prompt_builder.py`：阶段一/阶段二 user prompt 构建器。
   - `kline_table_renderer.py` / `experience_renderer.py` / `stage2_guidance.py` / `chain_context.py` / `program_prefill_hint.py`：prompt 渲染子模块（PyQt6-free 叶子模块）。
   - `json_validator.py` / `json_repair.py` / `business_rules.py` / `schema_validator.py`：阶段一/阶段二 JSON 校验、修复、业务规则与 schema 校验。
   - `stage1_normalizer.py` / `stage2_normalizer.py` / `trace_normalize.py`：LLM 输出归一化。
   - `decision_node_engine.py` / `decision_nodes.py` / `decision_tree.py` / `decision_stance.py`：决策树、立场、节点逻辑。
   - `decision_thresholds.py` / `bar_geometry.py` / `trace_nodes.py` / `preflight.py` / `signal_bar_judges.py` / `direction_judge.py` / `diagnostic_judges.py` / `always_in_judges.py` / `override_arbiter.py` / `order_method_router.py` / `signal_context.py`：决策节点拆分后的叶子模块。
-  - `strategy_files.py`：策略/提示 `.txt` 文件名的单一事实来源。
+  - `strategy_files.py`：当前策略/提示 `.txt` 文件名的单一事实来源；后续按
+    `docs/prompt_id_decoupling_plan.md` 迁移为 Prompt ID 核心身份，兼容期不得提前删除旧接口。
   - `prompts/schemas.py`：JSON schema 定义。
   - `session_ledger.py`：Token 用量与上下文窗口追踪。
 
@@ -579,6 +585,10 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     等价证据后评估删除。规则由 `scripts/check_compatibility_policy.py` 在 CI 强制执行。
     `use_template_store=False`、旧 `_load()` 和兼容回滚路径在完整稳定周期结束前不得删除，
     不得顺手重写 `prompt_engineering/` 中文文本。
+    Prompt ID 解耦 M1 已新增 29 个稳定 ID、严格 Catalog 和 TemplateStore 显式 ID API；
+    `TemplateSpec.name`、旧文件名 load/render/snapshot API、现有路由输出和全部 Prompt golden
+    保持不变。M2 前不得把 `strategy_files.py`、router 或 assembler 切换为 ID，也不得更新
+    golden 来掩盖字节漂移。
 21. **L1 外部扩展兼容观察当前进度**：外部风格 data source/AI client registrar 已完成 5 轮
     重复观察；versioned registrar 必须声明 `pa-agent.registry-extension.v1`，旧的未声明版本
     callable 继续兼容，未知显式版本只隔离当前扩展。观察样例只使用 marker builder，不连接

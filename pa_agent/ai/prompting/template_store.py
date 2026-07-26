@@ -11,11 +11,12 @@ from pathlib import Path
 from string import Template
 from typing import Any
 
+from pa_agent.ai.prompting.prompt_catalog import PromptCatalog, PromptCatalogError
+from pa_agent.ai.prompting.prompt_ids import PromptId
 from pa_agent.ai.prompting.template_manifest import (
     TEMPLATE_MANIFEST,
     StageName,
     TemplateSpec,
-    validate_template_manifest,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,16 @@ class TemplateSnapshot:
     """Byte-level identity information for one UTF-8 template."""
 
     name: str
+    version: str
+    byte_length: int
+    sha256: str
+
+
+@dataclass(frozen=True, slots=True)
+class TemplateIdSnapshot:
+    """Byte-level identity information keyed by stable Prompt ID."""
+
+    prompt_id: PromptId
     version: str
     byte_length: int
     sha256: str
@@ -51,8 +62,8 @@ class TemplateStore:
     ) -> None:
         self._root = root
         self._manifest = tuple(manifest)
-        self._specs = validate_template_manifest(self._manifest)
-        self._cache: dict[str, str] = {}
+        self._catalog = PromptCatalog(self._manifest)
+        self._cache: dict[PromptId, str] = {}
         self._lock = threading.Lock()
 
     @property
@@ -65,23 +76,51 @@ class TemplateStore:
         """Return the immutable manifest used by this store."""
         return self._manifest
 
+    @property
+    def catalog(self) -> PromptCatalog:
+        """Return the validated Prompt ID catalog."""
+        return self._catalog
+
     def spec(self, name: str) -> TemplateSpec:
-        """Return metadata for *name* or raise a strict store error."""
+        """Return metadata for a legacy filename."""
         try:
-            return self._specs[name]
-        except KeyError as exc:
+            prompt_id = self._catalog.resolve_legacy_filename(name)
+            return self._catalog.spec(prompt_id)
+        except PromptCatalogError as exc:
             raise TemplateStoreError(f"Unknown prompt template: {name}") from exc
 
+    def spec_id(self, prompt_id: PromptId) -> TemplateSpec:
+        """Return metadata for a stable Prompt ID."""
+        try:
+            return self._catalog.spec(prompt_id)
+        except PromptCatalogError as exc:
+            raise TemplateStoreError(str(exc)) from exc
+
     def load(self, name: str, *, stage: StageName | None = None) -> str:
-        """Load one manifest-backed UTF-8 template."""
-        spec = self.spec(name)
+        """Load one UTF-8 template through the legacy filename API."""
+        return self._load_spec(self.spec(name), stage=stage)
+
+    def load_id(self, prompt_id: PromptId, *, stage: StageName | None = None) -> str:
+        """Load one UTF-8 template by stable Prompt ID."""
+        return self._load_spec(self.spec_id(prompt_id), stage=stage)
+
+    def _load_spec(self, spec: TemplateSpec, *, stage: StageName | None) -> str:
+        """Load and cache one already-resolved template spec."""
         self._validate_stage(spec, stage)
+        cache_key = spec.prompt_id
         with self._lock:
-            cached = self._cache.get(name)
+            cached = self._cache.get(cache_key)
         if cached is not None:
             return cached
 
-        path = self._root / spec.name
+        root = self._root.resolve()
+        path = (root / spec.source_path).resolve()
+        try:
+            path.relative_to(root)
+        except ValueError as exc:
+            raise TemplateStoreError(
+                f"Prompt template path escapes root for ID {spec.prompt_id}"
+            ) from exc
         try:
             text = path.read_text(encoding="utf-8")
         except FileNotFoundError as exc:
@@ -94,10 +133,10 @@ class TemplateStore:
             raise TemplateStoreError(f"Prompt template is empty: {path}")
 
         with self._lock:
-            existing = self._cache.get(name)
+            existing = self._cache.get(cache_key)
             if existing is not None:
                 return existing
-            self._cache[name] = text
+            self._cache[cache_key] = text
         return text
 
     def load_many(
@@ -108,6 +147,15 @@ class TemplateStore:
     ) -> tuple[str, ...]:
         """Load templates in exactly the caller-provided order."""
         return tuple(self.load(name, stage=stage) for name in names)
+
+    def load_many_ids(
+        self,
+        prompt_ids: Sequence[PromptId],
+        *,
+        stage: StageName | None = None,
+    ) -> tuple[str, ...]:
+        """Load Prompt IDs in exactly the caller-provided order."""
+        return tuple(self.load_id(prompt_id, stage=stage) for prompt_id in prompt_ids)
 
     def render(
         self,
@@ -123,6 +171,28 @@ class TemplateStore:
         producing a partial prompt.
         """
         text = self.load(name, stage=stage)
+        return self._render_text(name, text, context, stage=stage)
+
+    def render_id(
+        self,
+        prompt_id: PromptId,
+        context: Mapping[str, Any] | Any,
+        *,
+        stage: StageName | None = None,
+    ) -> str:
+        """Render a template selected by stable Prompt ID."""
+        text = self.load_id(prompt_id, stage=stage)
+        return self._render_text(str(prompt_id), text, context, stage=stage)
+
+    @staticmethod
+    def _render_text(
+        identity: str,
+        text: str,
+        context: Mapping[str, Any] | Any,
+        *,
+        stage: StageName | None,
+    ) -> str:
+        """Render already-loaded text while logging only safe metadata."""
         values = context.to_dict() if hasattr(context, "to_dict") else context
         placeholder_names = _placeholder_names(text)
         context_type = type(context).__name__
@@ -133,7 +203,7 @@ class TemplateStore:
             "Template render started name=%s stage=%s context_type=%s "
             "context_key_count=%d context_keys=%s placeholder_count=%d "
             "placeholder_names=%s",
-            name,
+            identity,
             stage,
             context_type,
             len(context_keys),
@@ -144,7 +214,7 @@ class TemplateStore:
         if not isinstance(values, Mapping):
             logger.warning(
                 "Template render rejected non-mapping context name=%s stage=%s context_type=%s",
-                name,
+                identity,
                 stage,
                 context_type,
             )
@@ -156,27 +226,27 @@ class TemplateStore:
             logger.warning(
                 "Template render missing variable name=%s stage=%s missing=%s "
                 "required_placeholders=%s available_keys=%s",
-                name,
+                identity,
                 stage,
                 missing_name,
                 placeholder_names,
                 context_keys,
             )
             raise TemplateStoreError(
-                f"Missing template variable {missing_name!r} for {name}"
+                f"Missing template variable {missing_name!r} for {identity}"
             ) from exc
         except ValueError as exc:
             logger.warning(
                 "Template render invalid syntax name=%s stage=%s error_type=%s error=%s",
-                name,
+                identity,
                 stage,
                 type(exc).__name__,
                 str(exc),
             )
-            raise TemplateStoreError(f"Invalid template syntax for {name}: {exc}") from exc
+            raise TemplateStoreError(f"Invalid template syntax for {identity}: {exc}") from exc
         logger.debug(
             "Template render succeeded name=%s stage=%s output_chars=%d",
-            name,
+            identity,
             stage,
             len(rendered),
         )
@@ -215,6 +285,42 @@ class TemplateStore:
         )
         return rendered
 
+    def render_many_ids(
+        self,
+        prompt_ids: Sequence[PromptId],
+        context: Mapping[str, Any] | Any,
+        *,
+        stage: StageName | None = None,
+    ) -> tuple[str, ...]:
+        """Render Prompt IDs in caller order using one explicit context."""
+        ordered_ids = tuple(prompt_ids)
+        logger.debug(
+            "Template ID batch render started stage=%s template_count=%d "
+            "prompt_ids=%s context_type=%s",
+            stage,
+            len(ordered_ids),
+            ordered_ids,
+            type(context).__name__,
+        )
+        try:
+            rendered = tuple(
+                self.render_id(prompt_id, context, stage=stage) for prompt_id in ordered_ids
+            )
+        except TemplateStoreError:
+            logger.warning(
+                "Template ID batch render failed stage=%s template_count=%d prompt_ids=%s",
+                stage,
+                len(ordered_ids),
+                ordered_ids,
+            )
+            raise
+        logger.debug(
+            "Template ID batch render succeeded stage=%s template_count=%d",
+            stage,
+            len(ordered_ids),
+        )
+        return rendered
+
     def snapshot(self, name: str, *, stage: StageName | None = None) -> TemplateSnapshot:
         """Return the UTF-8 byte digest of one loaded template."""
         text = self.load(name, stage=stage)
@@ -235,14 +341,49 @@ class TemplateStore:
         """Return ordered byte snapshots for *names*."""
         return tuple(self.snapshot(name, stage=stage) for name in names)
 
+    def snapshot_id(
+        self,
+        prompt_id: PromptId,
+        *,
+        stage: StageName | None = None,
+    ) -> TemplateIdSnapshot:
+        """Return the UTF-8 byte digest keyed by stable Prompt ID."""
+        text = self.load_id(prompt_id, stage=stage)
+        encoded = text.encode("utf-8")
+        spec = self.spec_id(prompt_id)
+        return TemplateIdSnapshot(
+            prompt_id=spec.prompt_id,
+            version=spec.version,
+            byte_length=len(encoded),
+            sha256=hashlib.sha256(encoded).hexdigest(),
+        )
+
+    def snapshots_ids(
+        self,
+        prompt_ids: Sequence[PromptId],
+        *,
+        stage: StageName | None = None,
+    ) -> tuple[TemplateIdSnapshot, ...]:
+        """Return ordered byte snapshots for stable Prompt IDs."""
+        return tuple(self.snapshot_id(prompt_id, stage=stage) for prompt_id in prompt_ids)
+
     def clear_cache(self, name: str | None = None) -> None:
-        """Clear one cached template or the entire store cache."""
+        """Clear a legacy-filename cache entry or the entire store cache."""
+        prompt_id = self.spec(name).prompt_id if name is not None else None
         with self._lock:
-            if name is None:
+            if prompt_id is None:
                 self._cache.clear()
                 return
-            self.spec(name)
-            self._cache.pop(name, None)
+            self._cache.pop(prompt_id, None)
+
+    def clear_cache_id(self, prompt_id: PromptId | None = None) -> None:
+        """Clear a Prompt ID cache entry or the entire store cache."""
+        normalized = self.spec_id(prompt_id).prompt_id if prompt_id is not None else None
+        with self._lock:
+            if normalized is None:
+                self._cache.clear()
+                return
+            self._cache.pop(normalized, None)
 
     @staticmethod
     def _validate_stage(spec: TemplateSpec, stage: StageName | None) -> None:
