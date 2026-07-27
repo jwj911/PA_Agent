@@ -1,6 +1,6 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1-M4.2 已完成，M4.3 离线评估与真实 Provider 观察待实施
+> 状态：M1-M4.2、M4.3a 离线评估已完成；M4.3b 真实 Provider 观察等待会话级凭据
 >
 > 日期：2026-07-27
 >
@@ -494,6 +494,23 @@ GUI 默认显示：
   3,712 条 Ruff baseline 和差异检查通过。
 - 本切片不包含真实 Provider 调用，也不据固定 golden 推断模型质量。M4.3 必须独立比较
   校验失败率、重试率、Token 和语义冲突率，并按 L6 runbook 留存脱敏观察证据。
+
+**M4.3a 离线合同评估结果（2026-07-27）**：
+
+- 新增 `pa-agent.prompt-contract-evaluation.v1` 评估器和 M3.3 聚合基线，以固定 fixture
+  比较 Stage 1、Stage 2 standalone、continuation standalone 和 prefix-chain；报告只保存
+  消息计数、字节/字符数、估算 token、SHA-256 和聚合合同指标。
+- 4 个合成路由合同案例中，M3.3 与 M4.2 的 schema 校验失败和重试均为 0；Normalizer 后的
+  路由冲突由 2/4 降为 0/4。四种 Prompt 合计估算 token 由 309,649 降为 309,642；
+  单项最大上浮 10 tokens（约 0.0089%），低于 0.1% 门禁。
+- 离线门禁通过，但当前进程缺少 `PA_AGENT_LIVE_API_KEY`。报告明确记录
+  `blocked_missing_session_api_key`、`evidence_collected=false` 和
+  `m4_exit_gate_passed=false`；不得据此宣称 M4 完成。
+- 评估器单测 5 项、完整非 live unit 层 1,097 项、integration 层 80 项、property 层
+  55 项通过；CI 清单自检、focused Ruff/Black、3,712 条 Ruff baseline 和差异检查通过。
+- 评估口径、限制与复现命令见
+  [`prompt_contract_m4_evaluation.md`](./prompt_contract_m4_evaluation.md)，机器可读证据见
+  [`evaluations/prompt_contract_m4_2026-07-27.json`](./evaluations/prompt_contract_m4_2026-07-27.json)。
 
 **退出门禁**：
 

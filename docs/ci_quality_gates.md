@@ -35,7 +35,7 @@ python scripts/check_ruff_baseline.py
 
 该脚本执行 `python -m ruff check . --output-format=json`，并将每条诊断的相对路径、规则码、
 起止位置和消息与 [`scripts/ruff_baseline.json`](../scripts/ruff_baseline.json) 做严格集合比对。
-当前批准基线为 **3,725** 条诊断。
+当前批准基线为 **3,712** 条诊断。
 
 因此，以下变化都会使门禁失败：
 

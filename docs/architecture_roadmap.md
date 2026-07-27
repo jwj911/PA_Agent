@@ -22,7 +22,7 @@
 | 路线 | 当前状态 | 已有基础 | 主要剩余工作 |
 |---|---|---|---|
 | L1 Provider/数据源注册表 | 扩展兼容观察与下线策略/CI 门禁已收口；legacy registrar 按政策 retain | registry、entry point、v1 registrar、失败隔离、并发/lazy-import 和固定样例观察已完成；`compatibility_policy.json` 强制保留未声明版本 callable | 观察真实安装扩展；最早 0.3.0 且具备 v0.2.0 tag、inventory 和迁移报告后才评估删除 |
-| L2 Prompt 模板引擎 | 5 轮等价观察与下线策略/CI 门禁已收口；Prompt ID M1-M4.2 已完成；旧 loader/fallback 按政策 retain | TemplateStore、29 个稳定 Prompt ID、ID 路由/loader、TemplateContext/AnalysisRecord/Pipeline 双合同、GUI 显示名 + ID/tooltip、Stage 1 schema v2、router 权威兼容 Normalizer、manifest v2 和无 filename 模型上下文已完成 | 执行 M4.3 独立评估，再按证据决定 M5 物理后缀迁移；最早 0.3.0 且具备 v0.2.0 tag、fallback 零命中和 golden 报告后才评估删除旧入口 |
+| L2 Prompt 模板引擎 | 5 轮等价观察与下线策略/CI 门禁已收口；Prompt ID M1-M4.2、M4.3a 离线评估已完成；旧 loader/fallback 按政策 retain | TemplateStore、29 个稳定 Prompt ID、ID 路由/loader、TemplateContext/AnalysisRecord/Pipeline 双合同、GUI 显示名 + ID/tooltip、Stage 1 schema v2、router 权威兼容 Normalizer、manifest v2、无 filename 模型上下文和版本化离线评估报告已完成 | M4.3b 真实 Provider 观察等待会话级凭据；取得证据后再决定 M5 物理后缀迁移；最早 0.3.0 且具备 v0.2.0 tag、fallback 零命中和 golden 报告后才评估删除旧入口 |
 | L3 Pipeline Builder | 三轮真实稳定观察与默认 Pipeline 切换已收口，legacy 作为显式回滚保留 | 完整四步 Pipeline、Task 10 全终态矩阵、5 场景×3 轮 fixture 对照；3 个独立真实 pair 的 6 个单体校验和 3 个成对校验均为 `valid=true`；新旧缺失配置默认 `true`，显式 `false` 回滚 | 持续观察 lifecycle/terminal/record 指标；出现未解释偏差先回滚，不删除 legacy facade |
 | L4 性能优化 | v2 hosted baseline 与同环境 10% p95 对照已收口，进入每日持续观察 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；`pa-agent.performance.v1` 报告、`l4.synthetic.v2` 批量折算采样、p50/p95、100/500/5000 bars 基准、版本隔离 baseline cache 和 artifact；run `29975410917`/`29975592352` 完成建基线与 restore 对照 | 维护每日 schedule；runner image、benchmark version 或采样合同变化时重建 baseline |
 | L5 经验库升级 | 记录筛选/review catalog/可核验 outcome 导入、本地 evidence 重核、evidence-backed readiness、固定切分、opaque 标注/报告管道已交付，真实数据评估未收口 | completed record shape-only scan；脱敏 record ID catalog；固定 outcome policy + 本地证据 SHA-256；annotation/export/evaluate envelope 校验与本地文件重哈希门禁；人工 `success|failure` 最小化导入与 digest 去重；全量相关性排序 + K 线相似度；版本化 dataset/split/report；HMAC opaque catalog 和 leave-one-out 对照；不改变线上排序 | 为真实 outcome 提供并保留本地证据文件，导入至少两个不同 symbol 的 instrument group，完成相关性标注和指标报告；证据充分后才评估权重 |
@@ -41,11 +41,12 @@
 
 ### 1.1 当前收尾判定
 
-L1/L2 的实现、固定观察和下线策略门禁已收口，兼容入口按 `retain` 政策保留；L4 hosted
-baseline/10% 对照已收口并进入每日观察；L6 已取得真实成功主路径证据；L3 已完成三轮真实
-稳定观察和默认切换。当前尚未满足外部证据条件的路线为：
+L1/L2 的基础实现、固定兼容观察和下线策略门禁已收口，兼容入口按 `retain` 政策保留；
+L4 hosted baseline/10% 对照已收口并进入每日观察；L6 已取得真实成功主路径证据；L3 已完成
+三轮真实稳定观察和默认切换。当前尚未满足外部证据条件的路线为：
 
 1. **L5**：在有真实案例后完成人工标注和固定 split 指标报告。
+2. **L2/M4.3b**：在有会话级 Provider 凭据后完成真实合同观察；此前不得进入 M5。
 
 其中 L1 已具备第二阶段注册表基础，未知数据源配置回退、生命周期/并发证据和 entry point 扩展契约
 已完成，不再阻塞 L6；后续只观察外部扩展兼容性。L6 的 mock/fixed-fixture record 等价、
@@ -325,8 +326,10 @@ M4.1 已升级 Stage 1 schema 为 `pa-agent.stage1-output.v2`，模型输出不�
 模型建议不能覆盖运行时路由。M4.2 已从 29 个运行时模板、Stage 1 增量上下文、
 prefix-chain assistant 历史和 Stage 2 compact context 中移除物理 filename 与路由字段，
 模型可见引用统一改用稳定显示标题；manifest 已升级到 `v2`，29 个模板版本同步更新，实际正文
-SHA-256 只在预期的 14 个模板变化。下一步 M4.3 独立评估校验失败率、重试率、Token、
-语义冲突率和真实 Provider 行为；M5 再决定物理后缀迁移。
+SHA-256 只在预期的 14 个模板变化。M4.3a 已用 M3.3 固定基线完成离线合同评估：schema
+校验失败/重试保持 0/4，Normalizer 后路由冲突由 2/4 降为 0/4，四种 Prompt 合计估算 token
+减少 7，单项最大上浮约 0.0089%。当前缺少会话级 Provider 凭据，机器可读报告保持
+`m4_exit_gate_passed=false`；完成 M4.3b 真实观察后，M5 才能决定物理后缀迁移。
 
 ## 6. L3：Pipeline Builder / State Machine
 

@@ -18,6 +18,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-27（L2：Prompt ID 解耦 M4.3a 离线合同评估）
+
+- 新增 `tools/evaluate_prompt_contract_m4.py`、M3.3 聚合基线和
+  `pa-agent.prompt-contract-evaluation.v1` 机器可读报告；固定相同合成 fixture 比较
+  Stage 1、Stage 2 standalone、continuation standalone 和 prefix-chain。
+- 离线报告不保存 Prompt、模型回复、行情、价格、symbol、Provider 凭据或本地绝对路径，
+  只保存消息计数、字节/字符数、`cl100k_base` 估算 token、SHA-256 和聚合合同指标。
+- 4 个合成路由合同案例中，M3.3/M4.2 schema 校验失败和重试均为 0；Normalizer 后路由
+  冲突由 2/4 降为 0/4。四种 Prompt 合计估算 token 由 309,649 降为 309,642；
+  单项最大上浮 10 tokens（约 0.0089%），通过 0.1% 门禁。
+- 当前进程缺少会话级 `PA_AGENT_LIVE_API_KEY`，未调用真实 Provider。报告明确记录
+  `blocked_missing_session_api_key`、`evidence_collected=false` 和
+  `m4_exit_gate_passed=false`，M4.3b 与 M5 均不得提前标记完成。
+- 新增 5 项评估器单测，并将测试/工具加入 CI targeted pytest 与 focused Ruff/Black；
+  完整非 live unit 层 **1,097 passed**、integration 层 **80 passed**、property 层
+  **55 passed**。清单自检为 targeted **175** 个目标、focused Ruff **289** 个目标，
+  3,712 条 Ruff baseline 保持通过。
+- 同步评估说明、Prompt ID 方案、`AGENTS.md`、架构路线图、执行计划和 CI 质量门禁。
+
+---
+
 ## [Unreleased] — 2026-07-27（L2：Prompt ID 解耦 M4.2 Prompt/carryover/golden）
 
 - 清理 29 个运行时模板的模型可见物理身份：模板正文不再包含 `.txt` 交叉引用、
