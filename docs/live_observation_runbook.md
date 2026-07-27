@@ -42,7 +42,7 @@ py -3.12 tools/run_live_headless_observation.py `
 ```
 
 每次运行只应输出 `pa-agent.live-observation.v1` 脱敏摘要。真实 Prompt、Provider 回复、价格、
-symbol、API Key 和 token 值不得进入摘要或提交内容。
+symbol、API Key 和认证 token 值不得进入摘要或提交内容。
 
 ## 3. 单体自洽校验
 
@@ -80,10 +80,10 @@ py -3.12 tools/compare_live_observations.py `
 - terminal status、exception type、事件序列和记录写入结果一致；
 - record 顶层字段、meta 字段、消息角色、阶段 payload presence、异常形状和 usage 字段一致。
 
-成对校验刻意不比较两次独立 Provider 请求的正文、Prompt、价格、symbol、时间戳、token 数值或
-归一化 JSON 值。模型输出并非字节确定性；这些值既不能作为 Pipeline 等价依据，也不能进入脱敏
-报告。若终态或事件序列因 Provider 输出波动不同，应保留两次失败摘要并重跑完整 pair，不得手工
-修改 artifact。
+该 L3 shape-only 成对校验刻意不比较两次独立 Provider 请求的正文、Prompt、价格、symbol、
+时间戳、单次 token usage 计数或归一化 JSON 值。模型输出并非字节确定性；这些值不能作为
+Pipeline 等价依据。M4 仅按第 7 节对多条观察做 aggregate-only 用量比较。若终态或事件序列因
+Provider 输出波动不同，应保留两次失败摘要并重跑完整 pair，不得手工修改 artifact。
 
 ## 5. 验收与清理
 
@@ -119,3 +119,48 @@ Remove-Item Env:PA_AGENT_LIVE_MODEL -ErrorAction SilentlyContinue
 
 该基线证明 L6 真实成功主路径和 L3 三轮稳定观察。结合 fixed-fixture 全终态矩阵，
 `orchestrator.pipeline_builder_enabled` 已默认 `true`；显式 `false` 保留 legacy 回滚。
+
+## 7. M4 Prompt 合同观察
+
+M4 使用相同 live harness，但候选产物必须写入独立目录，不能混入历史基线：
+
+```powershell
+py -3.12 tools/run_live_headless_observation.py `
+  --confirm-live `
+  --output-dir artifacts/prompt-contract-m4-candidate/legacy `
+  --correlation-id m4-legacy-live-001
+
+py -3.12 tools/run_live_headless_observation.py `
+  --confirm-live `
+  --pipeline-builder-enabled `
+  --output-dir artifacts/prompt-contract-m4-candidate/pipeline `
+  --correlation-id m4-pipeline-live-001
+```
+
+随后生成 aggregate-only 候选报告并与 M3-compatible 基线比较：
+
+```powershell
+py -3.12 tools/summarize_prompt_contract_live.py `
+  --observations-root artifacts/prompt-contract-m4-candidate `
+  --contract-version m4.2 `
+  --output artifacts/prompt-contract-m4-candidate/aggregate.json
+
+py -3.12 tools/compare_prompt_contract_live.py `
+  --baseline docs/evaluations/prompt_contract_live_m3_baseline_2026-07-27.json `
+  --candidate artifacts/prompt-contract-m4-candidate/aggregate.json `
+  --output artifacts/prompt-contract-m4-candidate/comparison.json
+```
+
+比较结果必须为 `pa-agent.prompt-contract-live-comparison.v1`，且
+`gates.live_gate_passed=true`。门禁要求：
+
+- 基线和候选各自 artifact 全部有效，且均包含 legacy/Pipeline；
+- fixture 与 Provider 配置哈希完全一致；
+- 终局校验失败率和验证重试率不高于 M3-compatible 基线；
+- 模型 Prompt identity 输出率与语义路由冲突率不得回退；
+- 平均输入 token 增幅不超过 10%，输出/总 token 只记录差值用于人工复核。
+
+这里的 token 指 Provider 返回的**用量计数**，不是 API Key、Bearer token 或任何凭据值。
+聚合器只输出计数、比率和合同哈希，不输出 correlation id、文件路径、Prompt、模型回复、
+行情、symbol、价格或 Provider 配置值。没有会话级 `PA_AGENT_LIVE_API_KEY` 时不得执行候选
+观察，也不得用历史记录复制出候选报告。

@@ -18,6 +18,29 @@
 
 ---
 
+## [Unreleased] — 2026-07-27（L2：M4.3 真实基线聚合与候选门禁）
+
+- 新增 `tools/summarize_prompt_contract_live.py`，逐条复用
+  `validate_live_observation()` 校验 summary/event/record 后，仅聚合终局校验失败、Stage 1/2
+  验证重试、Provider usage 计数、模型 Prompt identity 输出和 router 语义冲突。
+- 从 2026-07-23/24 三组历史 legacy/Pipeline pair 生成 6 条 M3-compatible 真实基线：
+  6/6 完成并实际调用 Provider，0 次终局校验失败、0 次验证重试；模型 6/6 输出 Prompt
+  filename，且 6/6 与程序 router 冲突。fixture/provider 合同哈希各自唯一。
+- 新增 `tools/compare_prompt_contract_live.py`：M4 候选必须至少包含一条 legacy 和一条
+  Pipeline，匹配 fixture/provider 哈希，终局校验失败率和验证重试率不得上升，Prompt identity
+  输出与路由冲突不得回退，平均输入 token 增幅不得超过 10%。
+- 新增 `pa-agent.prompt-contract-live-aggregate.v1` 机器可读基线。报告不包含原始路径、
+  correlation id、Prompt、模型回复、行情、symbol、价格、Provider 配置值或凭据。
+- 新增 live 聚合/比较 9 项单测，并将两个工具和测试加入 CI targeted pytest 与 focused
+  Ruff/Black；完整非 live unit 层 **1,106 passed**、integration 层 **80 passed**、
+  property 层 **55 passed**。清单自检为 targeted **177** 个目标、focused Ruff
+  **293** 个目标，3,712 条 Ruff baseline 保持通过。
+- 当前进程仍缺少会话级 `PA_AGENT_LIVE_API_KEY`，未生成 M4 候选或比较通过证据；
+  `m4_exit_gate_passed` 仍为 false，M5 不得启动。
+- 同步 Prompt 合同评估、live runbook、Prompt ID 方案、`AGENTS.md`、架构路线图和执行计划。
+
+---
+
 ## [Unreleased] — 2026-07-27（L2：Prompt ID 解耦 M4.3a 离线合同评估）
 
 - 新增 `tools/evaluate_prompt_contract_m4.py`、M3.3 聚合基线和

@@ -1,10 +1,12 @@
 # M4 Prompt 合同评估
 
-> 状态：M4.3a 离线评估完成；M4.3b 真实 Provider 观察因缺少会话级凭据阻塞
+> 状态：M4.3a 离线评估与 M3-compatible 真实基线完成；M4 候选观察等待会话级凭据
 >
 > 日期：2026-07-27
 >
-> 机器可读报告：[`evaluations/prompt_contract_m4_2026-07-27.json`](./evaluations/prompt_contract_m4_2026-07-27.json)
+> 离线报告：[`evaluations/prompt_contract_m4_2026-07-27.json`](./evaluations/prompt_contract_m4_2026-07-27.json)
+>
+> 真实基线：[`evaluations/prompt_contract_live_m3_baseline_2026-07-27.json`](./evaluations/prompt_contract_live_m3_baseline_2026-07-27.json)
 
 ## 1. 评估边界
 
@@ -34,7 +36,30 @@
 单一 Prompt 形态的最大 token 上浮为 prefix-chain 的 10 tokens，比例约 `0.0089%`，
 低于版本化门禁 `0.1%`；四种形态的消息数量均未变化，字节数均下降。离线门禁通过。
 
-## 3. 限制与后续
+## 3. M3-Compatible 真实基线
+
+2026-07-23/24 的三组 legacy/Pipeline 真实成功 pair 仍保存在 Git 忽略目录。M1-M3 明确保持
+Prompt 字节、schema 和 Provider 行为不变，因此这 6 条记录可作为 M3-compatible 基线。
+`tools/summarize_prompt_contract_live.py` 会先逐条验证 summary/event/record 自洽性，再仅输出
+聚合值和 fixture/provider 合同哈希。
+
+| 指标 | M3-compatible 基线 |
+|---|---:|
+| 观察数 | 6（legacy 3、Pipeline 3） |
+| 完成并实际调用 Provider | 6/6 |
+| 终局校验失败 | 0/6 |
+| 发生验证重试 | 0/6 |
+| 模型输出 Prompt filename | 6/6 |
+| 模型 filename 与 router 冲突 | 6/6 |
+| 平均输入 token | 110,240.33 |
+| 平均输出 token | 14,862.83 |
+| 平均总 token | 125,103.17 |
+
+6 条记录的 fixture 哈希和 Provider 配置哈希分别保持唯一。报告不包含原始路径、correlation id、
+Prompt、回复、行情、symbol、价格或 Provider 配置值。M4 候选必须使用相同两个合同哈希，
+至少包含一条 legacy 和一条 Pipeline 观察。
+
+## 4. 限制与后续
 
 当前进程未设置 `PA_AGENT_LIVE_API_KEY`，因此没有执行真实 Provider 请求。
 机器可读报告必须保持：
@@ -43,14 +68,23 @@
 - `live_observation.evidence_collected=false`；
 - `gates.m4_exit_gate_passed=false`。
 
-获得会话级凭据后，按 [`live_observation_runbook.md`](./live_observation_runbook.md) 执行
-legacy/Pipeline 成对观察，并额外记录真实校验失败率、重试率、输入/输出 token 和语义冲突。
+获得会话级凭据后，按 [`live_observation_runbook.md`](./live_observation_runbook.md) 在独立目录
+执行 M4 legacy/Pipeline 成对观察，生成候选聚合报告，再由
+`tools/compare_prompt_contract_live.py` 与上述 M3-compatible 基线比较。真实终局校验失败率和
+验证重试率不得上升，fixture/provider 合同必须相同，平均输入 token 增幅不得超过 10%。
 不得读取持久化配置绕过凭据要求，也不得把离线合成指标表述为真实 Provider 结果。
 
-## 4. 复现
+## 5. 复现
 
 ```powershell
 python tools/evaluate_prompt_contract_m4.py `
   --output docs/evaluations/prompt_contract_m4_2026-07-27.json
-python -m pytest tests/unit/test_prompt_contract_evaluation.py -q
+python tools/summarize_prompt_contract_live.py `
+  --observations-root artifacts/live-observation `
+  --contract-version m3-compatible `
+  --output docs/evaluations/prompt_contract_live_m3_baseline_2026-07-27.json
+python -m pytest `
+  tests/unit/test_prompt_contract_evaluation.py `
+  tests/unit/test_prompt_contract_live_summary.py `
+  tests/unit/test_prompt_contract_live_comparison.py -q
 ```

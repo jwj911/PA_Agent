@@ -167,6 +167,8 @@ jobs:
           tests/unit/test_strategy_files.py
           tests/unit/test_prompt_catalog.py
           tests/unit/test_prompt_contract_evaluation.py
+          tests/unit/test_prompt_contract_live_comparison.py
+          tests/unit/test_prompt_contract_live_summary.py
           tests/unit/test_prompt_txt_files.py
           tests/unit/test_template_store.py
           tests/unit/test_template_context.py
@@ -339,7 +341,9 @@ jobs:
           scripts/check_ci_workflow_targets.py
           scripts/check_compatibility_policy.py
           tools/run_l4_benchmark.py
+          tools/compare_prompt_contract_live.py
           tools/evaluate_prompt_contract_m4.py
+          tools/summarize_prompt_contract_live.py
           tools/run_live_headless_observation.py
           tools/validate_live_observation.py
           tools/compare_live_observations.py
@@ -487,6 +491,8 @@ jobs:
           tests/unit/test_strategy_files.py
           tests/unit/test_prompt_catalog.py
           tests/unit/test_prompt_contract_evaluation.py
+          tests/unit/test_prompt_contract_live_comparison.py
+          tests/unit/test_prompt_contract_live_summary.py
           tests/unit/test_prompt_txt_files.py
           tests/unit/test_template_store.py
           tests/unit/test_template_context.py

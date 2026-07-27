@@ -29,7 +29,7 @@
 - 架构升级路线图：[`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md)
 - Prompt ID 解耦方案：[`docs/prompt_id_decoupling_plan.md`](./docs/prompt_id_decoupling_plan.md)，
   规定稳定逻辑 ID、可变存储路径、旧文件名兼容投影和 M1-M5 迁移门禁；M1-M4.2 与
-  M4.3a 离线评估已完成，M4.3b 真实 Provider 观察等待会话级凭据。
+  M4.3a 离线评估、M3-compatible 真实基线已完成，M4 候选观察等待会话级凭据。
 - M4 Prompt 合同评估：[`docs/prompt_contract_m4_evaluation.md`](./docs/prompt_contract_m4_evaluation.md)，
   固定 M3.3 聚合基线、离线指标口径、脱敏边界和 live 阻塞状态。
 - 短中期执行计划：[`docs/iteration_plan.md`](./docs/iteration_plan.md)，在长期边界以
@@ -609,8 +609,12 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     与 filename API 兼容。M4.3a 已新增 `tools/evaluate_prompt_contract_m4.py` 和
     `pa-agent.prompt-contract-evaluation.v1` 聚合报告：固定合同中 schema 校验失败/重试保持
     0/4，Normalizer 后路由冲突由 2/4 降为 0/4，四种 Prompt 合计估算 token 减少 7。
-    当前报告必须保持 `m4_exit_gate_passed=false`；只有会话级
-    `PA_AGENT_LIVE_API_KEY` 可解锁 M4.3b，禁止读取持久化配置替代或伪造 live 证据。
+    `summarize_prompt_contract_live.py` 已从 3 组历史 pair 建立 6 条 M3-compatible 真实
+    基线：0 次终局校验失败、0 次验证重试，模型 filename 输出和 router 冲突均为 6/6；
+    `compare_prompt_contract_live.py` 要求候选具备 legacy/Pipeline、相同 fixture/provider
+    哈希、失败/重试不回退且平均输入 token 增幅不超过 10%。当前离线报告必须保持
+    `m4_exit_gate_passed=false`；只有会话级 `PA_AGENT_LIVE_API_KEY` 可解锁 M4 候选观察，
+    禁止读取持久化配置替代或伪造 live 证据。
 21. **L1 外部扩展兼容观察当前进度**：外部风格 data source/AI client registrar 已完成 5 轮
     重复观察；versioned registrar 必须声明 `pa-agent.registry-extension.v1`，旧的未声明版本
     callable 继续兼容，未知显式版本只隔离当前扩展。观察样例只使用 marker builder，不连接

@@ -1,6 +1,6 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1-M4.2、M4.3a 离线评估已完成；M4.3b 真实 Provider 观察等待会话级凭据
+> 状态：M1-M4.2、M4.3a 离线评估和 M3-compatible 真实基线已完成；M4 候选观察等待凭据
 >
 > 日期：2026-07-27
 >
@@ -508,6 +508,13 @@ GUI 默认显示：
   `m4_exit_gate_passed=false`；不得据此宣称 M4 完成。
 - 评估器单测 5 项、完整非 live unit 层 1,097 项、integration 层 80 项、property 层
   55 项通过；CI 清单自检、focused Ruff/Black、3,712 条 Ruff baseline 和差异检查通过。
+- 复用 2026-07-23/24 三组真实 legacy/Pipeline pair 建立 6 条 M3-compatible 聚合基线：
+  6/6 完成、0 次终局校验失败、0 次验证重试；模型 6/6 输出 Prompt filename，且 6/6 与
+  router 冲突。基线只保存 usage 聚合和 fixture/provider 合同哈希。
+- 新增 live 聚合器与 comparator；M4 候选必须至少包含一条 legacy 和一条 Pipeline 记录，
+  使用相同合同哈希，并满足校验失败/重试不回退和平均输入 token 增幅不超过 10%。
+- live 聚合/比较单测 9 项、完整非 live unit 层 1,106 项、integration 层 80 项、property
+  层 55 项通过；CI 清单、focused Ruff/Black、3,712 条 Ruff baseline 和报告重生成检查通过。
 - 评估口径、限制与复现命令见
   [`prompt_contract_m4_evaluation.md`](./prompt_contract_m4_evaluation.md)，机器可读证据见
   [`evaluations/prompt_contract_m4_2026-07-27.json`](./evaluations/prompt_contract_m4_2026-07-27.json)。
