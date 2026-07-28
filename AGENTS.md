@@ -29,7 +29,8 @@
 - 架构升级路线图：[`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md)
 - Prompt ID 解耦方案：[`docs/prompt_id_decoupling_plan.md`](./docs/prompt_id_decoupling_plan.md)，
   规定稳定逻辑 ID、可变存储路径、旧文件名兼容投影和 M1-M5 迁移门禁；M1-M4.2 与
-  M4.3a 离线评估、M3-compatible 真实基线已完成，M4 候选观察等待会话级凭据。
+  M4.3a 离线评估、tokenizer 可复现性门禁和 M3-compatible 真实基线已完成，M4 候选观察
+  等待会话级凭据。
 - M4 Prompt 合同评估：[`docs/prompt_contract_m4_evaluation.md`](./docs/prompt_contract_m4_evaluation.md)，
   固定 M3.3 聚合基线、离线指标口径、脱敏边界和 live 阻塞状态。
 - 短中期执行计划：[`docs/iteration_plan.md`](./docs/iteration_plan.md)，在长期边界以
@@ -54,7 +55,7 @@
 | LLM 客户端    | openai（OpenAI 兼容协议）+ cursor-sdk                   |
 | 配置校验      | Pydantic v2                                             |
 | JSON Schema   | jsonschema                                              |
-| Token 计数    | tiktoken                                                |
+| Token 计数    | tiktoken 0.12.0（M3/M4 基线固定版本）                  |
 | A 股数据源    | akshare、baostock、tushare、东方财富客户端              |
 | 国际市场      | MetaTrader5（Windows）、TradingView（tvdatafeed）、yfinance |
 | 通知          | 飞书机器人、PushPlus                                    |
@@ -609,6 +610,8 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     与 filename API 兼容。M4.3a 已新增 `tools/evaluate_prompt_contract_m4.py` 和
     `pa-agent.prompt-contract-evaluation.v1` 聚合报告：固定合同中 schema 校验失败/重试保持
     0/4，Normalizer 后路由冲突由 2/4 降为 0/4，四种 Prompt 合计估算 token 减少 7。
+    M3.3 token 基线固定使用 `tiktoken 0.12.0`，`pyproject.toml` 必须精确固定同一版本；
+    tokenizer 升级必须重建基线和报告，不得只放宽 `tokenizer_comparable` 或 token 断言。
     `summarize_prompt_contract_live.py` 已从 3 组历史 pair 建立 6 条 M3-compatible 真实
     基线：0 次终局校验失败、0 次验证重试，模型 filename 输出和 router 冲突均为 6/6；
     `compare_prompt_contract_live.py` 要求候选具备 legacy/Pipeline、相同 fixture/provider

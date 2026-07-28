@@ -18,6 +18,24 @@
 
 ---
 
+## [Unreleased] — 2026-07-28（L2：M4.3a Tokenizer 可复现性修复）
+
+- GitHub Actions push runs `30228832510` 与 `30234921782` 在 Python 3.11/3.12 的
+  targeted tests 同时失败；根因是 fresh install 按 `tiktoken>=0.7` 获取了 `0.13.0`，
+  而 M3.3 Prompt token 基线明确冻结在 `0.12.0`，评估器因此按设计关闭
+  `tokenizer_comparable` 与离线门禁。
+- 将运行依赖固定为 `tiktoken==0.12.0`，使开发环境、GitHub fresh runner 与
+  `prompt_contract_m3_baseline.json` 使用同一 tokenizer 合同；未来升级必须先重建并审查
+  M3/M4 基线，不能只放宽评估器版本检查。
+- 新增项目依赖声明与 baseline tokenizer 版本一致性单测，防止依赖范围再次绕过合同门禁。
+  本地使用 `0.13.0` 覆盖依赖可稳定复现 `offline_gate_passed=false`；恢复 `0.12.0` 后，
+  干净 checkout 的 177-target + coverage 全部通过，覆盖率为 **56.76%**。
+- 同步 Prompt 合同评估说明、Prompt ID 方案、CI 质量门禁、`AGENTS.md`、架构路线图和
+  执行计划。本修复不修改 Prompt、schema、router 或 live artifact；当前仍缺少会话级
+  `PA_AGENT_LIVE_API_KEY`，`m4_exit_gate_passed` 保持 false，M5 仍不得启动。
+
+---
+
 ## [Unreleased] — 2026-07-27（L2：M4.3 真实基线聚合与候选门禁）
 
 - 新增 `tools/summarize_prompt_contract_live.py`，逐条复用

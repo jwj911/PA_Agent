@@ -16,7 +16,7 @@ dependencies = [
     "numpy>=1.26",
     "pandas>=2.2",
     "openai>=1.40",
-    "tiktoken>=0.7",
+    "tiktoken==0.12.0",
     "jsonschema>=4.22",
     "pydantic>=2.7",
     "MetaTrader5>=5.0; sys_platform == 'win32'",

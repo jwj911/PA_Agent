@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -96,3 +97,11 @@ def test_m4_baseline_fixture_schema_is_versioned() -> None:
 
     assert baseline["schema"] == BASELINE_SCHEMA
     assert baseline["source_commit"] == "2fc73e23a532534c9b468bab54ab8559e44bf871"
+
+
+def test_project_pins_the_baseline_tokenizer_version() -> None:
+    baseline = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    tokenizer = baseline["tokenizer"]
+
+    assert f"{tokenizer['package']}=={tokenizer['version']}" in project["dependencies"]

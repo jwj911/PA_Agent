@@ -1,7 +1,7 @@
 # L1-L6 后续迭代执行计划
 
 > 状态：短中期执行计划
-> 更新时间：2026-07-27
+> 更新时间：2026-07-28
 > 适用范围：后续若干轮原子迭代
 > 长期边界：以 [`docs/architecture_roadmap.md`](./architecture_roadmap.md) 为准
 
@@ -20,7 +20,7 @@
 | 路线 | 当前状态 | 已完成基础 | 主要剩余工作 |
 |---|---|---|---|
 | L1 Provider/数据源注册表 | 固定样例观察与下线策略/CI 门禁已收口；legacy registrar 按政策 retain | registry、entry point、v1 registrar、失败隔离、生命周期/并发/lazy-import 和 5 轮观察已交付 | 观察真实安装扩展；最早 0.3.0 且满足 tag/inventory/迁移证据后才评估删除 |
-| L2 Prompt 模板引擎 | 5 轮等价观察与下线策略/CI 门禁已收口；Prompt ID M1-M4.2、M4.3a 离线评估和 M3-compatible 真实基线已完成；旧 loader/fallback 按政策 retain | TemplateStore、29 个稳定 Prompt ID、ID 路由/loader、TemplateContext/AnalysisRecord/Pipeline 双合同、GUI 显示名 + ID/tooltip、Stage 1 schema v2、router 权威兼容 Normalizer、manifest v2、无 filename 模型上下文、版本化离线报告和 live 聚合/comparator 已交付 | M4 候选 legacy/Pipeline 观察等待会话级凭据；通过后再按证据决定 M5 后缀迁移；最早 0.3.0 且满足 tag/fallback 零命中/golden 证据后才评估删除旧入口 |
+| L2 Prompt 模板引擎 | 5 轮等价观察与下线策略/CI 门禁已收口；Prompt ID M1-M4.2、M4.3a 离线评估、tokenizer 可复现性门禁和 M3-compatible 真实基线已完成；旧 loader/fallback 按政策 retain | TemplateStore、29 个稳定 Prompt ID、ID 路由/loader、TemplateContext/AnalysisRecord/Pipeline 双合同、GUI 显示名 + ID/tooltip、Stage 1 schema v2、router 权威兼容 Normalizer、manifest v2、无 filename 模型上下文、固定 `tiktoken 0.12.0`、版本化离线报告和 live 聚合/comparator 已交付 | M4 候选 legacy/Pipeline 观察等待会话级凭据；通过后再按证据决定 M5 后缀迁移；最早 0.3.0 且满足 tag/fallback 零命中/golden 证据后才评估删除旧入口 |
 | L3 Pipeline Builder | 三轮真实稳定观察与默认 Pipeline 切换已收口，legacy 作为显式回滚保留 | 完整四步 Pipeline、Task 10 全终态矩阵、5 场景×3 轮 fixture 对照；3 个独立真实 pair 的 6 个单体校验和 3 个成对校验均为 `valid=true`；缺失配置默认 `true`，显式 `false` 回滚 | 持续观察 lifecycle/terminal/record 指标；出现未解释偏差先回滚，不删除 legacy facade |
 | L4 性能预算 | v2 hosted baseline、restore、九项 p95 对照和 10% 门禁已收口，进入每日观察 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；`pa-agent.performance.v1` 报告、`l4.synthetic.v2` 批量折算采样、p50/p95、100/500/5000 bars 基准、版本隔离 baseline cache；run `29975410917`/`29975592352` 已通过 | 维护每日 schedule；runner image、benchmark version 或采样合同变化时重建 baseline |
 | L5 经验库升级 | 记录筛选/review catalog/可核验 outcome 导入、本地 evidence 重核、evidence-backed readiness/evaluator、固定切分和 opaque 标注/报告管道已交付，真实数据评估未收口 | completed record shape-only scan；脱敏 record ID catalog；固定 outcome policy + 本地证据 SHA-256；annotation/export/evaluate envelope 校验与本地文件重哈希门禁；人工 `success|failure` 最小化导入与 digest 去重；版本化 dataset/split/report 和 leave-one-out 对照；不改变线上排序 | 为真实 outcome 提供并保留本地证据文件，导入至少两个不同 symbol 的 instrument group，完成相关性标注和指标报告；证据充分后才评估权重 |
@@ -41,7 +41,7 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 | P0 | L5 | curation/review/evidence-backed 评估管道、本地文件重核和 readiness 已建立；唯一 eligible 尚无已平仓证据并继续 defer，经验目录为空 | 提供并保留本地 evidence file，按 record ID 导入至少两个不同 symbol 的 group，使文件重核和 preflight 通过，再生成 Recall/NDCG/fallback/stability 报告 |
 | 已收口 | L4 | v1 负向证据证明 restore/阻断/失败保护；v2 run `29975410917`/`29975592352` 完成建基线和同环境对照 | 每日 schedule 持续观察；环境或合同变化时重建 baseline |
 | 观察 | L1 | 下线策略已固定，当前 retain | 收集真实安装扩展 inventory；未满足 0.3.0/tag/迁移证据前继续保留 |
-| Blocked | L2 | M1-M4.2、M4.3a 离线评估与 6 条 M3-compatible 真实基线已完成；历史基线 0 失败/0 重试、filename 输出与路由冲突均为 6/6 | 需要会话级 `PA_AGENT_LIVE_API_KEY` 采集 M4 legacy/Pipeline 候选并通过 comparator；当前不得进入 M5 |
+| Blocked | L2 | M1-M4.2、M4.3a 离线评估、tokenizer 可复现性门禁与 6 条 M3-compatible 真实基线已完成；历史基线 0 失败/0 重试、filename 输出与路由冲突均为 6/6 | 需要会话级 `PA_AGENT_LIVE_API_KEY` 采集 M4 legacy/Pipeline 候选并通过 comparator；当前不得进入 M5 |
 
 当前外部证据链路包括 **L5 真实 outcome/evidence** 与 **L2/M4.3b 会话级 Provider 凭据**。
 L2 不依赖外部数据的 M1-M4.3a 已完成，M5 必须等待 M4.3b 真实观察；L3/L6 已收口并进入
@@ -74,7 +74,8 @@ flag-off/flag-on 受控 fixture rollout 观察，并于 2026-07-23/24 连续取�
 显示名/ID/tooltip。M1-M3 的 Prompt 字节保持不变。M4 模型合同清理必须另开评估切片，并在
 进入 M5 前完成离线与真实 Provider 对照。M4.1 已完成 schema/Normalizer 边界，M4.2 已完成
 Prompt/carryover/golden 和 manifest v2，M4.3a 已完成离线指标和 M3-compatible 真实基线；
-M4 候选观察等待凭据。
+M3/M4 token 比较已固定 `tiktoken 0.12.0` 并由依赖/基线一致性测试保护；M4 候选观察等待
+凭据。
 
 ## 2.1 当前未收敛问题
 

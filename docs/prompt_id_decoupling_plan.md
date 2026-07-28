@@ -1,8 +1,8 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1-M4.2、M4.3a 离线评估和 M3-compatible 真实基线已完成；M4 候选观察等待凭据
+> 状态：M1-M4.2、M4.3a 离线评估、tokenizer 可复现性门禁和 M3-compatible 真实基线已完成；M4 候选观察等待凭据
 >
-> 日期：2026-07-27
+> 日期：2026-07-28
 >
 > 适用范围：L2 Prompt 模板引擎、策略路由、两阶段 Pipeline、分析记录与 Prompt 调试界面
 >
@@ -508,6 +508,9 @@ GUI 默认显示：
   `m4_exit_gate_passed=false`；不得据此宣称 M4 完成。
 - 评估器单测 5 项、完整非 live unit 层 1,097 项、integration 层 80 项、property 层
   55 项通过；CI 清单自检、focused Ruff/Black、3,712 条 Ruff baseline 和差异检查通过。
+- M3.3 token 基线固定使用 `tiktoken 0.12.0`；`pyproject.toml` 精确固定同一版本，并由
+  依赖/基线一致性单测保护。升级 tokenizer 必须重建 M3 基线和 M4 报告，不能把不同版本的
+  token 指标直接比较。
 - 复用 2026-07-23/24 三组真实 legacy/Pipeline pair 建立 6 条 M3-compatible 聚合基线：
   6/6 完成、0 次终局校验失败、0 次验证重试；模型 6/6 输出 Prompt filename，且 6/6 与
   router 冲突。基线只保存 usage 聚合和 fixture/provider 合同哈希。

@@ -1,8 +1,8 @@
 # M4 Prompt 合同评估
 
-> 状态：M4.3a 离线评估与 M3-compatible 真实基线完成；M4 候选观察等待会话级凭据
+> 状态：M4.3a 离线评估、tokenizer 可复现性门禁与 M3-compatible 真实基线完成；M4 候选观察等待会话级凭据
 >
-> 日期：2026-07-27
+> 日期：2026-07-28
 >
 > 离线报告：[`evaluations/prompt_contract_m4_2026-07-27.json`](./evaluations/prompt_contract_m4_2026-07-27.json)
 >
@@ -23,6 +23,18 @@
 4. 旧 `recommended_strategy_files` 与 router 冲突。
 
 这些案例用于验证 schema、Normalizer 和 router 的确定性合同，不代表真实模型输出分布。
+
+### 1.1 Tokenizer 可复现性
+
+M3.3 基线使用 `tiktoken 0.12.0` 的 `cl100k_base` 编码。`pyproject.toml` 因此精确固定
+`tiktoken==0.12.0`，`test_project_pins_the_baseline_tokenizer_version` 会校验项目依赖声明与
+基线元数据一致。若 fresh install 解析到其他版本，评估器必须保持
+`tokenizer_comparable=false` 并关闭离线门禁，不能用新版本 token 数与旧基线比较。
+
+升级 tokenizer 时必须在独立迭代中同时更新依赖版本、重建 M3 基线、重生成 M4 报告并审查
+四种 Prompt 的 token 差异；不得只放宽版本比较或修改精确结果断言。GitHub Actions runs
+`30228832510`、`30234921782` 暴露的双矩阵失败即由未固定的 `tiktoken>=0.7` 在 fresh
+runner 中解析到 `0.13.0` 导致。
 
 ## 2. 离线结果
 
@@ -77,6 +89,7 @@ Prompt、回复、行情、symbol、价格或 Provider 配置值。M4 候选必�
 ## 5. 复现
 
 ```powershell
+python -c "from importlib.metadata import version; print(version('tiktoken'))"
 python tools/evaluate_prompt_contract_m4.py `
   --output docs/evaluations/prompt_contract_m4_2026-07-27.json
 python tools/summarize_prompt_contract_live.py `

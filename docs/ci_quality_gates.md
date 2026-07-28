@@ -6,6 +6,22 @@ CI 在 `windows-latest` 上同时运行 Python **3.11** 与 **3.12**。3.11 是
 `pyproject.toml` 中 `requires-python = ">=3.11"` 声明的最低支持版本，3.12 是当前开发和
 覆盖率校准环境。所有安装、测试、Ruff 与 Black 门禁必须在两个矩阵任务中通过。
 
+## Prompt Tokenizer 版本门禁
+
+M4 Prompt 合同基线使用 `tiktoken 0.12.0` 与 `cl100k_base`。`pyproject.toml` 必须精确声明
+`tiktoken==0.12.0`，不能使用会让 fresh runner 自动升级的下限范围；targeted tests 中的
+`test_project_pins_the_baseline_tokenizer_version` 会把依赖声明与
+`tests/fixtures/prompt_contract_m3_baseline.json` 的 tokenizer 元数据做一致性校验。
+
+升级 tokenizer 必须作为独立评估迭代，同时完成以下事项：
+
+1. 更新精确依赖版本；
+2. 在同一版本下重建 M3 基线；
+3. 重生成并审查 M4 离线报告；
+4. 在 Python 3.11/3.12 fresh install 上验证 targeted tests。
+
+不得通过删除 `tokenizer_comparable`、放宽版本比较或仅修改 token 断言绕过门禁。
+
 ## CI 工作流目标清单自检
 
 CI 在安装验证后执行：
