@@ -97,6 +97,7 @@ python -m black --check @targets
 ## Targeted 测试覆盖率
 
 CI 的 targeted pytest 集在 Python 3.11 与 3.12 上均执行
-`--cov=pa_agent --cov-fail-under=50`，并同时输出终端报告和 `coverage.xml`。2026-07-17
-在 Windows/Python 3.12 实测基线为 **50.95%**；50% 为保留环境波动余量后的门槛。两条矩阵
-任务都必须满足该门槛，不得通过缩小测试集或排除业务包来维持通过。
+`--cov=pa_agent --cov-fail-under=50`，并同时输出终端报告和 `coverage.xml`。2026-07-29
+在干净 Windows/Python 3.12 worktree 实测为 **56.76%**，GitHub Actions run
+`30416289654` 的 Python 3.11/3.12 双矩阵均通过；50% 为保留环境波动余量后的门槛。
+两条矩阵任务都必须满足该门槛，不得通过缩小测试集或排除业务包来维持通过。

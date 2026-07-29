@@ -18,7 +18,7 @@
 
 ---
 
-## [Unreleased] — 2026-07-28（L2：M4.3a Tokenizer 可复现性修复）
+## [Unreleased] — 2026-07-29（L2：M4.3a Tokenizer 可复现性修复）
 
 - GitHub Actions push runs `30228832510` 与 `30234921782` 在 Python 3.11/3.12 的
   targeted tests 同时失败；根因是 fresh install 按 `tiktoken>=0.7` 获取了 `0.13.0`，
@@ -30,6 +30,9 @@
 - 新增项目依赖声明与 baseline tokenizer 版本一致性单测，防止依赖范围再次绕过合同门禁。
   本地使用 `0.13.0` 覆盖依赖可稳定复现 `offline_gate_passed=false`；恢复 `0.12.0` 后，
   干净 checkout 的 177-target + coverage 全部通过，覆盖率为 **56.76%**。
+- 实现提交 `b7beeff` 已推送到 `main`；GitHub Actions run `30416289654` 的
+  Windows/Python 3.11 与 3.12 全步骤均为 `success`，包括 fresh install、targeted tests、
+  non-live tests、Ruff baseline、focused Ruff 和 focused Black。
 - 同步 Prompt 合同评估说明、Prompt ID 方案、CI 质量门禁、`AGENTS.md`、架构路线图和
   执行计划。本修复不修改 Prompt、schema、router 或 live artifact；当前仍缺少会话级
   `PA_AGENT_LIVE_API_KEY`，`m4_exit_gate_passed` 保持 false，M5 仍不得启动。

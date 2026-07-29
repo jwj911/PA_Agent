@@ -2,7 +2,7 @@
 
 > 状态：M4.3a 离线评估、tokenizer 可复现性门禁与 M3-compatible 真实基线完成；M4 候选观察等待会话级凭据
 >
-> 日期：2026-07-28
+> 日期：2026-07-29
 >
 > 离线报告：[`evaluations/prompt_contract_m4_2026-07-27.json`](./evaluations/prompt_contract_m4_2026-07-27.json)
 >
@@ -34,7 +34,8 @@ M3.3 基线使用 `tiktoken 0.12.0` 的 `cl100k_base` 编码。`pyproject.toml` 
 升级 tokenizer 时必须在独立迭代中同时更新依赖版本、重建 M3 基线、重生成 M4 报告并审查
 四种 Prompt 的 token 差异；不得只放宽版本比较或修改精确结果断言。GitHub Actions runs
 `30228832510`、`30234921782` 暴露的双矩阵失败即由未固定的 `tiktoken>=0.7` 在 fresh
-runner 中解析到 `0.13.0` 导致。
+runner 中解析到 `0.13.0` 导致。固定版本后的 GitHub Actions run `30416289654` 已在
+Python 3.11/3.12 全门禁通过。
 
 ## 2. 离线结果
 
