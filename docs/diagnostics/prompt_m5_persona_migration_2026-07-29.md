@@ -4,7 +4,7 @@
 >
 > 日期：2026-07-29
 >
-> 状态：M5.1 本地全部质量门禁已通过，远端验收待完成
+> 状态：M5.1 本地全部质量门禁与远端验收均已完成
 
 ## 目标
 
@@ -64,8 +64,12 @@ ID、兼容名称、正文和组装合同是否保持稳定。
 - Ruff 0.15.13 baseline 精确保持 3,712 条批准诊断。
 - 293 个 focused Ruff 目标与展开后的 363 个 focused Black 文件通过。
 - CI 清单自检、兼容政策、`git diff --check` 和 M4 最终报告逐字节复现通过。
+- 实现提交：`fe119af`。
+- GitHub Actions run `30474245087`：
+  - Windows/Python 3.12 job `90651830066` 为 `success`；
+  - Windows/Python 3.11 job `90651830112` 为 `success`。
 
 ## 后续
 
-完整本地门禁与 GitHub Actions Python 3.11/3.12 双矩阵通过后，M5.1 才能收口。后续模板
-必须继续按独立批次使用 `git mv`，不得把 Prompt 文本优化、多 Agent 或无关配置改动混入迁移。
+M5.1 已收口。后续 28 个模板必须继续按独立批次使用 `git mv`，不得把 Prompt 文本优化、
+多 Agent 或无关配置改动混入迁移。

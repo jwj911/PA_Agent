@@ -630,7 +630,8 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     M5.1 以 `pa.persona` 验证首个单模板 `git mv`：只修改 manifest `source_path`，保留
     `pa.persona`、manifest v2 和旧 `.txt` `legacy_filename`，且 raw/TemplateStore 正文摘要、
     M4 Prompt metrics 与四种 assembled Prompt digest 均不得变化；物理目录不得保留同名
-    `.txt` 重复实体。
+    `.txt` 重复实体。实现提交 `fe119af` 与 GitHub Actions run `30474245087` 双矩阵已通过；
+    后续 28 个模板继续按独立批次迁移。
 21. **L1 外部扩展兼容观察当前进度**：外部风格 data source/AI client registrar 已完成 5 轮
     重复观察；versioned registrar 必须声明 `pa-agent.registry-extension.v1`，旧的未声明版本
     callable 继续兼容，未知显式版本只隔离当前扩展。观察样例只使用 marker builder，不连接

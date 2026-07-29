@@ -1,6 +1,6 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1-M4.3 与 M5.0 已完成，M5.1 Persona 单模板迁移正在验收
+> 状态：M1-M4.3、M5.0 与 M5.1 Persona 单模板迁移已完成；后续分批迁移剩余 28 个模板
 >
 > 日期：2026-07-29
 >
@@ -579,7 +579,8 @@ GUI 默认显示：
   与迁移前冻结值逐项相同；M4 candidate Prompt metrics 也逐对象相等。
 - 批次诊断为
   [`PA-M5-PERSONA-001`](./diagnostics/prompt_m5_persona_migration_2026-07-29.md)；
-  完整本地门禁与 GitHub Actions 双矩阵通过前不启动下一批。
+  实现提交 `fe119af` 与 GitHub Actions run `30474245087` 的 Python 3.11/3.12 双矩阵
+  已通过，M5.1 已收口。
 
 **退出门禁**：
 
