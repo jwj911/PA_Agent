@@ -1,6 +1,6 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1-M4.3 已完成，M5.0 Source Path 准备进行中；后续分批执行可选 M5 存储迁移
+> 状态：M1-M4.3 与 M5.0 已完成，M5.1 Persona 单模板迁移正在验收
 >
 > 日期：2026-07-29
 >
@@ -104,7 +104,7 @@ M1 初始状态下，`legacy_filename` 与表中的 `source_path` 相同；M5 �
 
 | `prompt_id` | 当前 `source_path` | `display_name` |
 |---|---|---|
-| `pa.persona` | `提示词大纲_人设与思维方式.txt` | 人设与思维方式 |
+| `pa.persona` | `提示词大纲_人设与思维方式.prompt.md` | 人设与思维方式 |
 | `pa.binary_decision` | `二元决策.txt` | 交易二元决策树 |
 | `pa.market_diagnosis` | `市场诊断框架.txt` | 市场诊断框架 |
 | `pa.kline_signal` | `文件16-K线信号识别.txt` | K 线信号识别 |
@@ -564,6 +564,22 @@ GUI 默认显示：
   检查均按 manifest `source_path` 执行。
 - 本切片未移动 Prompt 文件。29 个 ID、legacy filename、正文、manifest v2 和组装合同不变；
   第一批 `git mv` 必须在本切片独立提交并通过 CI 后开始。
+
+**M5.1 Persona 单模板迁移结果（2026-07-29）**：
+
+- 首批只迁移无模板依赖的 `pa.persona`，使用 `git mv` 将物理路径改为
+  `提示词大纲_人设与思维方式.prompt.md`；manifest 只修改对应 `source_path`。
+- 稳定 ID 仍为 `pa.persona`，不可变 `legacy_filename` 仍为
+  `提示词大纲_人设与思维方式.txt`；新实体存在且旧 `.txt` 实体不存在。
+- 原始文件保持 5,702 bytes /
+  `6a8b31bf6686a086092dfbe00b8a772aca5d8159ac39c74b1e3e983214553fb0`；
+  `TemplateStore` 正文保持 5,604 bytes /
+  `1bb0b0ccc326ef6170624dc8d64f1dc0509abaa4f14538c14153c4b5b14f853b`。
+- Stage 1、Stage 2 standalone、continuation standalone 和 continuation prefix 的组装摘要
+  与迁移前冻结值逐项相同；M4 candidate Prompt metrics 也逐对象相等。
+- 批次诊断为
+  [`PA-M5-PERSONA-001`](./diagnostics/prompt_m5_persona_migration_2026-07-29.md)；
+  完整本地门禁与 GitHub Actions 双矩阵通过前不启动下一批。
 
 **退出门禁**：
 

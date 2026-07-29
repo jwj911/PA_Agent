@@ -83,6 +83,15 @@ def test_manifest_covers_strategy_registry_and_stage_contracts() -> None:
     assert all(spec.version == "v2" for spec in TEMPLATE_MANIFEST)
 
 
+def test_persona_uses_prompt_markdown_source_with_legacy_filename() -> None:
+    spec = TEMPLATE_CATALOG.spec(prompt_ids.PERSONA)
+
+    assert spec.source_path == "提示词大纲_人设与思维方式.prompt.md"
+    assert spec.legacy_filename == sf.PERSONA
+    assert (PROMPT_DIR / spec.source_path).is_file()
+    assert not (PROMPT_DIR / spec.legacy_filename).exists()
+
+
 def test_template_store_matches_utf8_golden_snapshots() -> None:
     golden = json.loads(GOLDEN_PATH.read_text(encoding="utf-8"))
     store = TemplateStore(PROMPT_DIR)

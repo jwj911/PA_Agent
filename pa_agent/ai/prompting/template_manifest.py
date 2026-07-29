@@ -62,7 +62,14 @@ def _spec(
 
 
 TEMPLATE_MANIFEST: tuple[TemplateSpec, ...] = (
-    _spec(pid.PERSONA, sf.PERSONA, "人设与思维方式", ("stage1", "stage2"), "system"),
+    _spec(
+        pid.PERSONA,
+        "提示词大纲_人设与思维方式.prompt.md",
+        "人设与思维方式",
+        ("stage1", "stage2"),
+        "system",
+        legacy_filename=sf.PERSONA,
+    ),
     _spec(
         pid.BINARY_DECISION,
         sf.BINARY_DECISION,

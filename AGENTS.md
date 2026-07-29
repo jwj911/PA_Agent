@@ -35,6 +35,9 @@
 - M5 Source Path 诊断：
   [`docs/diagnostics/prompt_m5_source_path_audit_2026-07-29.md`](./docs/diagnostics/prompt_m5_source_path_audit_2026-07-29.md)，
   记录 legacy filename 物理读取耦合、修复边界和分批迁移前置条件。
+- M5.1 Persona 迁移诊断：
+  [`docs/diagnostics/prompt_m5_persona_migration_2026-07-29.md`](./docs/diagnostics/prompt_m5_persona_migration_2026-07-29.md)，
+  固定首个 `.prompt.md` 迁移批次的双口径正文摘要、组装摘要和 legacy 兼容证据。
 - 短中期执行计划：[`docs/iteration_plan.md`](./docs/iteration_plan.md)，在长期边界以
   `architecture_roadmap` 为准的前提下，拆解后续若干轮交付物、验收标准和依赖顺序。
 - L6/L3 真实观察手册：[`docs/live_observation_runbook.md`](./docs/live_observation_runbook.md)，
@@ -624,6 +627,10 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     aggregate-only 候选、比较和退出报告；M5 仍必须分批迁移并保持内容/组装 digest 不变。
     M5.0 先将 assembler fallback 与默认 decision tree 的物理读取统一到 Catalog `source_path` /
     Prompt ID；legacy filename 只作兼容身份，不得再假设磁盘存在同名 `.txt` 文件。
+    M5.1 以 `pa.persona` 验证首个单模板 `git mv`：只修改 manifest `source_path`，保留
+    `pa.persona`、manifest v2 和旧 `.txt` `legacy_filename`，且 raw/TemplateStore 正文摘要、
+    M4 Prompt metrics 与四种 assembled Prompt digest 均不得变化；物理目录不得保留同名
+    `.txt` 重复实体。
 21. **L1 外部扩展兼容观察当前进度**：外部风格 data source/AI client registrar 已完成 5 轮
     重复观察；versioned registrar 必须声明 `pa-agent.registry-extension.v1`，旧的未声明版本
     callable 继续兼容，未知显式版本只隔离当前扩展。观察样例只使用 marker builder，不连接

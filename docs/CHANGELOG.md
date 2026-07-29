@@ -18,6 +18,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-29（L2：Prompt ID 解耦 M5.1 Persona 单模板迁移）
+
+- 使用 `git mv` 将 `pa.persona` 的物理文件从
+  `提示词大纲_人设与思维方式.txt` 迁移为
+  `提示词大纲_人设与思维方式.prompt.md`；manifest 只修改该模板的 `source_path`。
+- `pa.persona`、manifest `v2`、不可变 `.txt` `legacy_filename`、阶段、角色和依赖保持不变；
+  新 `.prompt.md` 实体存在且旧 `.txt` 实体不存在，不保留重复文件。
+- 迁移前后磁盘原始正文保持 5,702 bytes /
+  `6a8b31bf6686a086092dfbe00b8a772aca5d8159ac39c74b1e3e983214553fb0`，
+  `TemplateStore` 规范化正文保持 5,604 bytes /
+  `1bb0b0ccc326ef6170624dc8d64f1dc0509abaa4f14538c14153c4b5b14f853b`；
+  M4 Prompt metrics 与 Stage 1、三种 Stage 2 组装摘要逐项不变。
+- 新增 Persona 迁移合同测试；Catalog/Store/Assembler/DecisionTree、记录兼容和 L2 集成
+  聚焦回归 114 项通过。CI targeted 177 个目标与完整 `not e2e and not live` 回归通过，
+  coverage 56.83%；3,712 条 Ruff baseline、293 个 focused Ruff 目标、363 个 focused
+  Black 文件、CI 清单自检、兼容政策和差异检查通过。远端验收结果将在推送后回填。
+- 批次证据见
+  [`PA-M5-PERSONA-001`](./diagnostics/prompt_m5_persona_migration_2026-07-29.md)。
+
+---
+
 ## [Unreleased] — 2026-07-29（L2：Prompt ID 解耦 M5.0 Source Path 准备）
 
 - M5 物理迁移前审计发现 `PromptAssembler._load()` 与默认 `load_decision_tree()` 仍把不可变

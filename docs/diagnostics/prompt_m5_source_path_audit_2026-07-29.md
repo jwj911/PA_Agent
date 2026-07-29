@@ -62,3 +62,7 @@ M4.3 已证明模型合同可进入 M5，但物理迁移前审计发现两条读
 
 M5 第一批只迁移一个低耦合模板组。每批必须使用 `git mv`，只修改对应 manifest
 `source_path`，并重新验证模板内容 SHA-256、assembled Prompt digest、legacy API 和旧记录解析。
+
+M5.1 已按该边界选择 `pa.persona` 单模板执行首批迁移；双口径正文摘要、四种组装摘要和
+legacy filename 合同均保持不变。批次证据见
+[`PA-M5-PERSONA-001`](./prompt_m5_persona_migration_2026-07-29.md)。
