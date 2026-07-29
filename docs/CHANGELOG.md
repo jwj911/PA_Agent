@@ -33,9 +33,12 @@
 - Prompt/Catalog/Store/Assembler/DecisionTree、记录、GUI 和 L2 集成聚焦回归 118 项通过；
   CI targeted 177 个目标与完整 `not e2e and not live` 回归通过，coverage 56.83%；
   3,712 条 Ruff baseline、293 个 focused Ruff 目标、363 个 focused Black 文件、CI 清单
-  自检、兼容政策和差异检查通过。远端验收结果将在推送后回填。
+  自检、兼容政策和差异检查通过。
 - 批次证据见
   [`PA-M5-BINARY-001`](./diagnostics/prompt_m5_binary_decision_migration_2026-07-29.md)。
+- 实现提交 `980c294` 已推送到 `main`；GitHub Actions run `30490054789` 的
+  Windows/Python 3.11 与 3.12 两个矩阵 job 均为 `success`。M5.2 已收口，后续按依赖边界
+  分批迁移剩余 27 个运行时模板。
 
 ---
 

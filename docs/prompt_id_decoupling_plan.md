@@ -1,6 +1,6 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1-M4.3、M5.0 与 M5.1 已完成；M5.2 Binary Decision 单模板迁移正在验收
+> 状态：M1-M4.3 与 M5.0-M5.2 已完成；后续分批迁移剩余 27 个模板
 >
 > 日期：2026-07-29
 >
@@ -596,7 +596,8 @@ GUI 默认显示：
   解析摘要逐项不变。
 - 批次诊断为
   [`PA-M5-BINARY-001`](./diagnostics/prompt_m5_binary_decision_migration_2026-07-29.md)；
-  完整本地门禁与 GitHub Actions 双矩阵通过前不启动依赖模板批次。
+  实现提交 `980c294` 与 GitHub Actions run `30490054789` 的 Python 3.11/3.12 双矩阵
+  已通过，M5.2 已收口。
 
 **退出门禁**：
 

@@ -637,7 +637,8 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     后续 28 个模板继续按独立批次迁移。
     M5.2 单独迁移高耦合 `pa.binary_decision`：除通用正文/组装不变量外，还必须保持默认
     决策树的 legacy `source`、section/node 数量和规范 JSON 摘要不变；剩余依赖模板不得
-    与该共享系统模板混入同一提交。
+    与该共享系统模板混入同一提交。实现提交 `980c294` 与 GitHub Actions run
+    `30490054789` 双矩阵已通过。
 21. **L1 外部扩展兼容观察当前进度**：外部风格 data source/AI client registrar 已完成 5 轮
     重复观察；versioned registrar 必须声明 `pa-agent.registry-extension.v1`，旧的未声明版本
     callable 继续兼容，未知显式版本只隔离当前扩展。观察样例只使用 marker builder，不连接
