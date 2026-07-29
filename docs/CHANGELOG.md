@@ -34,7 +34,9 @@
 - 扩展聚焦回归 **134 passed**；CI targeted **177** 个目标与完整
   `not e2e and not live` 回归全部通过，覆盖率 **56.83%**；3,712 条 Ruff baseline、
   293 个 focused Ruff 目标、363 个 focused Black 文件、`py_compile` 和差异检查通过。
-  远端 CI 结果在推送后补记。
+- 实现提交 `ac549d0` 已推送到 `main`；GitHub Actions run `30471807472` 的
+  Windows/Python 3.11 与 3.12 两个矩阵 job 均为 `success`。M5.0 已收口，下一独立切片为
+  `pa.persona` 单模板 `.prompt.md` 迁移。
 
 ---
 

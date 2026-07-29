@@ -5,7 +5,7 @@
 > 适用范围：后续若干轮原子迭代
 > 长期边界：以 [`docs/architecture_roadmap.md`](./architecture_roadmap.md) 为准
 
-> 最近验收：GitHub Actions run `30469187666` 在 `main@f7dee66` 的
+> 最近验收：GitHub Actions run `30471807472` 在 `main@ac549d0` 的
 > Windows/Python 3.11/3.12 双矩阵全部通过。
 > 当前代码/合同侧迭代、L2/M4.3 退出门禁、L6 真实成功主路径和 L3 三轮稳定观察/默认切换
 > 已完成；外部证据未收尾项为 L5 真实数据证据。
@@ -41,7 +41,7 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 | P0 | L5 | curation/review/evidence-backed 评估管道、本地文件重核和 readiness 已建立；唯一 eligible 尚无已平仓证据并继续 defer，经验目录为空 | 提供并保留本地 evidence file，按 record ID 导入至少两个不同 symbol 的 group，使文件重核和 preflight 通过，再生成 Recall/NDCG/fallback/stability 报告 |
 | 已收口 | L4 | v1 负向证据证明 restore/阻断/失败保护；v2 run `29975410917`/`29975592352` 完成建基线和同环境对照 | 每日 schedule 持续观察；环境或合同变化时重建 baseline |
 | 观察 | L1 | 下线策略已固定，当前 retain | 收集真实安装扩展 inventory；未满足 0.3.0/tag/迁移证据前继续保留 |
-| 进行中 | L2/M5.0 | M4 退出门禁已通过；迁移前发现 assembler fallback/decision tree 仍直读 legacy `.txt` 物理路径 | 先独立提交 Catalog `source_path` 投影与迁移态回归，再分批 `git mv` 到 `.prompt.md` |
+| 下一轮 | L2/M5.1 | M5.0 Catalog `source_path` 投影与迁移态回归已通过本地/远端门禁 | 先迁移无依赖的 `pa.persona` 单模板，验证 legacy filename、正文和全部组装 digest 不变 |
 
 当前外部证据链路只剩 **L5 真实 outcome/evidence**。L2/M4.3 的离线与真实 Provider 门禁
 均已完成，M5 不再受 live 证据阻塞；L3/L6 已收口并进入持续观察，L1 的实现与下线策略按
