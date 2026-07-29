@@ -8,7 +8,7 @@ from typing import Any
 
 from pa_agent.config.paths import PROMPT_DIR
 
-_BINARY_DECISION_FILE = "二元决策.txt"
+# Default loading uses the stable Prompt ID; explicit paths remain supported.
 
 _SECTION_RE = re.compile(r"^##\s+(\d+)\.\s+(.+)$")
 _NODE_RE = re.compile(r"^###\s+([\d.]+[A-Z]?)\s+(.+)$")
@@ -176,9 +176,9 @@ def get_node_branch_outcome(node_id: str, branch: str) -> str:
 
 @lru_cache(maxsize=1)
 def load_decision_tree(path: Path | None = None) -> dict[str, Any]:
-    """Parse ``二元决策.txt`` into sections + nodes for the UI tree."""
-    txt_path = path or (PROMPT_DIR / _BINARY_DECISION_FILE)
-    text = txt_path.read_text(encoding="utf-8")
+    """Parse the binary-decision Prompt into sections and nodes for the UI."""
+    text, source = _load_decision_tree_source(path)
+
     branch_outcomes = _parse_all_branch_outcomes(text)
     sections: list[dict[str, Any]] = []
     current: dict[str, Any] | None = None
@@ -222,7 +222,7 @@ def load_decision_tree(path: Path | None = None) -> dict[str, Any]:
 
     return {
         "version": 1,
-        "source": txt_path.name,
+        "source": source,
         "sections": sections,
         "node_index": node_index,
     }
@@ -664,3 +664,14 @@ def validate_stage2_trace_consistency(stage2: dict[str, Any]) -> list[str]:
             break
 
     return errors
+
+
+def _load_decision_tree_source(path: Path | None) -> tuple[str, str]:
+    if path is not None:
+        return path.read_text(encoding="utf-8"), path.name
+
+    from pa_agent.ai import prompting
+
+    prompt_id = prompting.prompt_ids.BINARY_DECISION
+    text = prompting.TemplateStore(PROMPT_DIR).load_id(prompt_id)
+    return text, prompting.TEMPLATE_CATALOG.legacy_filename(prompt_id)

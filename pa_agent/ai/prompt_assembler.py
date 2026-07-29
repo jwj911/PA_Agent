@@ -1054,13 +1054,13 @@ class PromptAssembler:
     # ── File loading ──────────────────────────────────────────────────────────
 
     def _load(self, filename: str) -> str:
-        """Load a prompt file by name. Returns empty string on error."""
+        """Load a prompt through its legacy filename compatibility projection."""
         if filename in self._txt_cache:
             return self._txt_cache[filename]
-        path = self._prompt_dir / filename
         try:
+            path = _runtime_prompt_path(self._prompt_dir, self._template_store, filename)
             content = path.read_text(encoding="utf-8")
-        except OSError as exc:
+        except (OSError, prompting.PromptCatalogError) as exc:
             logger.error("Failed to load prompt file %s: %s", filename, exc)
             content = f"[ERROR: could not load {filename}]"
         self._txt_cache[filename] = content
@@ -1382,3 +1382,8 @@ class PromptAssembler:
     # ── Experience library rendering ──────────────────────────────────────────
 
     _render_experience = staticmethod(render_experience)
+
+
+def _runtime_prompt_path(root: Path, store: Any, legacy_filename: str) -> Path:
+    catalog = getattr(store, "catalog", prompting.TEMPLATE_CATALOG)
+    return root / catalog.source_path_for_legacy_filename(legacy_filename)

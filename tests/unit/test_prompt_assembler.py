@@ -13,7 +13,7 @@ from pa_agent.ai.prompt_assembler import (
     STAGE2_TEMPLATE_TXT_FILES,
     PromptAssembler,
 )
-from pa_agent.ai.prompting import TemplateStoreError
+from pa_agent.ai.prompting import TEMPLATE_CATALOG, TemplateStoreError
 from pa_agent.data.base import IndicatorBundle, KlineBar, KlineFrame
 
 
@@ -44,14 +44,21 @@ def _make_frame(n: int = 5) -> KlineFrame:
     )
 
 
+def _write_runtime_templates(root: Path, files: dict[str, str]) -> None:
+    for legacy_filename, content in files.items():
+        source_path = TEMPLATE_CATALOG.source_path_for_legacy_filename(legacy_filename)
+        path = root / source_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+
+
 @pytest.fixture()
 def assembler(tmp_path: Path) -> PromptAssembler:
     """PromptAssembler with fake prompt files."""
-    for fname in [
+    filenames = [
         "提示词大纲_人设与思维方式.txt",
         "市场诊断框架.txt",
         "二元决策.txt",
-        "二元决策_闸门.txt",
         "文件16-K线信号识别.txt",
         "逐棒分析检查单.txt",
         "文件17-止损和止盈与仓位管理.txt",
@@ -78,8 +85,15 @@ def assembler(tmp_path: Path) -> PromptAssembler:
         "文件25-主要趋势反转MTR.txt",
         "文件27-三角形与收敛形态.txt",
         "文件28-双重顶底与微型结构.txt",
-    ]:
-        (tmp_path / fname).write_text(f"[CONTENT OF {fname}]", encoding="utf-8")
+    ]
+    _write_runtime_templates(
+        tmp_path,
+        {name: f"[CONTENT OF {name}]" for name in filenames},
+    )
+    (tmp_path / "二元决策_闸门.txt").write_text(
+        "[CONTENT OF 二元决策_闸门.txt]",
+        encoding="utf-8",
+    )
     return PromptAssembler(prompt_dir=tmp_path)
 
 
@@ -154,8 +168,7 @@ def test_shared_system_prompt_uses_template_store(tmp_path: Path) -> None:
         "提示词大纲_人设与思维方式.txt": "[STORE PERSONA]",
         "二元决策.txt": "[STORE BINARY]",
     }
-    for name, content in files.items():
-        (tmp_path / name).write_text(content, encoding="utf-8")
+    _write_runtime_templates(tmp_path, files)
 
     class _RecordingStore:
         def __init__(self) -> None:
@@ -180,8 +193,7 @@ def test_stage1_user_prompt_uses_template_store(tmp_path: Path) -> None:
         "市场诊断框架.txt": "[STORE DIAGNOSIS]",
         "文件16-K线信号识别.txt": "[STORE SIGNAL]",
     }
-    for name, content in files.items():
-        (tmp_path / name).write_text(content, encoding="utf-8")
+    _write_runtime_templates(tmp_path, files)
 
     class _RecordingStore:
         def __init__(self) -> None:
@@ -209,8 +221,7 @@ def test_shared_system_prompt_falls_back_to_legacy_loader(
         "提示词大纲_人设与思维方式.txt": "[LEGACY PERSONA]",
         "二元决策.txt": "[LEGACY BINARY]",
     }
-    for name, content in files.items():
-        (tmp_path / name).write_text(content, encoding="utf-8")
+    _write_runtime_templates(tmp_path, files)
 
     class _FailingStore:
         def load_many(self, names, *, stage=None):
@@ -234,8 +245,7 @@ def test_stage1_user_prompt_falls_back_as_a_group(
         "市场诊断框架.txt": "[LEGACY DIAGNOSIS]",
         "文件16-K线信号识别.txt": "[LEGACY SIGNAL]",
     }
-    for name, content in files.items():
-        (tmp_path / name).write_text(content, encoding="utf-8")
+    _write_runtime_templates(tmp_path, files)
 
     class _FailingStore:
         def load_many(self, names, *, stage=None):
@@ -287,8 +297,13 @@ def test_stage2_user_prompt_falls_back_as_an_atomic_group(
     tmp_path: Path,
     caplog,
 ) -> None:
-    for name in (*COMMON_SYSTEM_STAGE2_TXT_FILES, *STAGE2_TEMPLATE_TXT_FILES):
-        (tmp_path / name).write_text(f"[LEGACY {name}]", encoding="utf-8")
+    _write_runtime_templates(
+        tmp_path,
+        {
+            name: f"[LEGACY {name}]"
+            for name in (*COMMON_SYSTEM_STAGE2_TXT_FILES, *STAGE2_TEMPLATE_TXT_FILES)
+        },
+    )
 
     class _FailingStore:
         def load_many(self, names, *, stage=None):
@@ -312,11 +327,13 @@ def test_stage2_user_prompt_falls_back_as_an_atomic_group(
 
 
 def test_shared_system_prompt_can_disable_template_store(tmp_path: Path) -> None:
-    for name, content in {
-        "提示词大纲_人设与思维方式.txt": "[LEGACY PERSONA]",
-        "二元决策.txt": "[LEGACY BINARY]",
-    }.items():
-        (tmp_path / name).write_text(content, encoding="utf-8")
+    _write_runtime_templates(
+        tmp_path,
+        {
+            "提示词大纲_人设与思维方式.txt": "[LEGACY PERSONA]",
+            "二元决策.txt": "[LEGACY BINARY]",
+        },
+    )
 
     class _UnexpectedStoreCall:
         def load_many(self, names, *, stage=None):

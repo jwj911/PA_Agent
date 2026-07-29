@@ -115,6 +115,10 @@ class PromptCatalog:
         """Return the physical source path for a Prompt ID."""
         return self.spec(prompt_id).source_path
 
+    def source_path_for_legacy_filename(self, filename: str) -> str:
+        """Resolve a compatibility filename to its current physical path."""
+        return self.source_path(self.resolve_legacy_filename(filename))
+
     def legacy_filename(self, prompt_id: PromptId) -> str:
         """Return the immutable legacy filename projection for a Prompt ID."""
         return self.spec(prompt_id).legacy_filename

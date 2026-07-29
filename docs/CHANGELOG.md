@@ -18,6 +18,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-29（L2：Prompt ID 解耦 M5.0 Source Path 准备）
+
+- M5 物理迁移前审计发现 `PromptAssembler._load()` 与默认 `load_decision_tree()` 仍把不可变
+  `legacy_filename` 直接拼为磁盘路径；若只执行 `.txt` → `.prompt.md` 与 manifest
+  `source_path` 更新，显式 fallback 和决策树 UI 会失效。
+- `PromptCatalog` 新增 legacy filename 到当前 `source_path` 的显式投影；assembler fallback
+  保留旧 filename 输入/缓存/错误合同，但物理读取改走 Catalog。决策树默认改用稳定
+  `pa.binary_decision` 和 `TemplateStore.load_id()`，显式 `path` 入口保持兼容。
+- 测试 fixture 改按 manifest 当前物理路径创建文件，并新增 `.prompt.md` 实体不存在同名
+  `.txt` 时 legacy API 仍可读取、决策树经 Prompt ID 加载、未知兼容名称失败关闭的覆盖。
+- 本切片不移动或修改 Prompt 正文，不改变 29 个 ID、legacy filename、manifest 版本、路由、
+  记录或 GUI 合同。诊断边界见
+  [`PA-M5-SOURCE-PATH-001`](./diagnostics/prompt_m5_source_path_audit_2026-07-29.md)。
+- 扩展聚焦回归 **134 passed**；CI targeted **177** 个目标与完整
+  `not e2e and not live` 回归全部通过，覆盖率 **56.83%**；3,712 条 Ruff baseline、
+  293 个 focused Ruff 目标、363 个 focused Black 文件、`py_compile` 和差异检查通过。
+  远端 CI 结果在推送后补记。
+
+---
+
 ## [Unreleased] — 2026-07-29（L2：Prompt ID 解耦 M4.3b 真实退出门禁）
 
 - 在干净 `main@8b62b29` detached worktree 中，使用与冻结 M3-compatible 基线相同的

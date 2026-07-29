@@ -112,7 +112,7 @@ def test_stage_prompt_file_lists_match_audited_order() -> None:
     ) == stage2_prompt_txt_files(routed, direction="bullish")
 
 
-def test_prompt_file_helpers_reference_existing_real_txt_files() -> None:
+def test_prompt_file_helpers_resolve_to_existing_runtime_sources() -> None:
     helper_files = {
         *stage1_prompt_txt_files(),
         *stage2_prompt_txt_files(
@@ -129,7 +129,11 @@ def test_prompt_file_helpers_reference_existing_real_txt_files() -> None:
     assert all(name.endswith(".txt") for name in helper_files)
 
     expected_files = helper_files | _strategy_registry_values()
-    missing = sorted(name for name in expected_files if not (PROMPT_DIR / name).is_file())
+    missing = sorted(
+        name
+        for name in expected_files
+        if not (PROMPT_DIR / TEMPLATE_CATALOG.source_path_for_legacy_filename(name)).is_file()
+    )
     assert missing == []
 
 

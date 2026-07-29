@@ -41,7 +41,7 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 | P0 | L5 | curation/review/evidence-backed 评估管道、本地文件重核和 readiness 已建立；唯一 eligible 尚无已平仓证据并继续 defer，经验目录为空 | 提供并保留本地 evidence file，按 record ID 导入至少两个不同 symbol 的 group，使文件重核和 preflight 通过，再生成 Recall/NDCG/fallback/stability 报告 |
 | 已收口 | L4 | v1 负向证据证明 restore/阻断/失败保护；v2 run `29975410917`/`29975592352` 完成建基线和同环境对照 | 每日 schedule 持续观察；环境或合同变化时重建 baseline |
 | 观察 | L1 | 下线策略已固定，当前 retain | 收集真实安装扩展 inventory；未满足 0.3.0/tag/迁移证据前继续保留 |
-| 下一轮 | L2/M5 | M4 legacy/Pipeline 真实候选已通过全部 comparator gate，最终报告 `m4_exit_gate_passed=true` | 分批 `git mv` 到 `.prompt.md`，只修改 manifest `source_path`，保持 ID、legacy filename、正文与组装 digest 不变 |
+| 进行中 | L2/M5.0 | M4 退出门禁已通过；迁移前发现 assembler fallback/decision tree 仍直读 legacy `.txt` 物理路径 | 先独立提交 Catalog `source_path` 投影与迁移态回归，再分批 `git mv` 到 `.prompt.md` |
 
 当前外部证据链路只剩 **L5 真实 outcome/evidence**。L2/M4.3 的离线与真实 Provider 门禁
 均已完成，M5 不再受 live 证据阻塞；L3/L6 已收口并进入持续观察，L1 的实现与下线策略按
@@ -60,14 +60,17 @@ flag-off/flag-on 受控 fixture rollout 观察，并于 2026-07-23/24 连续取�
 
 推荐顺序如下：
 
-1. **L2/M5：分批执行 `.prompt.md` 物理存储迁移**。M4.3 真实候选已通过
-   Provider/fixture、失败/重试、identity/路由冲突和 token 全部门禁。每批只允许修改
-   manifest `source_path` 与物理路径，必须保持 Prompt ID、legacy filename、正文 SHA-256 和
-   assembled Prompt digest 不变。
-2. **L5：真实案例 opaque 导出、人工标注和离线指标报告**。具备真实 evidence 后立即恢复。
-3. **L3/L6**：保持持续观察；Provider、事件或记录合同变化时重跑真实 pair，出现偏差先回滚。
-4. **L4**：每日持续基准，不凭单次波动修改热路径。
-5. **L1/L2 旧入口**：按 `compatibility_policy.json` retain；证据与版本条件未满足前不删除。
+1. **L2/M5.0：先收口 Source Path 兼容准备**。M4.3 全部门禁已通过；诊断
+   `PA-M5-SOURCE-PATH-001` 发现两个旧入口仍把 legacy filename 当物理路径。先让 assembler
+   fallback 和默认 decision tree 经 Catalog/Prompt ID 加载，验证 `.prompt.md` 实体下旧 API
+   仍可用，再独立提交。
+2. **L2/M5：分批执行 `.prompt.md` 物理存储迁移**。每批只允许修改 manifest
+   `source_path` 与物理路径，必须保持 Prompt ID、legacy filename、正文 SHA-256 和 assembled
+   Prompt digest 不变。
+3. **L5：真实案例 opaque 导出、人工标注和离线指标报告**。具备真实 evidence 后立即恢复。
+4. **L3/L6**：保持持续观察；Provider、事件或记录合同变化时重跑真实 pair，出现偏差先回滚。
+5. **L4**：每日持续基准，不凭单次波动修改热路径。
+6. **L1/L2 旧入口**：按 `compatibility_policy.json` retain；证据与版本条件未满足前不删除。
 
 第 233 轮模板引擎迁移和 Prompt ID M1-M2 已完成；M3.1 已完成 AnalysisRecord ID/filename
 双合同与旧记录内存补全，M3.2 已完成 Pipeline state/route outputs 双合同，M3.3 已完成 GUI

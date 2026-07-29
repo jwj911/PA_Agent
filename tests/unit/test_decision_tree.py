@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+from pa_agent.ai import decision_tree, prompting
 from pa_agent.ai.decision_tree import (
     build_stage2_gate_wait_response,
     format_bar_basis_suffix,
@@ -14,6 +17,7 @@ from pa_agent.ai.decision_tree import (
     validate_gate_result_consistency,
     validate_stage2_trace_consistency,
 )
+from pa_agent.ai.prompting import TEMPLATE_CATALOG, prompt_ids
 from tests.integration.conftest import SAMPLE_DECISION_TRACE, SAMPLE_GATE_TRACE, VALID_STAGE2
 
 
@@ -42,6 +46,34 @@ def test_load_decision_tree_has_sections() -> None:
     tree = load_decision_tree()
     assert len(tree["sections"]) >= 10
     assert "0.1" in tree["node_index"]
+    assert tree["source"] == TEMPLATE_CATALOG.legacy_filename(prompt_ids.BINARY_DECISION)
+
+
+def test_load_decision_tree_uses_prompt_id_store(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    calls: list[object] = []
+
+    class _Store:
+        def __init__(self, root: Path) -> None:
+            calls.append(root)
+
+        def load_id(self, prompt_id) -> str:
+            calls.append(prompt_id)
+            return "## 1. 测试章节\n### 1.1 测试节点\n是：继续\n否：等待\n"  # noqa: RUF001
+
+    load_decision_tree.cache_clear()
+    monkeypatch.setattr(decision_tree, "PROMPT_DIR", tmp_path)
+    monkeypatch.setattr(prompting, "TemplateStore", _Store)
+    try:
+        tree = load_decision_tree()
+    finally:
+        load_decision_tree.cache_clear()
+
+    assert calls == [tmp_path, prompt_ids.BINARY_DECISION]
+    assert tree["source"] == TEMPLATE_CATALOG.legacy_filename(prompt_ids.BINARY_DECISION)
+    assert "1.1" in tree["node_index"]
 
 
 def test_node_branch_outcomes_from_txt() -> None:

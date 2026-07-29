@@ -1,6 +1,6 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1-M4.3 已完成，离线与真实 Provider 退出门禁均通过；下一阶段为可选 M5 存储迁移
+> 状态：M1-M4.3 已完成，M5.0 Source Path 准备进行中；后续分批执行可选 M5 存储迁移
 >
 > 日期：2026-07-29
 >
@@ -545,10 +545,25 @@ GUI 默认显示：
 
 ### M5：可选 `.prompt.md` 存储迁移
 
+- M5.0 先消除剩余物理路径耦合：legacy filename 只能经 Catalog 解析当前 `source_path`，
+  默认决策树通过 `pa.binary_decision` 加载；不得依赖磁盘上存在同名 `.txt` 实体。
 - 使用 `git mv` 分批把运行时模板改为 `.prompt.md`。
 - 每批只修改 manifest 的 `source_path`，`prompt_id`、版本、路由和记录身份不变。
 - 旧 `.txt` 名称继续作为 `legacy_filename`，但不得保留重复实体文件。
 - `_reference/*.md` 继续是参考层，不进入运行时 manifest。
+
+**M5.0 Source Path 准备结果（2026-07-29）**：
+
+- 诊断 `PA-M5-SOURCE-PATH-001` 确认 assembler fallback 和默认 decision tree 仍直接读取
+  legacy `.txt` 物理路径，直接执行 M5 会破坏显式回滚与 GUI 决策树。
+- `PromptCatalog.source_path_for_legacy_filename()` 已成为兼容名称到当前物理路径的唯一投影；
+  `PromptAssembler._load()` 保留 legacy 输入/缓存合同但通过该投影读取。
+- 默认 `load_decision_tree()` 已改用 `TemplateStore.load_id(pa.binary_decision)`；显式 `path`
+  入口和返回的 legacy `source` 保持兼容。
+- 新增迁移态回归：只有 `.prompt.md` 实体时 legacy API 仍可读取；测试 fixture 和实体存在性
+  检查均按 manifest `source_path` 执行。
+- 本切片未移动 Prompt 文件。29 个 ID、legacy filename、正文、manifest v2 和组装合同不变；
+  第一批 `git mv` 必须在本切片独立提交并通过 CI 后开始。
 
 **退出门禁**：
 

@@ -48,9 +48,11 @@ def test_runtime_catalog_covers_all_prompt_ids_and_legacy_filenames() -> None:
     assert len(prompt_ids.ALL_PROMPT_IDS) == len(set(prompt_ids.ALL_PROMPT_IDS)) == 29
     assert set(TEMPLATE_CATALOG.by_id) == set(prompt_ids.ALL_PROMPT_IDS)
     assert set(TEMPLATE_CATALOG.by_legacy_filename) == expected_filenames
-    assert {
+    source_paths = {
         TEMPLATE_CATALOG.source_path(prompt_id) for prompt_id in prompt_ids.ALL_PROMPT_IDS
-    } == expected_filenames
+    }
+    assert len(source_paths) == 29
+    assert all(path.endswith((".txt", ".prompt.md")) for path in source_paths)
     assert all(TEMPLATE_CATALOG.display_name(prompt_id) for prompt_id in prompt_ids.ALL_PROMPT_IDS)
 
 
@@ -75,6 +77,8 @@ def test_catalog_separates_id_source_path_and_legacy_filename(tmp_path) -> None:
     assert catalog.legacy_filename(prompt_id) == legacy_filename
     assert catalog.resolve_legacy_filename(legacy_filename) == prompt_id
     assert catalog.resolve_legacy_filename(alias) == prompt_id
+    assert catalog.source_path_for_legacy_filename(legacy_filename) == source_path
+    assert catalog.source_path_for_legacy_filename(alias) == source_path
     assert store.load_id(prompt_id) == "stable content"
     assert store.load(legacy_filename) == "stable content"
     assert store.load(alias) == "stable content"
@@ -194,3 +198,5 @@ def test_catalog_rejects_unknown_dependencies_and_lookups() -> None:
         TEMPLATE_CATALOG.spec(PromptId("pa.unknown"))
     with pytest.raises(PromptCatalogError, match="Unknown legacy prompt filename"):
         TEMPLATE_CATALOG.resolve_legacy_filename("unknown.txt")
+    with pytest.raises(PromptCatalogError, match="Unknown legacy prompt filename"):
+        TEMPLATE_CATALOG.source_path_for_legacy_filename("unknown.txt")

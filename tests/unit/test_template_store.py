@@ -330,6 +330,31 @@ def test_template_store_cache_is_explicitly_invalidated(tmp_path: Path) -> None:
     assert store.load(template_name) == "two"
 
 
+def test_legacy_loader_resolves_current_source_path(tmp_path: Path) -> None:
+    prompt_id = PromptId("test.fixture")
+    source_path = "runtime/fixture.prompt.md"
+    legacy_filename = "fixture.txt"
+    spec = _fixture_spec(
+        str(prompt_id),
+        source_path,
+        stage="stage1",
+        legacy_filename=legacy_filename,
+    )
+    source = tmp_path / source_path
+    source.parent.mkdir()
+    source.write_text("stable content", encoding="utf-8")
+    store = TemplateStore(tmp_path, manifest=(spec,))
+    assembler = PromptAssembler(
+        prompt_dir=tmp_path,
+        template_store=store,
+        use_template_store=False,
+    )
+
+    assert not (tmp_path / legacy_filename).exists()
+    assert assembler._load(legacy_filename) == "stable content"
+    assert assembler._load("unknown.txt") == "[ERROR: could not load unknown.txt]"
+
+
 def test_template_store_render_is_strict_and_non_executable(tmp_path: Path) -> None:
     template_name = "fixture.txt"
     (tmp_path / template_name).write_text(
