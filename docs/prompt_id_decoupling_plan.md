@@ -1,6 +1,6 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1-M4.2、M4.3a 离线评估、tokenizer 可复现性门禁和 M3-compatible 真实基线已完成；M4 候选观察等待凭据
+> 状态：M1-M4.3 已完成，离线与真实 Provider 退出门禁均通过；下一阶段为可选 M5 存储迁移
 >
 > 日期：2026-07-29
 >
@@ -521,6 +521,20 @@ GUI 默认显示：
 - 评估口径、限制与复现命令见
   [`prompt_contract_m4_evaluation.md`](./prompt_contract_m4_evaluation.md)，机器可读证据见
   [`evaluations/prompt_contract_m4_2026-07-27.json`](./evaluations/prompt_contract_m4_2026-07-27.json)。
+
+**M4.3b 真实 Provider 退出结果（2026-07-29）**：
+
+- 在干净 `main@8b62b29` detached worktree 中，使用与 M3-compatible 基线相同的
+  Provider/fixture 合同分别执行一次 legacy 与 Pipeline；两条路径均完成 5 事件、调用
+  Provider、写入 record，单体 artifact 均为 `valid=true`。
+- 候选终局校验失败和验证重试均为 0/2；模型 Prompt identity 输出与 router 语义冲突均由
+  基线 6/6 降至候选 0/2。
+- 平均输入 token 由 110,240.33 降至 109,392.50，减少 847.83（约 0.769%）；Provider 与
+  fixture 合同哈希一致，10% token 门禁通过。
+- comparator 的 11 项 gate 全部通过。最终评估器重新计算 comparison、校验候选/比较
+  SHA-256，并生成 `m4_exit_gate_passed=true` 的最终报告。
+- 原始 summary/event/record 留在 Git 忽略目录；仓库只保存 aggregate-only 候选、比较和
+  退出报告。M4 退出条件已满足，可进入独立的 M5 物理路径迁移。
 
 **退出门禁**：
 

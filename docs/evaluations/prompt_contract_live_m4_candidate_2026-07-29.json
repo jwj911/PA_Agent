@@ -1,0 +1,56 @@
+{
+  "contract_version": "m4.2",
+  "execution_modes": {
+    "legacy": 1,
+    "pipeline": 1
+  },
+  "fixture_contract_sha256s": [
+    "3fcefa42964dfa481b6ba060063a784b3bc2c4715ddce8cd2905cd02371ccb99"
+  ],
+  "gates": {
+    "aggregate_only": true,
+    "all_artifacts_valid": true,
+    "all_runs_called_provider": true,
+    "all_runs_completed": true,
+    "all_stage1_json_parseable": true,
+    "single_fixture_contract": true,
+    "single_provider_contract": true
+  },
+  "metrics": {
+    "completed_rate": 1.0,
+    "completed_runs": 2,
+    "model_prompt_identity_output_rate": 0.0,
+    "model_prompt_identity_output_runs": 0,
+    "provider_called_rate": 1.0,
+    "provider_called_runs": 2,
+    "raw_stage1_json_parseable_rate": 1.0,
+    "raw_stage1_json_parseable_runs": 2,
+    "routing_comparable_runs": 2,
+    "runs_with_validation_retry": 0,
+    "semantic_routing_conflict_rate": 0.0,
+    "semantic_routing_conflicts": 0,
+    "stage1_retry_count": 0,
+    "stage2_retry_count": 0,
+    "terminal_validation_failure_rate": 0.0,
+    "terminal_validation_failures": 0,
+    "usage_per_run_mean": {
+      "cached_prompt_tokens": 25216.0,
+      "completion_tokens": 14862.5,
+      "prompt_tokens": 109392.5,
+      "total_tokens": 124255.0
+    },
+    "usage_totals": {
+      "cached_prompt_tokens": 50432,
+      "completion_tokens": 29725,
+      "prompt_tokens": 218785,
+      "total_tokens": 248510
+    },
+    "validation_retry_count": 0,
+    "validation_retry_run_rate": 0.0
+  },
+  "observation_count": 2,
+  "provider_contract_sha256s": [
+    "4e0950aec8b1d92b0e59255bbe6dbdc706d67550f2043f81bcbc6721f775c3ec"
+  ],
+  "schema": "pa-agent.prompt-contract-live-aggregate.v1"
+}

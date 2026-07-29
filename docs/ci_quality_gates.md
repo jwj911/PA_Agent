@@ -22,6 +22,23 @@ M4 Prompt 合同基线使用 `tiktoken 0.12.0` 与 `cl100k_base`。`pyproject.to
 
 不得通过删除 `tokenizer_comparable`、放宽版本比较或仅修改 token 断言绕过门禁。
 
+## M4 Live 退出证据门禁
+
+M4 最终退出报告由 `tools/evaluate_prompt_contract_m4.py` 同时读取以下三份 aggregate-only
+证据：
+
+- M3-compatible live baseline；
+- M4 live candidate aggregate；
+- M3/M4 live comparison。
+
+三条路径参数必须同时提供。评估器会独立调用 `compare_live_prompt_contracts()` 重算
+comparison；任何字段篡改、缺失输入、schema/contract version 不匹配或 live gate 失败都会
+失败关闭。最终报告保存 candidate/comparison SHA-256，CI 中
+`test_m4_final_exit_report_is_reproducible` 会从仓库证据重建报告并要求逐对象相等。
+
+原始 summary/event/record 只能留在 Git 忽略的 `artifacts/`。提交报告不得包含 Prompt、
+模型回复、行情、symbol、价格、correlation id、Provider 配置值、API Key 或本地绝对路径。
+
 ## CI 工作流目标清单自检
 
 CI 在安装验证后执行：

@@ -122,33 +122,46 @@ Remove-Item Env:PA_AGENT_LIVE_MODEL -ErrorAction SilentlyContinue
 
 ## 7. M4 Prompt 合同观察
 
-M4 使用相同 live harness，但候选产物必须写入独立目录，不能混入历史基线：
+M4 使用相同 live harness，但候选产物必须写入独立目录，不能混入历史基线。冻结的
+M3-compatible 基线使用 Moonshot `https://api.moonshot.cn/v1` / `kimi-k3`；M4 候选必须使用
+同一 Provider 合同，否则 Provider usage token 不可比较，comparator 会按设计失败关闭。
+`run_live_headless_observation.py` 的通用默认值是 DeepSeek，不能依赖默认值执行本组对照。
 
 ```powershell
+$env:PA_AGENT_LIVE_BASE_URL = "https://api.moonshot.cn/v1"
+$env:PA_AGENT_LIVE_MODEL = "kimi-k3"
+
 py -3.12 tools/run_live_headless_observation.py `
   --confirm-live `
-  --output-dir artifacts/prompt-contract-m4-candidate/legacy `
+  --output-dir artifacts/prompt-contract-m4-candidate-moonshot/legacy `
   --correlation-id m4-legacy-live-001
 
 py -3.12 tools/run_live_headless_observation.py `
   --confirm-live `
   --pipeline-builder-enabled `
-  --output-dir artifacts/prompt-contract-m4-candidate/pipeline `
+  --output-dir artifacts/prompt-contract-m4-candidate-moonshot/pipeline `
   --correlation-id m4-pipeline-live-001
 ```
 
-随后生成 aggregate-only 候选报告并与 M3-compatible 基线比较：
+随后生成 aggregate-only 候选报告、与 M3-compatible 基线比较，并由总评估器重新计算
+comparison 后生成 M4 退出报告：
 
 ```powershell
 py -3.12 tools/summarize_prompt_contract_live.py `
-  --observations-root artifacts/prompt-contract-m4-candidate `
+  --observations-root artifacts/prompt-contract-m4-candidate-moonshot `
   --contract-version m4.2 `
-  --output artifacts/prompt-contract-m4-candidate/aggregate.json
+  --output docs/evaluations/prompt_contract_live_m4_candidate_2026-07-29.json
 
 py -3.12 tools/compare_prompt_contract_live.py `
   --baseline docs/evaluations/prompt_contract_live_m3_baseline_2026-07-27.json `
-  --candidate artifacts/prompt-contract-m4-candidate/aggregate.json `
-  --output artifacts/prompt-contract-m4-candidate/comparison.json
+  --candidate docs/evaluations/prompt_contract_live_m4_candidate_2026-07-29.json `
+  --output docs/evaluations/prompt_contract_live_m4_comparison_2026-07-29.json
+
+py -3.12 tools/evaluate_prompt_contract_m4.py `
+  --live-baseline docs/evaluations/prompt_contract_live_m3_baseline_2026-07-27.json `
+  --live-candidate docs/evaluations/prompt_contract_live_m4_candidate_2026-07-29.json `
+  --live-comparison docs/evaluations/prompt_contract_live_m4_comparison_2026-07-29.json `
+  --output docs/evaluations/prompt_contract_m4_exit_2026-07-29.json
 ```
 
 比较结果必须为 `pa-agent.prompt-contract-live-comparison.v1`，且
@@ -164,3 +177,7 @@ py -3.12 tools/compare_prompt_contract_live.py `
 聚合器只输出计数、比率和合同哈希，不输出 correlation id、文件路径、Prompt、模型回复、
 行情、symbol、价格或 Provider 配置值。没有会话级 `PA_AGENT_LIVE_API_KEY` 时不得执行候选
 观察，也不得用历史记录复制出候选报告。
+
+2026-07-29 的 M4 候选 legacy/Pipeline 均完成 5 事件并写入 record，单体 artifact 有效；
+comparison 的 11 项 gate 全部通过，最终报告为 `m4_exit_gate_passed=true`。原始 artifact
+继续留在 Git 忽略目录，只提交上述三份 aggregate-only 报告。

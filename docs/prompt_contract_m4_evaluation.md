@@ -1,12 +1,18 @@
 # M4 Prompt 合同评估
 
-> 状态：M4.3a 离线评估、tokenizer 可复现性门禁与 M3-compatible 真实基线完成；M4 候选观察等待会话级凭据
+> 状态：M4.3 离线与真实 Provider 合同评估完成；M4 退出门禁通过
 >
 > 日期：2026-07-29
 >
-> 离线报告：[`evaluations/prompt_contract_m4_2026-07-27.json`](./evaluations/prompt_contract_m4_2026-07-27.json)
+> 历史离线报告：[`evaluations/prompt_contract_m4_2026-07-27.json`](./evaluations/prompt_contract_m4_2026-07-27.json)
 >
 > 真实基线：[`evaluations/prompt_contract_live_m3_baseline_2026-07-27.json`](./evaluations/prompt_contract_live_m3_baseline_2026-07-27.json)
+>
+> M4 候选：[`evaluations/prompt_contract_live_m4_candidate_2026-07-29.json`](./evaluations/prompt_contract_live_m4_candidate_2026-07-29.json)
+>
+> 真实比较：[`evaluations/prompt_contract_live_m4_comparison_2026-07-29.json`](./evaluations/prompt_contract_live_m4_comparison_2026-07-29.json)
+>
+> 最终退出报告：[`evaluations/prompt_contract_m4_exit_2026-07-29.json`](./evaluations/prompt_contract_m4_exit_2026-07-29.json)
 
 ## 1. 评估边界
 
@@ -72,31 +78,55 @@ Prompt 字节、schema 和 Provider 行为不变，因此这 6 条记录可作�
 Prompt、回复、行情、symbol、价格或 Provider 配置值。M4 候选必须使用相同两个合同哈希，
 至少包含一条 legacy 和一条 Pipeline 观察。
 
-## 4. 限制与后续
+## 4. M4.3b 真实候选结果
 
-当前进程未设置 `PA_AGENT_LIVE_API_KEY`，因此没有执行真实 Provider 请求。
-机器可读报告必须保持：
+2026-07-29 使用与冻结基线相同的 Provider/fixture 合同，在干净 detached worktree
+`main@8b62b29` 中分别执行一次 legacy 与 Pipeline。两条路径均完成 5 事件、实际调用 Provider、
+写入 record，且单体 `pa-agent.live-observation-validation.v1` 均为 `valid=true`。
 
-- `live_observation.status=blocked_missing_session_api_key`；
-- `live_observation.evidence_collected=false`；
-- `gates.m4_exit_gate_passed=false`。
+| 指标 | M3-compatible 基线 | M4.2 候选 | 变化 |
+|---|---:|---:|---:|
+| 观察数 | 6（legacy 3、Pipeline 3） | 2（legacy 1、Pipeline 1） | - |
+| 终局校验失败率 | 0% | 0% | 0 |
+| 验证重试 run rate | 0% | 0% | 0 |
+| 模型 Prompt identity 输出率 | 100% | 0% | -100 个百分点 |
+| 模型 filename 与 router 冲突率 | 100% | 0% | -100 个百分点 |
+| 平均输入 token | 110,240.33 | 109,392.50 | -847.83（-0.769%） |
+| 平均输出 token | 14,862.83 | 14,862.50 | -0.33 |
+| 平均总 token | 125,103.17 | 124,255.00 | -848.17 |
 
-获得会话级凭据后，按 [`live_observation_runbook.md`](./live_observation_runbook.md) 在独立目录
-执行 M4 legacy/Pipeline 成对观察，生成候选聚合报告，再由
-`tools/compare_prompt_contract_live.py` 与上述 M3-compatible 基线比较。真实终局校验失败率和
-验证重试率不得上升，fixture/provider 合同必须相同，平均输入 token 增幅不得超过 10%。
-不得读取持久化配置绕过凭据要求，也不得把离线合成指标表述为真实 Provider 结果。
+比较器的 baseline/candidate 有效性、legacy/Pipeline 配对、Provider/fixture 哈希一致、失败率、
+重试率、identity 输出、路由冲突和 10% token 阈值共 11 项 gate 全部为 true，
+`gates.live_gate_passed=true`。最终评估器重新计算 comparison 并校验候选/比较文件 SHA-256，
+得到：
+
+- `live_observation.status=passed`；
+- `live_observation.evidence_collected=true`；
+- `gates.offline_gate_passed=true`；
+- `gates.live_gate_passed=true`；
+- `gates.m4_exit_gate_passed=true`。
+
+原始 summary/event/record 继续保存在 Git 忽略的 `artifacts/`，不提交。仓库只保存聚合计数、
+比率、合同哈希和报告 SHA-256；不保存 correlation id、Prompt、回复、行情、symbol、价格、
+Provider 配置值或凭据。M4 已满足退出条件，后续可按独立原子切片进入 M5。
 
 ## 5. 复现
 
 ```powershell
 python -c "from importlib.metadata import version; print(version('tiktoken'))"
-python tools/evaluate_prompt_contract_m4.py `
-  --output docs/evaluations/prompt_contract_m4_2026-07-27.json
 python tools/summarize_prompt_contract_live.py `
-  --observations-root artifacts/live-observation `
-  --contract-version m3-compatible `
-  --output docs/evaluations/prompt_contract_live_m3_baseline_2026-07-27.json
+  --observations-root artifacts/prompt-contract-m4-candidate-moonshot `
+  --contract-version m4.2 `
+  --output docs/evaluations/prompt_contract_live_m4_candidate_2026-07-29.json
+python tools/compare_prompt_contract_live.py `
+  --baseline docs/evaluations/prompt_contract_live_m3_baseline_2026-07-27.json `
+  --candidate docs/evaluations/prompt_contract_live_m4_candidate_2026-07-29.json `
+  --output docs/evaluations/prompt_contract_live_m4_comparison_2026-07-29.json
+python tools/evaluate_prompt_contract_m4.py `
+  --live-baseline docs/evaluations/prompt_contract_live_m3_baseline_2026-07-27.json `
+  --live-candidate docs/evaluations/prompt_contract_live_m4_candidate_2026-07-29.json `
+  --live-comparison docs/evaluations/prompt_contract_live_m4_comparison_2026-07-29.json `
+  --output docs/evaluations/prompt_contract_m4_exit_2026-07-29.json
 python -m pytest `
   tests/unit/test_prompt_contract_evaluation.py `
   tests/unit/test_prompt_contract_live_summary.py `

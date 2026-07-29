@@ -28,11 +28,10 @@
 - 迭代记录：[`docs/CHANGELOG.md`](./docs/CHANGELOG.md)
 - 架构升级路线图：[`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md)
 - Prompt ID 解耦方案：[`docs/prompt_id_decoupling_plan.md`](./docs/prompt_id_decoupling_plan.md)，
-  规定稳定逻辑 ID、可变存储路径、旧文件名兼容投影和 M1-M5 迁移门禁；M1-M4.2 与
-  M4.3a 离线评估、tokenizer 可复现性门禁和 M3-compatible 真实基线已完成，M4 候选观察
-  等待会话级凭据。
+  规定稳定逻辑 ID、可变存储路径、旧文件名兼容投影和 M1-M5 迁移门禁；M1-M4.3 与
+  离线/真实 Provider 退出门禁已完成，下一阶段为可选 M5 物理存储迁移。
 - M4 Prompt 合同评估：[`docs/prompt_contract_m4_evaluation.md`](./docs/prompt_contract_m4_evaluation.md)，
-  固定 M3.3 聚合基线、离线指标口径、脱敏边界和 live 阻塞状态。
+  固定 M3.3 聚合基线、离线/live 指标口径、脱敏边界和最终退出证据。
 - 短中期执行计划：[`docs/iteration_plan.md`](./docs/iteration_plan.md)，在长期边界以
   `architecture_roadmap` 为准的前提下，拆解后续若干轮交付物、验收标准和依赖顺序。
 - L6/L3 真实观察手册：[`docs/live_observation_runbook.md`](./docs/live_observation_runbook.md)，
@@ -615,9 +614,11 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     `summarize_prompt_contract_live.py` 已从 3 组历史 pair 建立 6 条 M3-compatible 真实
     基线：0 次终局校验失败、0 次验证重试，模型 filename 输出和 router 冲突均为 6/6；
     `compare_prompt_contract_live.py` 要求候选具备 legacy/Pipeline、相同 fixture/provider
-    哈希、失败/重试不回退且平均输入 token 增幅不超过 10%。当前离线报告必须保持
-    `m4_exit_gate_passed=false`；只有会话级 `PA_AGENT_LIVE_API_KEY` 可解锁 M4 候选观察，
-    禁止读取持久化配置替代或伪造 live 证据。
+    哈希、失败/重试不回退且平均输入 token 增幅不超过 10%。2026-07-29 的 M4 候选两条
+    路径均完成 5 事件、调用 Provider 并写入 record；0 失败、0 重试，模型 filename 输出与
+    router 冲突均由基线 6/6 降至 0/2，平均输入 token 下降约 0.769%。comparison 全部 gate
+    通过，最终报告为 `m4_exit_gate_passed=true`。原始 artifact 不提交，仓库只保存
+    aggregate-only 候选、比较和退出报告；M5 仍必须分批迁移并保持内容/组装 digest 不变。
 21. **L1 外部扩展兼容观察当前进度**：外部风格 data source/AI client registrar 已完成 5 轮
     重复观察；versioned registrar 必须声明 `pa-agent.registry-extension.v1`，旧的未声明版本
     callable 继续兼容，未知显式版本只隔离当前扩展。观察样例只使用 marker builder，不连接

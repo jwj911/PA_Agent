@@ -1,0 +1,237 @@
+{
+  "baseline": {
+    "contract_metrics": {
+      "case_count": 4,
+      "identity_output_cases": 3,
+      "retry_required": 0,
+      "retry_required_rate": 0.0,
+      "schema_validation_failure_rate": 0.0,
+      "schema_validation_failures": 0,
+      "semantic_routing_conflict_rate": 0.5,
+      "semantic_routing_conflicts": 2
+    },
+    "fixture_input_sha256": "1e38d9617ca8317d6ad26fbc63a2b657386f07410e3ff2d6b3491d05a65f0c41",
+    "name": "m3.3",
+    "prompt_metrics": {
+      "stage1": {
+        "byte_length": 189754,
+        "char_length": 91493,
+        "estimated_tokens": 77496,
+        "message_count": 2,
+        "sha256": "c4b49b9ec092af59e52b007f48e65a081cbd2cf9f5526850094e5979aeeb8061"
+      },
+      "stage2_continuation_prefix": {
+        "byte_length": 278474,
+        "char_length": 137224,
+        "estimated_tokens": 112797,
+        "message_count": 4,
+        "sha256": "d985a28398b4c75e7155a4bc6516386dd9af525e56d87bd8ace51c907158a2f3"
+      },
+      "stage2_continuation_standalone": {
+        "byte_length": 147357,
+        "char_length": 76472,
+        "estimated_tokens": 59678,
+        "message_count": 2,
+        "sha256": "fc677ba82ef7177d39d1d1d2fc6acca60e1624c41338201a41d0c0054f6e9b2a"
+      },
+      "stage2_standalone": {
+        "byte_length": 147357,
+        "char_length": 76472,
+        "estimated_tokens": 59678,
+        "message_count": 2,
+        "sha256": "fc677ba82ef7177d39d1d1d2fc6acca60e1624c41338201a41d0c0054f6e9b2a"
+      }
+    },
+    "source_commit": "2fc73e23a532534c9b468bab54ab8559e44bf871",
+    "tokenizer": {
+      "encoding": "cl100k_base",
+      "package": "tiktoken",
+      "version": "0.12.0"
+    }
+  },
+  "candidate": {
+    "contract_metrics": {
+      "case_count": 4,
+      "identity_output_cases": 3,
+      "retry_required": 0,
+      "retry_required_rate": 0.0,
+      "schema_validation_failure_rate": 0.0,
+      "schema_validation_failures": 0,
+      "semantic_routing_conflict_rate": 0.0,
+      "semantic_routing_conflicts": 0
+    },
+    "fixture_input_sha256": "1e38d9617ca8317d6ad26fbc63a2b657386f07410e3ff2d6b3491d05a65f0c41",
+    "manifest_version": "v2",
+    "name": "m4.2",
+    "prompt_metrics": {
+      "stage1": {
+        "byte_length": 189601,
+        "char_length": 91256,
+        "estimated_tokens": 77501,
+        "message_count": 2,
+        "sha256": "d7ffebc4a68c431d42f4efe231a8af4937c5d4121b91e347d9c66617d9862577"
+      },
+      "stage2_continuation_prefix": {
+        "byte_length": 278327,
+        "char_length": 136975,
+        "estimated_tokens": 112807,
+        "message_count": 4,
+        "sha256": "9b5ba6b4a27d99f34444aea324e08074118396277ae11f4551ce3c4d0748a90c"
+      },
+      "stage2_continuation_standalone": {
+        "byte_length": 147316,
+        "char_length": 76415,
+        "estimated_tokens": 59667,
+        "message_count": 2,
+        "sha256": "6aec0599a2f0ffdf2474d890b2d3af03a8ec9e5d6f3de345b5fd56f3465844fd"
+      },
+      "stage2_standalone": {
+        "byte_length": 147316,
+        "char_length": 76415,
+        "estimated_tokens": 59667,
+        "message_count": 2,
+        "sha256": "6aec0599a2f0ffdf2474d890b2d3af03a8ec9e5d6f3de345b5fd56f3465844fd"
+      }
+    },
+    "stage1_schema_version": "pa-agent.stage1-output.v2",
+    "tokenizer": {
+      "encoding": "cl100k_base",
+      "package": "tiktoken",
+      "version": "0.12.0"
+    }
+  },
+  "deltas": {
+    "prompt_aggregate": {
+      "baseline_estimated_tokens": 309649,
+      "candidate_estimated_tokens": 309642,
+      "estimated_token_delta": -7,
+      "estimated_token_delta_ratio": -2.2606241260265655e-05
+    },
+    "prompt_variants": {
+      "stage1": {
+        "byte_length_delta": -153,
+        "char_length_delta": -237,
+        "estimated_token_delta": 5,
+        "estimated_token_delta_ratio": 6.451945906885516e-05,
+        "message_count_changed": false,
+        "sha256_changed": true
+      },
+      "stage2_continuation_prefix": {
+        "byte_length_delta": -147,
+        "char_length_delta": -249,
+        "estimated_token_delta": 10,
+        "estimated_token_delta_ratio": 8.865484011099586e-05,
+        "message_count_changed": false,
+        "sha256_changed": true
+      },
+      "stage2_continuation_standalone": {
+        "byte_length_delta": -41,
+        "char_length_delta": -57,
+        "estimated_token_delta": -11,
+        "estimated_token_delta_ratio": -0.00018432253091591543,
+        "message_count_changed": false,
+        "sha256_changed": true
+      },
+      "stage2_standalone": {
+        "byte_length_delta": -41,
+        "char_length_delta": -57,
+        "estimated_token_delta": -11,
+        "estimated_token_delta_ratio": -0.00018432253091591543,
+        "message_count_changed": false,
+        "sha256_changed": true
+      }
+    },
+    "retry_required_rate": 0.0,
+    "schema_validation_failure_rate": 0.0,
+    "semantic_routing_conflict_rate": -0.5
+  },
+  "gates": {
+    "fixture_unchanged": true,
+    "live_gate_passed": true,
+    "m4_exit_gate_passed": true,
+    "offline_gate_passed": true,
+    "retry_non_regression": true,
+    "schema_validation_non_regression": true,
+    "semantic_routing_conflict_non_regression": true,
+    "token_non_regression": true,
+    "tokenizer_comparable": true
+  },
+  "live_observation": {
+    "baseline_contract_version": "m3-compatible",
+    "candidate_aggregate_sha256": "c9e72c771e170ede01a4e8b08a097326dbf3e98c876ba8653ff2e8954f8c0278",
+    "candidate_contract_version": "m4.2",
+    "candidate_execution_modes": {
+      "legacy": 1,
+      "pipeline": 1
+    },
+    "candidate_metrics": {
+      "completed_rate": 1.0,
+      "completed_runs": 2,
+      "model_prompt_identity_output_rate": 0.0,
+      "model_prompt_identity_output_runs": 0,
+      "provider_called_rate": 1.0,
+      "provider_called_runs": 2,
+      "raw_stage1_json_parseable_rate": 1.0,
+      "raw_stage1_json_parseable_runs": 2,
+      "routing_comparable_runs": 2,
+      "runs_with_validation_retry": 0,
+      "semantic_routing_conflict_rate": 0.0,
+      "semantic_routing_conflicts": 0,
+      "stage1_retry_count": 0,
+      "stage2_retry_count": 0,
+      "terminal_validation_failure_rate": 0.0,
+      "terminal_validation_failures": 0,
+      "usage_per_run_mean": {
+        "cached_prompt_tokens": 25216.0,
+        "completion_tokens": 14862.5,
+        "prompt_tokens": 109392.5,
+        "total_tokens": 124255.0
+      },
+      "usage_totals": {
+        "cached_prompt_tokens": 50432,
+        "completion_tokens": 29725,
+        "prompt_tokens": 218785,
+        "total_tokens": 248510
+      },
+      "validation_retry_count": 0,
+      "validation_retry_run_rate": 0.0
+    },
+    "comparison_deltas": {
+      "mean_completion_tokens": -0.33333333333393966,
+      "mean_prompt_tokens": -847.8333333333285,
+      "mean_prompt_tokens_ratio": -0.007690772584746616,
+      "mean_total_tokens": -848.1666666666715,
+      "model_prompt_identity_output_rate": -1.0,
+      "semantic_routing_conflict_rate": -1.0,
+      "terminal_validation_failure_rate": 0.0,
+      "validation_retry_run_rate": 0.0
+    },
+    "comparison_gates": {
+      "baseline_has_legacy_pipeline_pair": true,
+      "baseline_valid": true,
+      "candidate_has_legacy_pipeline_pair": true,
+      "candidate_valid": true,
+      "live_gate_passed": true,
+      "model_prompt_identity_output_non_regression": true,
+      "prompt_token_non_regression": true,
+      "same_fixture_contract": true,
+      "same_provider_contract": true,
+      "semantic_routing_conflict_non_regression": true,
+      "terminal_validation_non_regression": true,
+      "validation_retry_non_regression": true
+    },
+    "comparison_sha256": "fa58035b6371f18d28a78705e17ed00839e248c1dd6ee83b7de9c1cd4a6031a9",
+    "evidence_collected": true,
+    "live_gate_passed": true,
+    "observation_counts": {
+      "baseline": 6,
+      "candidate": 2
+    },
+    "runbook": "docs/live_observation_runbook.md",
+    "status": "passed"
+  },
+  "schema": "pa-agent.prompt-contract-evaluation.v1",
+  "thresholds": {
+    "max_token_regression_ratio_per_prompt_variant": 0.001
+  }
+}

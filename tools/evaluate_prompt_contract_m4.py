@@ -30,12 +30,19 @@ from pa_agent.ai.token_counter import estimate_tokens  # noqa: E402
 from pa_agent.data.snapshot import build_analysis_frame  # noqa: E402
 from tests.fixtures.kline_bars import make_newest_first_bars  # noqa: E402
 from tests.integration.conftest import VALID_STAGE1  # noqa: E402
+from tools.compare_prompt_contract_live import (  # noqa: E402
+    LIVE_COMPARISON_SCHEMA,
+    compare_live_prompt_contracts,
+)
+from tools.summarize_prompt_contract_live import LIVE_AGGREGATE_SCHEMA  # noqa: E402
 
 REPORT_SCHEMA = "pa-agent.prompt-contract-evaluation.v1"
 BASELINE_SCHEMA = "pa-agent.prompt-contract-baseline.v1"
 TOKENIZER_PACKAGE = "tiktoken"
 TOKENIZER_ENCODING = "cl100k_base"
 MAX_TOKEN_REGRESSION_RATIO = 0.001
+LIVE_BASELINE_CONTRACT_VERSION = "m3-compatible"
+LIVE_CANDIDATE_CONTRACT_VERSION = "m4.2"
 _FIXTURE_KEYS = (
     "symbol",
     "timeframe",
@@ -67,6 +74,65 @@ def _load_baseline(path: Path) -> dict[str, Any]:
     if not isinstance(payload.get("tokenizer"), dict):
         raise ValueError("baseline tokenizer must be an object")
     return payload
+
+
+def _load_json_object(path: Path, label: str) -> dict[str, Any]:
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"invalid {label} JSON") from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"{label} must be an object")
+    return payload
+
+
+def _sha256_file(path: Path) -> str:
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def _build_live_evidence(
+    *,
+    baseline_path: Path,
+    candidate_path: Path,
+    comparison_path: Path,
+) -> dict[str, object]:
+    baseline = _load_json_object(baseline_path, "live baseline")
+    candidate = _load_json_object(candidate_path, "live candidate")
+    comparison = _load_json_object(comparison_path, "live comparison")
+    if baseline.get("schema") != LIVE_AGGREGATE_SCHEMA:
+        raise ValueError("unsupported live baseline schema")
+    if candidate.get("schema") != LIVE_AGGREGATE_SCHEMA:
+        raise ValueError("unsupported live candidate schema")
+    if comparison.get("schema") != LIVE_COMPARISON_SCHEMA:
+        raise ValueError("unsupported live comparison schema")
+    if baseline.get("contract_version") != LIVE_BASELINE_CONTRACT_VERSION:
+        raise ValueError("unexpected live baseline contract version")
+    if candidate.get("contract_version") != LIVE_CANDIDATE_CONTRACT_VERSION:
+        raise ValueError("unexpected live candidate contract version")
+
+    recomputed = compare_live_prompt_contracts(baseline, candidate)
+    if comparison != recomputed:
+        raise ValueError("live comparison does not match recomputed result")
+
+    comparison_gates = comparison.get("gates")
+    if not isinstance(comparison_gates, dict):
+        raise ValueError("live comparison gates must be an object")
+    live_gate_passed = comparison_gates.get("live_gate_passed") is True
+    return {
+        "status": "passed" if live_gate_passed else "failed",
+        "evidence_collected": True,
+        "baseline_contract_version": baseline["contract_version"],
+        "candidate_contract_version": candidate["contract_version"],
+        "observation_counts": comparison["observation_counts"],
+        "candidate_execution_modes": candidate["execution_modes"],
+        "candidate_metrics": candidate["metrics"],
+        "comparison_deltas": comparison["deltas"],
+        "comparison_gates": comparison_gates,
+        "candidate_aggregate_sha256": _sha256_file(candidate_path),
+        "comparison_sha256": _sha256_file(comparison_path),
+        "live_gate_passed": live_gate_passed,
+        "runbook": "docs/live_observation_runbook.md",
+    }
 
 
 def _load_prompt_fixture(root: Path) -> tuple[dict[str, Any], str]:
@@ -230,6 +296,9 @@ def build_report(
     root: Path = ROOT,
     baseline_path: Path | None = None,
     live_api_key_present: bool | None = None,
+    live_baseline_path: Path | None = None,
+    live_candidate_path: Path | None = None,
+    live_comparison_path: Path | None = None,
 ) -> dict[str, object]:
     """Build an aggregate-only M4 contract evaluation report."""
     root = Path(root)
@@ -285,10 +354,32 @@ def build_report(
         )
     )
 
-    if live_api_key_present is None:
-        live_api_key_present = bool(os.environ.get("PA_AGENT_LIVE_API_KEY", "").strip())
-    live_status = "ready" if live_api_key_present else "blocked_missing_session_api_key"
-    live_evidence_collected = False
+    live_paths = (
+        live_baseline_path,
+        live_candidate_path,
+        live_comparison_path,
+    )
+    if any(path is not None for path in live_paths) and not all(
+        path is not None for path in live_paths
+    ):
+        raise ValueError("live baseline, candidate, and comparison must be provided together")
+
+    if all(path is not None for path in live_paths):
+        live_observation = _build_live_evidence(
+            baseline_path=Path(live_baseline_path),
+            candidate_path=Path(live_candidate_path),
+            comparison_path=Path(live_comparison_path),
+        )
+    else:
+        if live_api_key_present is None:
+            live_api_key_present = bool(os.environ.get("PA_AGENT_LIVE_API_KEY", "").strip())
+        live_observation = {
+            "status": "ready" if live_api_key_present else "blocked_missing_session_api_key",
+            "evidence_collected": False,
+            "live_gate_passed": False,
+            "runbook": "docs/live_observation_runbook.md",
+        }
+    live_gate_passed = live_observation["live_gate_passed"] is True
 
     return {
         "schema": REPORT_SCHEMA,
@@ -340,13 +431,10 @@ def build_report(
             "semantic_routing_conflict_non_regression": routing_conflict_non_regression,
             "token_non_regression": token_non_regression,
             "offline_gate_passed": offline_gate_passed,
-            "m4_exit_gate_passed": offline_gate_passed and live_evidence_collected,
+            "live_gate_passed": live_gate_passed,
+            "m4_exit_gate_passed": offline_gate_passed and live_gate_passed,
         },
-        "live_observation": {
-            "status": live_status,
-            "evidence_collected": live_evidence_collected,
-            "runbook": "docs/live_observation_runbook.md",
-        },
+        "live_observation": live_observation,
     }
 
 
@@ -357,10 +445,27 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         default=ROOT / "tests" / "fixtures" / "prompt_contract_m3_baseline.json",
     )
+    parser.add_argument("--live-baseline", type=Path)
+    parser.add_argument("--live-candidate", type=Path)
+    parser.add_argument("--live-comparison", type=Path)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args(argv)
+    live_evidence_requested = any(
+        path is not None
+        for path in (
+            args.live_baseline,
+            args.live_candidate,
+            args.live_comparison,
+        )
+    )
     try:
-        report = build_report(root=ROOT, baseline_path=args.baseline)
+        report = build_report(
+            root=ROOT,
+            baseline_path=args.baseline,
+            live_baseline_path=args.live_baseline,
+            live_candidate_path=args.live_candidate,
+            live_comparison_path=args.live_comparison,
+        )
     except (KeyError, OSError, PackageNotFoundError, TypeError, ValueError) as exc:
         print(
             json.dumps(
@@ -380,7 +485,8 @@ def main(argv: list[str] | None = None) -> int:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(rendered, encoding="utf-8")
     print(rendered, end="")
-    return 0 if report["gates"]["offline_gate_passed"] else 1
+    required_gate = "m4_exit_gate_passed" if live_evidence_requested else "offline_gate_passed"
+    return 0 if report["gates"][required_gate] else 1
 
 
 if __name__ == "__main__":

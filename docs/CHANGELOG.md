@@ -18,6 +18,33 @@
 
 ---
 
+## [Unreleased] — 2026-07-29（L2：Prompt ID 解耦 M4.3b 真实退出门禁）
+
+- 在干净 `main@8b62b29` detached worktree 中，使用与冻结 M3-compatible 基线相同的
+  Provider/fixture 合同分别完成 M4 legacy 与 Pipeline 真实观察；两条路径均完成
+  `Stage1Started -> Stage1Done -> Stage2Started -> Stage2Done -> RecordSaved`、实际调用
+  Provider、写入 record，单体 validator 均为 `valid=true`。
+- M4 候选 2/2 完成，0 次终局校验失败、0 次验证重试；模型 Prompt identity 输出与 router
+  语义冲突均由基线 6/6 降至候选 0/2。平均输入 token 由 110,240.33 降至 109,392.50，
+  减少约 0.769%，低于 10% 回退阈值。
+- `pa-agent.prompt-contract-live-comparison.v1` 的 baseline/candidate 有效性、双路径配对、
+  Provider/fixture 哈希、失败/重试、identity/冲突和 token 共 11 项 gate 全部通过。
+- 扩展 `tools/evaluate_prompt_contract_m4.py`：只有同时提供 live baseline、candidate 和
+  comparison 才接受 live 证据；评估器独立重算 comparison、拒绝篡改/部分输入，并把候选与
+  comparison 的 SHA-256 写入最终 aggregate-only 报告。
+- 新增 M4 candidate、comparison 和 `m4_exit_gate_passed=true` 最终报告；原始
+  summary/event/record 保留在 Git 忽略目录，不提交 Prompt、回复、行情、symbol、价格、
+  correlation id、Provider 配置值或凭据。
+- 修正 live runbook 的 Provider 合同：冻结基线使用 Moonshot/Kimi，M4 候选不得依赖通用
+  DeepSeek 默认值进行跨 Provider token 比较。同步 Prompt ID 方案、`AGENTS.md`、架构路线图
+  和执行计划，下一独立迭代进入 M5 `.prompt.md` 物理迁移。
+- 验证通过：Prompt 合同聚焦回归 **20 passed**；CI targeted **177** 个目标与完整
+  `not e2e and not live` 回归全部通过，覆盖率 **56.81%**；3,712 条 Ruff baseline、
+  293 个 focused Ruff 目标和 363 个 focused Black 文件通过。三份 aggregate-only 报告的
+  可复现测试与敏感字段扫描通过。
+
+---
+
 ## [Unreleased] — 2026-07-29（L2：M4.3a Tokenizer 可复现性修复）
 
 - GitHub Actions push runs `30228832510` 与 `30234921782` 在 Python 3.11/3.12 的

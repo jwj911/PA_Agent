@@ -1,0 +1,36 @@
+{
+  "baseline_contract_version": "m3-compatible",
+  "candidate_contract_version": "m4.2",
+  "deltas": {
+    "mean_completion_tokens": -0.33333333333393966,
+    "mean_prompt_tokens": -847.8333333333285,
+    "mean_prompt_tokens_ratio": -0.007690772584746616,
+    "mean_total_tokens": -848.1666666666715,
+    "model_prompt_identity_output_rate": -1.0,
+    "semantic_routing_conflict_rate": -1.0,
+    "terminal_validation_failure_rate": 0.0,
+    "validation_retry_run_rate": 0.0
+  },
+  "gates": {
+    "baseline_has_legacy_pipeline_pair": true,
+    "baseline_valid": true,
+    "candidate_has_legacy_pipeline_pair": true,
+    "candidate_valid": true,
+    "live_gate_passed": true,
+    "model_prompt_identity_output_non_regression": true,
+    "prompt_token_non_regression": true,
+    "same_fixture_contract": true,
+    "same_provider_contract": true,
+    "semantic_routing_conflict_non_regression": true,
+    "terminal_validation_non_regression": true,
+    "validation_retry_non_regression": true
+  },
+  "observation_counts": {
+    "baseline": 6,
+    "candidate": 2
+  },
+  "schema": "pa-agent.prompt-contract-live-comparison.v1",
+  "thresholds": {
+    "max_mean_prompt_token_regression_ratio": 0.1
+  }
+}
