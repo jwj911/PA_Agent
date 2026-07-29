@@ -36,6 +36,18 @@ from tests.fixtures.kline_bars import make_newest_first_bars
 
 PROMPT_DIR = Path(__file__).resolve().parents[2] / "prompt_engineering"
 GOLDEN_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "prompt_golden.json"
+MIGRATED_PROMPT_SOURCES = (
+    (
+        prompt_ids.PERSONA,
+        sf.PERSONA,
+        "提示词大纲_人设与思维方式.prompt.md",
+    ),
+    (
+        prompt_ids.BINARY_DECISION,
+        sf.BINARY_DECISION,
+        "二元决策.prompt.md",
+    ),
+)
 
 
 def _strategy_registry_values() -> set[str]:
@@ -83,11 +95,20 @@ def test_manifest_covers_strategy_registry_and_stage_contracts() -> None:
     assert all(spec.version == "v2" for spec in TEMPLATE_MANIFEST)
 
 
-def test_persona_uses_prompt_markdown_source_with_legacy_filename() -> None:
-    spec = TEMPLATE_CATALOG.spec(prompt_ids.PERSONA)
+@pytest.mark.parametrize(
+    ("prompt_id", "legacy_filename", "source_path"),
+    MIGRATED_PROMPT_SOURCES,
+    ids=[str(entry[0]) for entry in MIGRATED_PROMPT_SOURCES],
+)
+def test_migrated_prompt_uses_markdown_source_with_legacy_filename(
+    prompt_id: PromptId,
+    legacy_filename: str,
+    source_path: str,
+) -> None:
+    spec = TEMPLATE_CATALOG.spec(prompt_id)
 
-    assert spec.source_path == "提示词大纲_人设与思维方式.prompt.md"
-    assert spec.legacy_filename == sf.PERSONA
+    assert spec.source_path == source_path
+    assert spec.legacy_filename == legacy_filename
     assert (PROMPT_DIR / spec.source_path).is_file()
     assert not (PROMPT_DIR / spec.legacy_filename).exists()
 

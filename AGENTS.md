@@ -38,6 +38,9 @@
 - M5.1 Persona 迁移诊断：
   [`docs/diagnostics/prompt_m5_persona_migration_2026-07-29.md`](./docs/diagnostics/prompt_m5_persona_migration_2026-07-29.md)，
   固定首个 `.prompt.md` 迁移批次的双口径正文摘要、组装摘要和 legacy 兼容证据。
+- M5.2 Binary Decision 迁移诊断：
+  [`docs/diagnostics/prompt_m5_binary_decision_migration_2026-07-29.md`](./docs/diagnostics/prompt_m5_binary_decision_migration_2026-07-29.md)，
+  固定共享系统模板的正文/组装摘要、决策树解析合同和 legacy 兼容证据。
 - 短中期执行计划：[`docs/iteration_plan.md`](./docs/iteration_plan.md)，在长期边界以
   `architecture_roadmap` 为准的前提下，拆解后续若干轮交付物、验收标准和依赖顺序。
 - L6/L3 真实观察手册：[`docs/live_observation_runbook.md`](./docs/live_observation_runbook.md)，
@@ -632,6 +635,9 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     M4 Prompt metrics 与四种 assembled Prompt digest 均不得变化；物理目录不得保留同名
     `.txt` 重复实体。实现提交 `fe119af` 与 GitHub Actions run `30474245087` 双矩阵已通过；
     后续 28 个模板继续按独立批次迁移。
+    M5.2 单独迁移高耦合 `pa.binary_decision`：除通用正文/组装不变量外，还必须保持默认
+    决策树的 legacy `source`、section/node 数量和规范 JSON 摘要不变；剩余依赖模板不得
+    与该共享系统模板混入同一提交。
 21. **L1 外部扩展兼容观察当前进度**：外部风格 data source/AI client registrar 已完成 5 轮
     重复观察；versioned registrar 必须声明 `pa-agent.registry-extension.v1`，旧的未声明版本
     callable 继续兼容，未知显式版本只隔离当前扩展。观察样例只使用 marker builder，不连接

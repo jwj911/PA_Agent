@@ -1,6 +1,6 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1-M4.3、M5.0 与 M5.1 Persona 单模板迁移已完成；后续分批迁移剩余 28 个模板
+> 状态：M1-M4.3、M5.0 与 M5.1 已完成；M5.2 Binary Decision 单模板迁移正在验收
 >
 > 日期：2026-07-29
 >
@@ -105,7 +105,7 @@ M1 初始状态下，`legacy_filename` 与表中的 `source_path` 相同；M5 �
 | `prompt_id` | 当前 `source_path` | `display_name` |
 |---|---|---|
 | `pa.persona` | `提示词大纲_人设与思维方式.prompt.md` | 人设与思维方式 |
-| `pa.binary_decision` | `二元决策.txt` | 交易二元决策树 |
+| `pa.binary_decision` | `二元决策.prompt.md` | 交易二元决策树 |
 | `pa.market_diagnosis` | `市场诊断框架.txt` | 市场诊断框架 |
 | `pa.kline_signal` | `文件16-K线信号识别.txt` | K 线信号识别 |
 | `pa.bar_checklist` | `逐棒分析检查单.txt` | 逐棒分析检查单 |
@@ -581,6 +581,22 @@ GUI 默认显示：
   [`PA-M5-PERSONA-001`](./diagnostics/prompt_m5_persona_migration_2026-07-29.md)；
   实现提交 `fe119af` 与 GitHub Actions run `30474245087` 的 Python 3.11/3.12 双矩阵
   已通过，M5.1 已收口。
+
+**M5.2 Binary Decision 单模板迁移结果（2026-07-29）**：
+
+- 高耦合共享系统模板 `pa.binary_decision` 单独使用 `git mv` 迁移为
+  `二元决策.prompt.md`；manifest 只修改 `source_path`，legacy filename 仍为
+  `二元决策.txt`。
+- raw 正文保持 43,260 bytes /
+  `7a67b6bee0425279fbdad1880f265c1feb796897418792f667a19d5c537c9c13`；
+  `TemplateStore` 正文保持 42,164 bytes /
+  `723111253fa41d732e123943ab12dc94e2c459988978f2fad807699ff704525c`。
+- 四种 assembled Prompt digest、M4 最终报告和决策树 14 sections / 54 nodes /
+  `cb9b2f7982126bc4995394a8dc81067b0b5d2119a70c36f74aad3a47fb017c91`
+  解析摘要逐项不变。
+- 批次诊断为
+  [`PA-M5-BINARY-001`](./diagnostics/prompt_m5_binary_decision_migration_2026-07-29.md)；
+  完整本地门禁与 GitHub Actions 双矩阵通过前不启动依赖模板批次。
 
 **退出门禁**：
 

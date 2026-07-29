@@ -18,6 +18,27 @@
 
 ---
 
+## [Unreleased] — 2026-07-29（L2：Prompt ID 解耦 M5.2 Binary Decision 迁移）
+
+- 使用 `git mv` 将高耦合共享系统模板 `pa.binary_decision` 从 `二元决策.txt` 迁移为
+  `二元决策.prompt.md`；manifest 只修改该模板的 `source_path`，稳定 ID、manifest `v2`、
+  `.txt` `legacy_filename`、阶段、角色、输出合同和依赖保持不变。
+- 迁移前后磁盘原始正文保持 43,260 bytes /
+  `7a67b6bee0425279fbdad1880f265c1feb796897418792f667a19d5c537c9c13`，
+  `TemplateStore` 正文保持 42,164 bytes /
+  `723111253fa41d732e123943ab12dc94e2c459988978f2fad807699ff704525c`；
+  四种组装摘要、M4 Prompt metrics 和最终退出报告逐项不变。
+- 默认决策树解析仍返回 legacy `source`，14 个 sections、54 个节点和规范 JSON 摘要不变。
+  迁移实体合同测试改为参数表，同时覆盖 Persona 与 Binary Decision。
+- Prompt/Catalog/Store/Assembler/DecisionTree、记录、GUI 和 L2 集成聚焦回归 118 项通过；
+  CI targeted 177 个目标与完整 `not e2e and not live` 回归通过，coverage 56.83%；
+  3,712 条 Ruff baseline、293 个 focused Ruff 目标、363 个 focused Black 文件、CI 清单
+  自检、兼容政策和差异检查通过。远端验收结果将在推送后回填。
+- 批次证据见
+  [`PA-M5-BINARY-001`](./diagnostics/prompt_m5_binary_decision_migration_2026-07-29.md)。
+
+---
+
 ## [Unreleased] — 2026-07-29（L2：Prompt ID 解耦 M5.1 Persona 单模板迁移）
 
 - 使用 `git mv` 将 `pa.persona` 的物理文件从

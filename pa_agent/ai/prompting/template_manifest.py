@@ -72,11 +72,12 @@ TEMPLATE_MANIFEST: tuple[TemplateSpec, ...] = (
     ),
     _spec(
         pid.BINARY_DECISION,
-        sf.BINARY_DECISION,
+        "二元决策.prompt.md",
         "交易二元决策树",
         ("stage1", "stage2"),
         "system",
         output_contract="stage1_diagnosis",
+        legacy_filename=sf.BINARY_DECISION,
     ),
     _spec(
         pid.MARKET_DIAGNOSIS,
