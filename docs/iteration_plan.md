@@ -5,7 +5,7 @@
 > 适用范围：后续若干轮原子迭代
 > 长期边界：以 [`docs/architecture_roadmap.md`](./architecture_roadmap.md) 为准
 
-> 最近验收：GitHub Actions run `30416289654` 在 `main@b7beeff` 的
+> 最近验收：GitHub Actions run `30469187666` 在 `main@f7dee66` 的
 > Windows/Python 3.11/3.12 双矩阵全部通过。
 > 当前代码/合同侧迭代、L2/M4.3 退出门禁、L6 真实成功主路径和 L3 三轮稳定观察/默认切换
 > 已完成；外部证据未收尾项为 L5 真实数据证据。
