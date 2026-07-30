@@ -18,6 +18,28 @@
 
 ---
 
+## [Unreleased] — 2026-07-30（L2：Prompt ID 解耦 M5.4 Router 语义对迁移）
+
+- 使用 `git mv` 将 bullish/bearish channel、bullish/bearish spike 和 range 的 5 组识别/
+  策略语义对，共 10 个 Stage 2 strategy 模板迁移为同名 `.prompt.md`。
+- manifest 只修改 10 个 `source_path`；稳定 ID、manifest `v2`、不可变 `.txt`
+  `legacy_filename`、阶段、角色、输出合同和语义对依赖保持不变，不保留重复 `.txt` 实体。
+- 10 个模板的 raw/TemplateStore 字节数与 SHA-256 逐项不变，内容身份摘要保持
+  `79fe25f7…d0a711`；迁移合同参数表已覆盖 17/29 个模板。
+- 使用规范化 `normal_channel`、`spike` 和 `trading_range` 输入冻结 5 组路由与 Stage 2
+  组装合同。Prompt ID/legacy filename 路由摘要保持 `17d0a737…5f941`，组装摘要保持
+  `76abfc50…7db95`，总合同保持 `09388ffc…96fda`。
+- M4 最终退出报告保持 `ce8b9555…2c79a`，offline/live/final 三项 gate 均为 `true`；
+  Prompt/Catalog/Store/Assembler/router、记录与迁移合同聚焦回归 132 项通过。
+- 批次证据见
+  [`PA-M5-ROUTER-PAIRS-001`](./diagnostics/prompt_m5_router_pairs_migration_2026-07-30.md)。
+- CI targeted 177 个目标与完整 `not e2e and not live` 回归通过，coverage 56.83%；
+  3,712 条 Ruff baseline、293 个 focused Ruff 目标、363 个 focused Black 文件、CI 清单
+  自检、兼容政策、`py_compile` 和差异检查通过。
+- 实现提交与远端双矩阵验收尚待执行；完成前不把 M5.4 标记为收口。
+
+---
+
 ## [Unreleased] — 2026-07-29（L2：Prompt ID 解耦 M5.3 Stage 1/Base 迁移）
 
 - 在 `pa.binary_decision` 独立验收后，使用 `git mv` 将直接依赖它的

@@ -72,6 +72,56 @@ MIGRATED_PROMPT_SOURCES = (
         sf.MEASURED_MOVE,
         "文件23-MeasuredMove与结构目标.prompt.md",
     ),
+    (
+        prompt_ids.BULLISH_CHANNEL_ID,
+        sf.BULLISH_CHANNEL_ID,
+        "上涨通道分析识别.prompt.md",
+    ),
+    (
+        prompt_ids.BULLISH_CHANNEL_STRATEGY,
+        sf.BULLISH_CHANNEL_STRATEGY,
+        "上涨通道交易策略.prompt.md",
+    ),
+    (
+        prompt_ids.BEARISH_CHANNEL_ID,
+        sf.BEARISH_CHANNEL_ID,
+        "下跌通道分析识别.prompt.md",
+    ),
+    (
+        prompt_ids.BEARISH_CHANNEL_STRATEGY,
+        sf.BEARISH_CHANNEL_STRATEGY,
+        "下跌通道交易策略.prompt.md",
+    ),
+    (
+        prompt_ids.BULLISH_SPIKE_ID,
+        sf.BULLISH_SPIKE_ID,
+        "极速上涨分析识别.prompt.md",
+    ),
+    (
+        prompt_ids.BULLISH_SPIKE_STRATEGY,
+        sf.BULLISH_SPIKE_STRATEGY,
+        "极速上涨交易策略.prompt.md",
+    ),
+    (
+        prompt_ids.BEARISH_SPIKE_ID,
+        sf.BEARISH_SPIKE_ID,
+        "极速下跌分析识别.prompt.md",
+    ),
+    (
+        prompt_ids.BEARISH_SPIKE_STRATEGY,
+        sf.BEARISH_SPIKE_STRATEGY,
+        "极速下跌交易策略.prompt.md",
+    ),
+    (
+        prompt_ids.RANGE_ID,
+        sf.RANGE_ID,
+        "震荡区间分析识别.prompt.md",
+    ),
+    (
+        prompt_ids.RANGE_STRATEGY,
+        sf.RANGE_STRATEGY,
+        "震荡区间交易策略.prompt.md",
+    ),
 )
 
 

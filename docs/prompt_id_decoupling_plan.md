@@ -1,8 +1,8 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1-M4.3 与 M5.0-M5.3 已完成；后续分批迁移剩余 22 个模板
+> 状态：M1-M4.3 与 M5.0-M5.3 已完成；M5.4 已通过本地全部门禁，远端验收待执行
 >
-> 日期：2026-07-29
+> 日期：2026-07-30
 >
 > 适用范围：L2 Prompt 模板引擎、策略路由、两阶段 Pipeline、分析记录与 Prompt 调试界面
 >
@@ -111,16 +111,16 @@ M1 初始状态下，`legacy_filename` 与表中的 `source_path` 相同；M5 �
 | `pa.bar_checklist` | `逐棒分析检查单.prompt.md` | 逐棒分析检查单 |
 | `pa.stop_target_position` | `文件17-止损和止盈与仓位管理.prompt.md` | 止损、止盈与仓位约束 |
 | `pa.measured_move` | `文件23-MeasuredMove与结构目标.prompt.md` | Measured Move 与结构目标 |
-| `pa.channel.bullish.identification` | `上涨通道分析识别.txt` | 上涨通道识别 |
-| `pa.channel.bullish.strategy` | `上涨通道交易策略.txt` | 上涨通道策略 |
-| `pa.channel.bearish.identification` | `下跌通道分析识别.txt` | 下跌通道识别 |
-| `pa.channel.bearish.strategy` | `下跌通道交易策略.txt` | 下跌通道策略 |
-| `pa.spike.bullish.identification` | `极速上涨分析识别.txt` | 极速上涨识别 |
-| `pa.spike.bullish.strategy` | `极速上涨交易策略.txt` | 极速上涨策略 |
-| `pa.spike.bearish.identification` | `极速下跌分析识别.txt` | 极速下跌识别 |
-| `pa.spike.bearish.strategy` | `极速下跌交易策略.txt` | 极速下跌策略 |
-| `pa.range.identification` | `震荡区间分析识别.txt` | 震荡区间识别 |
-| `pa.range.strategy` | `震荡区间交易策略.txt` | 震荡区间策略 |
+| `pa.channel.bullish.identification` | `上涨通道分析识别.prompt.md` | 上涨通道识别 |
+| `pa.channel.bullish.strategy` | `上涨通道交易策略.prompt.md` | 上涨通道策略 |
+| `pa.channel.bearish.identification` | `下跌通道分析识别.prompt.md` | 下跌通道识别 |
+| `pa.channel.bearish.strategy` | `下跌通道交易策略.prompt.md` | 下跌通道策略 |
+| `pa.spike.bullish.identification` | `极速上涨分析识别.prompt.md` | 极速上涨识别 |
+| `pa.spike.bullish.strategy` | `极速上涨交易策略.prompt.md` | 极速上涨策略 |
+| `pa.spike.bearish.identification` | `极速下跌分析识别.prompt.md` | 极速下跌识别 |
+| `pa.spike.bearish.strategy` | `极速下跌交易策略.prompt.md` | 极速下跌策略 |
+| `pa.range.identification` | `震荡区间分析识别.prompt.md` | 震荡区间识别 |
+| `pa.range.strategy` | `震荡区间交易策略.prompt.md` | 震荡区间策略 |
 | `pa.channel.width` | `文件13-窄通道与宽通道策略.txt` | 窄通道与宽通道 |
 | `pa.pattern.wedge` | `文件14-楔形形态分析交易.txt` | 楔形 |
 | `pa.pattern.second_entry` | `文件15-二次入场机会.txt` | 二次入场 |
@@ -613,6 +613,24 @@ GUI 默认显示：
   [`PA-M5-STAGE-BASE-001`](./diagnostics/prompt_m5_stage_base_migration_2026-07-29.md)；
   实现提交 `8c36501` 与 GitHub Actions run `30504189236` 的 Python 3.11/3.12 双矩阵
   已通过，M5.3 已收口。
+
+**M5.4 Router 语义对十模板迁移结果（2026-07-30）**：
+
+- 按 router 运行边界迁移 bullish/bearish channel、bullish/bearish spike 和 range 的
+  5 组识别/策略语义对，共 10 个 Stage 2 strategy 模板；manifest 只修改对应
+  `source_path`。
+- 10 个 raw/TemplateStore 字节数与 SHA-256 逐项不变；稳定 ID、旧 `.txt`
+  `legacy_filename`、manifest v2、阶段、角色、输出合同和语义对依赖不变。
+- 五组规范化 Stage 1 输入的 Prompt ID/legacy filename 路由摘要保持
+  `17d0a7376303f2f631f70a98f6ec042446e233f09a120c05af5f2abf94c5f941`，
+  Stage 2 组装摘要保持
+  `76abfc50d1735f1c55ef4e42f0546539d7e5bfa6f15d662d962a4fe88547db95`。
+- M4 最终报告保持
+  `ce8b9555c8b947cce70046f415e3715f7db09d8f759eb4db808d440cc0e2c79a`，
+  offline/live/final 三项 gate 均为 `true`。
+- 批次诊断为
+  [`PA-M5-ROUTER-PAIRS-001`](./diagnostics/prompt_m5_router_pairs_migration_2026-07-30.md)；
+  当前实现与本地全部门禁已完成，远端 Python 3.11/3.12 双矩阵通过后方可收口。
 
 **退出门禁**：
 

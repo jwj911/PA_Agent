@@ -1,14 +1,14 @@
 # L1-L6 后续迭代执行计划
 
 > 状态：短中期执行计划
-> 更新时间：2026-07-29
+> 更新时间：2026-07-30
 > 适用范围：后续若干轮原子迭代
 > 长期边界：以 [`docs/architecture_roadmap.md`](./architecture_roadmap.md) 为准
 
 > 最近验收：GitHub Actions run `30504189236` 在 `main@8c36501` 的
 > Windows/Python 3.11/3.12 双矩阵全部通过。
-> 当前切片：L2/M5.3 已完成 Stage 1/Base 五模板物理迁移、摘要复核和本地/远端全部门禁；
-> 下一批继续迁移剩余 22 个模板。
+> 当前切片：L2/M5.4 已完成 Router 语义对十模板物理迁移与本地全部质量门禁；下一步提交、
+> 推送并验证远端双矩阵。
 > 当前代码/合同侧迭代、L2/M4.3 退出门禁、L6 真实成功主路径和 L3 三轮稳定观察/默认切换
 > 已完成；外部证据未收尾项为 L5 真实数据证据。
 
@@ -22,7 +22,7 @@
 | 路线 | 当前状态 | 已完成基础 | 主要剩余工作 |
 |---|---|---|---|
 | L1 Provider/数据源注册表 | 固定样例观察与下线策略/CI 门禁已收口；legacy registrar 按政策 retain | registry、entry point、v1 registrar、失败隔离、生命周期/并发/lazy-import 和 5 轮观察已交付 | 观察真实安装扩展；最早 0.3.0 且满足 tag/inventory/迁移证据后才评估删除 |
-| L2 Prompt 模板引擎 | Prompt ID M1-M4.3、退出门禁和 M5.0-M5.3 Stage 1/Base 五模板迁移已完成；旧 loader/fallback 按政策 retain | TemplateStore、29 个稳定 Prompt ID、ID 路由/loader、TemplateContext/AnalysisRecord/Pipeline 双合同、GUI 显示名 + ID/tooltip、Stage 1 schema v2、router 权威兼容 Normalizer、manifest v2、无 filename 模型上下文、固定 `tiktoken 0.12.0`、离线/live 退出报告、source path 投影和 7 个 `.prompt.md` 模板已交付 | 分批迁移剩余 22 个模板；最早 0.3.0 且满足 tag/fallback 零命中/golden 证据后才评估删除旧入口 |
+| L2 Prompt 模板引擎 | Prompt ID M1-M4.3、退出门禁和 M5.0-M5.3 已完成；M5.4 Router 语义对已通过本地全部门禁，远端验收待执行；旧 loader/fallback 按政策 retain | TemplateStore、29 个稳定 Prompt ID、ID 路由/loader、TemplateContext/AnalysisRecord/Pipeline 双合同、GUI 显示名 + ID/tooltip、Stage 1 schema v2、router 权威兼容 Normalizer、manifest v2、无 filename 模型上下文、固定 `tiktoken 0.12.0`、离线/live 退出报告、source path 投影和 17 个 `.prompt.md` 模板已交付 | 完成 M5.4 远端验收，再分批迁移剩余 12 个模板；最早 0.3.0 且满足 tag/fallback 零命中/golden 证据后才评估删除旧入口 |
 | L3 Pipeline Builder | 三轮真实稳定观察与默认 Pipeline 切换已收口，legacy 作为显式回滚保留 | 完整四步 Pipeline、Task 10 全终态矩阵、5 场景×3 轮 fixture 对照；3 个独立真实 pair 的 6 个单体校验和 3 个成对校验均为 `valid=true`；缺失配置默认 `true`，显式 `false` 回滚 | 持续观察 lifecycle/terminal/record 指标；出现未解释偏差先回滚，不删除 legacy facade |
 | L4 性能预算 | v2 hosted baseline、restore、九项 p95 对照和 10% 门禁已收口，进入每日观察 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；`pa-agent.performance.v1` 报告、`l4.synthetic.v2` 批量折算采样、p50/p95、100/500/5000 bars 基准、版本隔离 baseline cache；run `29975410917`/`29975592352` 已通过 | 维护每日 schedule；runner image、benchmark version 或采样合同变化时重建 baseline |
 | L5 经验库升级 | 记录筛选/review catalog/可核验 outcome 导入、本地 evidence 重核、evidence-backed readiness/evaluator、固定切分和 opaque 标注/报告管道已交付，真实数据评估未收口 | completed record shape-only scan；脱敏 record ID catalog；固定 outcome policy + 本地证据 SHA-256；annotation/export/evaluate envelope 校验与本地文件重哈希门禁；人工 `success|failure` 最小化导入与 digest 去重；版本化 dataset/split/report 和 leave-one-out 对照；不改变线上排序 | 为真实 outcome 提供并保留本地证据文件，导入至少两个不同 symbol 的 instrument group，完成相关性标注和指标报告；证据充分后才评估权重 |
@@ -43,7 +43,7 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 | P0 | L5 | curation/review/evidence-backed 评估管道、本地文件重核和 readiness 已建立；唯一 eligible 尚无已平仓证据并继续 defer，经验目录为空 | 提供并保留本地 evidence file，按 record ID 导入至少两个不同 symbol 的 group，使文件重核和 preflight 通过，再生成 Recall/NDCG/fallback/stability 报告 |
 | 已收口 | L4 | v1 负向证据证明 restore/阻断/失败保护；v2 run `29975410917`/`29975592352` 完成建基线和同环境对照 | 每日 schedule 持续观察；环境或合同变化时重建 baseline |
 | 观察 | L1 | 下线策略已固定，当前 retain | 收集真实安装扩展 inventory；未满足 0.3.0/tag/迁移证据前继续保留 |
-| 下一轮 | L2/M5.4 | 5 个 Binary Decision 直接依赖模板已迁移，全部摘要与 M4 报告不变；run `30504189236` 双矩阵通过 | 按 router 语义对迁移 channel/spike/range 模板，继续保持每批路径变更、摘要证据、原子提交和远端验收 |
+| 进行中 | L2/M5.4 | channel/spike/range 10 个模板已迁移，正文、路由、组装和 M4 报告不变；本地全部门禁通过 | 原子提交并验证 GitHub Actions Python 3.11/3.12 双矩阵 |
 
 当前外部证据链路只剩 **L5 真实 outcome/evidence**。L2/M4.3 的离线与真实 Provider 门禁
 均已完成，M5 不再受 live 证据阻塞；L3/L6 已收口并进入持续观察，L1 的实现与下线策略按
@@ -72,7 +72,8 @@ flag-off/flag-on 受控 fixture rollout 观察，并于 2026-07-23/24 连续取�
 3. **L2/M5：继续分批执行 `.prompt.md` 物理存储迁移**。每批只允许修改 manifest
    `source_path` 与物理路径，必须保持 Prompt ID、legacy filename、正文 SHA-256 和 assembled
    Prompt digest 不变。M5.2 已单独迁移共享 `pa.binary_decision`；M5.3 随后迁移其 5 个
-   Stage 1/Base 直接依赖模板，router 动态策略对仍留在后续批次。
+   Stage 1/Base 直接依赖模板；M5.4 已迁移 5 组 channel/spike/range router 语义对并通过
+   本地全部门禁，正在执行远端验收，之后继续迁移剩余 12 个独立 pattern/context 模板。
 4. **L5：真实案例 opaque 导出、人工标注和离线指标报告**。具备真实 evidence 后立即恢复。
 5. **L3/L6**：保持持续观察；Provider、事件或记录合同变化时重跑真实 pair，出现偏差先回滚。
 6. **L4**：每日持续基准，不凭单次波动修改热路径。
