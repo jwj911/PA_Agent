@@ -29,7 +29,7 @@
 - 架构升级路线图：[`docs/architecture_roadmap.md`](./docs/architecture_roadmap.md)
 - Prompt ID 解耦方案：[`docs/prompt_id_decoupling_plan.md`](./docs/prompt_id_decoupling_plan.md)，
   规定稳定逻辑 ID、可变存储路径、旧文件名兼容投影和 M1-M5 迁移门禁；M1-M4.3 与
-  离线/真实 Provider 退出门禁已完成，M5.0-M5.4 已收口。
+  离线/真实 Provider 退出门禁已完成，M5.0-M5.4 已收口，M5.5 本地门禁已通过。
 - M4 Prompt 合同评估：[`docs/prompt_contract_m4_evaluation.md`](./docs/prompt_contract_m4_evaluation.md)，
   固定 M3.3 聚合基线、离线/live 指标口径、脱敏边界和最终退出证据。
 - M5 Source Path 诊断：
@@ -47,6 +47,9 @@
 - M5.4 Router 语义对迁移诊断：
   [`docs/diagnostics/prompt_m5_router_pairs_migration_2026-07-30.md`](./docs/diagnostics/prompt_m5_router_pairs_migration_2026-07-30.md)，
   固定 10 个 channel/spike/range 模板的正文、路由与五组 Stage 2 组装摘要证据。
+- M5.5 Pattern/Context 迁移诊断：
+  [`docs/diagnostics/prompt_m5_pattern_context_migration_2026-07-30.md`](./docs/diagnostics/prompt_m5_pattern_context_migration_2026-07-30.md)，
+  固定最后 12 个模板的正文、10 组路由与 Stage 2 组装摘要证据。
 - 短中期执行计划：[`docs/iteration_plan.md`](./docs/iteration_plan.md)，在长期边界以
   `architecture_roadmap` 为准的前提下，拆解后续若干轮交付物、验收标准和依赖顺序。
 - L6/L3 真实观察手册：[`docs/live_observation_runbook.md`](./docs/live_observation_runbook.md)，
@@ -653,6 +656,9 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     range 的 10 个模板；除通用正文/身份不变量外，五组规范化输入的 Prompt ID/legacy
     filename 路由顺序与 Stage 2 组装摘要必须逐项不变。实现提交 `47d0b76` 与 GitHub
     Actions run `30507318293` 双矩阵已通过，后续迁移剩余 12 个独立 pattern/context 模板。
+    M5.5 迁移最后 12 个 pattern/context 模板；迁移合同必须覆盖 29/29 个模板，运行时目录
+    必须保持 29 个 `.prompt.md`、0 个 `.txt`，并以 10 组路由/组装证据覆盖全部 12 个 ID。
+    当前实现与本地全部门禁已完成，远端验收和最终完成审计通过前不得标记 M5 收口。
 21. **L1 外部扩展兼容观察当前进度**：外部风格 data source/AI client registrar 已完成 5 轮
     重复观察；versioned registrar 必须声明 `pa-agent.registry-extension.v1`，旧的未声明版本
     callable 继续兼容，未知显式版本只隔离当前扩展。观察样例只使用 marker builder，不连接

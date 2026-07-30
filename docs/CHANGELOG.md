@@ -18,6 +18,30 @@
 
 ---
 
+## [Unreleased] — 2026-07-30（L2：Prompt ID 解耦 M5.5 Pattern/Context 迁移）
+
+- 使用 `git mv` 将 channel width、wedge、second entry、breakout failure、H1/H2、
+  Always In、barbwire、magnet、final flag、MTR、triangle 和 double top/bottom 共 12 个
+  Stage 2 pattern/context 模板迁移为同名 `.prompt.md`。
+- manifest 只修改 12 个 `source_path`；稳定 ID、manifest `v2`、不可变 `.txt`
+  `legacy_filename`、阶段、角色和输出合同保持不变，不保留重复 `.txt` 实体。
+- 12 个模板的 raw/TemplateStore 字节数与 SHA-256 逐项不变，内容身份摘要保持
+  `7614a9be…17525`；迁移合同参数表现已覆盖 29/29 个运行时模板。
+- 10 组规范化输入覆盖全部 12 个 Prompt ID。Prompt ID/legacy filename 路由摘要保持
+  `3c42df28…98b70`，Stage 2 组装摘要保持 `155063ff…75e26`，总合同保持
+  `0a0e16c0…9c17f`。
+- M4 最终退出报告保持 `ce8b9555…2c79a`，offline/live/final 三项 gate 均为 `true`；
+  Prompt/Catalog/Store/Assembler/router、记录与迁移合同聚焦回归 144 项通过。
+- `prompt_engineering/` 现有 29 个 `.prompt.md`、0 个 `.txt`；模板总数仍为 29。
+- 批次证据见
+  [`PA-M5-PATTERN-CONTEXT-001`](./diagnostics/prompt_m5_pattern_context_migration_2026-07-30.md)。
+- CI targeted 177 个目标与完整 `not e2e and not live` 回归通过，coverage 56.83%；
+  3,712 条 Ruff baseline、293 个 focused Ruff 目标、363 个 focused Black 文件、CI 清单
+  自检、兼容政策、`py_compile` 和差异检查通过。
+- 实现提交与远端双矩阵验收尚待执行；完成前不把 M5.5 或整个 M5 标记为收口。
+
+---
+
 ## [Unreleased] — 2026-07-30（L2：Prompt ID 解耦 M5.4 Router 语义对迁移）
 
 - 使用 `git mv` 将 bullish/bearish channel、bullish/bearish spike 和 range 的 5 组识别/

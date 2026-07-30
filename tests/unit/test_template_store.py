@@ -122,6 +122,66 @@ MIGRATED_PROMPT_SOURCES = (
         sf.RANGE_STRATEGY,
         "震荡区间交易策略.prompt.md",
     ),
+    (
+        prompt_ids.CHANNEL_WIDTH,
+        sf.CHANNEL_WIDTH,
+        "文件13-窄通道与宽通道策略.prompt.md",
+    ),
+    (
+        prompt_ids.WEDGE,
+        sf.WEDGE,
+        "文件14-楔形形态分析交易.prompt.md",
+    ),
+    (
+        prompt_ids.REVERSAL,
+        sf.REVERSAL,
+        "文件15-二次入场机会.prompt.md",
+    ),
+    (
+        prompt_ids.BREAKOUT_FAILURE,
+        sf.BREAKOUT_FAILURE,
+        "文件18-突破失败与突破测试.prompt.md",
+    ),
+    (
+        prompt_ids.H1H2,
+        sf.H1H2,
+        "文件19-H1H2-L1L2计数.prompt.md",
+    ),
+    (
+        prompt_ids.ALWAYS_IN,
+        sf.ALWAYS_IN,
+        "文件20-AlwaysIn与20GB.prompt.md",
+    ),
+    (
+        prompt_ids.BARBWIRE,
+        sf.BARBWIRE,
+        "文件21-铁丝网与无交易环境.prompt.md",
+    ),
+    (
+        prompt_ids.MAGNET,
+        sf.MAGNET,
+        "文件22-信号失败后的磁力位.prompt.md",
+    ),
+    (
+        prompt_ids.FINAL_FLAG,
+        sf.FINAL_FLAG,
+        "文件24-最终旗形与趋势末端.prompt.md",
+    ),
+    (
+        prompt_ids.MTR,
+        sf.MTR,
+        "文件25-主要趋势反转MTR.prompt.md",
+    ),
+    (
+        prompt_ids.TRIANGLE,
+        sf.TRIANGLE,
+        "文件27-三角形与收敛形态.prompt.md",
+    ),
+    (
+        prompt_ids.DOUBLE_TOP_BOTTOM,
+        sf.DOUBLE_TOP_BOTTOM,
+        "文件28-双重顶底与微型结构.prompt.md",
+    ),
 )
 
 

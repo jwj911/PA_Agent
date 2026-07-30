@@ -1,6 +1,6 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1-M4.3 与 M5.0-M5.4 已完成；后续分批迁移剩余 12 个模板
+> 状态：M1-M4.3 与 M5.0-M5.4 已完成；M5.5 已通过本地全部门禁，远端验收待执行
 >
 > 日期：2026-07-30
 >
@@ -121,18 +121,18 @@ M1 初始状态下，`legacy_filename` 与表中的 `source_path` 相同；M5 �
 | `pa.spike.bearish.strategy` | `极速下跌交易策略.prompt.md` | 极速下跌策略 |
 | `pa.range.identification` | `震荡区间分析识别.prompt.md` | 震荡区间识别 |
 | `pa.range.strategy` | `震荡区间交易策略.prompt.md` | 震荡区间策略 |
-| `pa.channel.width` | `文件13-窄通道与宽通道策略.txt` | 窄通道与宽通道 |
-| `pa.pattern.wedge` | `文件14-楔形形态分析交易.txt` | 楔形 |
-| `pa.pattern.second_entry` | `文件15-二次入场机会.txt` | 二次入场 |
-| `pa.pattern.breakout_failure` | `文件18-突破失败与突破测试.txt` | 突破失败与突破测试 |
-| `pa.pattern.h1_h2_l1_l2` | `文件19-H1H2-L1L2计数.txt` | H1/H2/L1/L2 计数 |
-| `pa.context.always_in_20gb` | `文件20-AlwaysIn与20GB.txt` | Always In 与 20GB |
-| `pa.context.barbwire` | `文件21-铁丝网与无交易环境.txt` | 铁丝网与无交易环境 |
-| `pa.context.failed_signal_magnet` | `文件22-信号失败后的磁力位.txt` | 失败信号与磁力位 |
-| `pa.pattern.final_flag` | `文件24-最终旗形与趋势末端.txt` | 最终旗形与趋势末端 |
-| `pa.pattern.mtr` | `文件25-主要趋势反转MTR.txt` | 主要趋势反转 MTR |
-| `pa.pattern.triangle` | `文件27-三角形与收敛形态.txt` | 三角形与收敛形态 |
-| `pa.pattern.double_top_bottom` | `文件28-双重顶底与微型结构.txt` | 双重顶底与微型结构 |
+| `pa.channel.width` | `文件13-窄通道与宽通道策略.prompt.md` | 窄通道与宽通道 |
+| `pa.pattern.wedge` | `文件14-楔形形态分析交易.prompt.md` | 楔形 |
+| `pa.pattern.second_entry` | `文件15-二次入场机会.prompt.md` | 二次入场 |
+| `pa.pattern.breakout_failure` | `文件18-突破失败与突破测试.prompt.md` | 突破失败与突破测试 |
+| `pa.pattern.h1_h2_l1_l2` | `文件19-H1H2-L1L2计数.prompt.md` | H1/H2/L1/L2 计数 |
+| `pa.context.always_in_20gb` | `文件20-AlwaysIn与20GB.prompt.md` | Always In 与 20GB |
+| `pa.context.barbwire` | `文件21-铁丝网与无交易环境.prompt.md` | 铁丝网与无交易环境 |
+| `pa.context.failed_signal_magnet` | `文件22-信号失败后的磁力位.prompt.md` | 失败信号与磁力位 |
+| `pa.pattern.final_flag` | `文件24-最终旗形与趋势末端.prompt.md` | 最终旗形与趋势末端 |
+| `pa.pattern.mtr` | `文件25-主要趋势反转MTR.prompt.md` | 主要趋势反转 MTR |
+| `pa.pattern.triangle` | `文件27-三角形与收敛形态.prompt.md` | 三角形与收敛形态 |
+| `pa.pattern.double_top_bottom` | `文件28-双重顶底与微型结构.prompt.md` | 双重顶底与微型结构 |
 
 ### 4.3 `TemplateSpec`
 
@@ -633,12 +633,28 @@ GUI 默认显示：
   实现提交 `47d0b76` 与 GitHub Actions run `30507318293` 的 Python 3.11/3.12 双矩阵
   已通过，M5.4 已收口。
 
+**M5.5 Pattern/Context 十二模板迁移结果（2026-07-30）**：
+
+- 迁移最后 12 个 channel width、pattern 与 context 模板；manifest 只修改对应
+  `source_path`，迁移合同参数表现覆盖全部 29 个运行时模板。
+- 12 个 raw/TemplateStore 字节数与 SHA-256 逐项不变；稳定 ID、旧 `.txt`
+  `legacy_filename`、manifest v2、阶段、角色和输出合同不变。
+- 10 组规范化输入覆盖全部 12 个 Prompt ID；路由摘要保持
+  `3c42df2872e5d8f5522c0eb5d09c20640090a0a526d47bbe3e83d30ed2898b70`，
+  Stage 2 组装摘要保持
+  `155063ffed987bab45bdc641b89556e8f1e876f13ec1d3b2d5f102dda1475e26`。
+- 运行时目录现有 29 个 `.prompt.md`、0 个 `.txt`；M4 最终报告仍为
+  `ce8b9555c8b947cce70046f415e3715f7db09d8f759eb4db808d440cc0e2c79a`。
+- 批次诊断为
+  [`PA-M5-PATTERN-CONTEXT-001`](./diagnostics/prompt_m5_pattern_context_migration_2026-07-30.md)；
+  当前实现与本地全部门禁已完成，远端 Python 3.11/3.12 双矩阵通过后方可收口。
+
 **退出门禁**：
 
 - 文件移动前后每个 ID 的内容 SHA-256 不变；
 - 所有 assembled Prompt digest 不变；
 - 旧记录和 legacy API 仍能通过 alias 解析；
-- 确认 Markdown lint/预览收益后，再决定是否继续迁移剩余文件。
+- 运行时目录保持 29 个 `.prompt.md`、0 个 `.txt`，并完成 29/29 最终审计。
 
 ## 8. 兼容矩阵
 
