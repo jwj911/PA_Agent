@@ -18,6 +18,24 @@
 
 ---
 
+## [Unreleased] — 2026-07-29（L2：Prompt ID 解耦 M5.3 Stage 1/Base 迁移）
+
+- 在 `pa.binary_decision` 独立验收后，使用 `git mv` 将直接依赖它的
+  `pa.market_diagnosis`、`pa.kline_signal`、`pa.bar_checklist`、
+  `pa.stop_target_position` 和 `pa.measured_move` 迁移为同名 `.prompt.md`。
+- manifest 只修改 5 个 `source_path`；稳定 ID、manifest `v2`、不可变 `.txt`
+  `legacy_filename`、阶段、角色、输出合同和依赖保持不变，不保留重复 `.txt` 实体。
+- 五个模板的 raw/TemplateStore 字节数与 SHA-256 逐项不变；四种组装摘要和 M4 最终退出
+  报告 `ce8b9555…2c79a` 保持一致。迁移合同参数表已覆盖全部 7 个已迁移模板。
+- Prompt/Catalog/Store/Assembler/DecisionTree、记录、GUI 和 L2 集成聚焦回归 123 项通过；
+  CI targeted 177 个目标与完整 `not e2e and not live` 回归通过，coverage 56.83%；
+  3,712 条 Ruff baseline、293 个 focused Ruff 目标、363 个 focused Black 文件、CI 清单
+  自检、兼容政策和差异检查通过。远端验收结果将在推送后回填。
+- 批次证据见
+  [`PA-M5-STAGE-BASE-001`](./diagnostics/prompt_m5_stage_base_migration_2026-07-29.md)。
+
+---
+
 ## [Unreleased] — 2026-07-29（L2：Prompt ID 解耦 M5.2 Binary Decision 迁移）
 
 - 使用 `git mv` 将高耦合共享系统模板 `pa.binary_decision` 从 `二元决策.txt` 迁移为

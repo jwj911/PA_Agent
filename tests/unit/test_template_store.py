@@ -47,6 +47,31 @@ MIGRATED_PROMPT_SOURCES = (
         sf.BINARY_DECISION,
         "二元决策.prompt.md",
     ),
+    (
+        prompt_ids.MARKET_DIAGNOSIS,
+        sf.MARKET_DIAGNOSIS,
+        "市场诊断框架.prompt.md",
+    ),
+    (
+        prompt_ids.KLINE_SIGNAL,
+        sf.KLINE_SIGNAL,
+        "文件16-K线信号识别.prompt.md",
+    ),
+    (
+        prompt_ids.BAR_CHECKLIST,
+        sf.BAR_CHECKLIST,
+        "逐棒分析检查单.prompt.md",
+    ),
+    (
+        prompt_ids.STOP_TARGET_POSITION,
+        sf.STOP_TARGET_POSITION,
+        "文件17-止损和止盈与仓位管理.prompt.md",
+    ),
+    (
+        prompt_ids.MEASURED_MOVE,
+        sf.MEASURED_MOVE,
+        "文件23-MeasuredMove与结构目标.prompt.md",
+    ),
 )
 
 

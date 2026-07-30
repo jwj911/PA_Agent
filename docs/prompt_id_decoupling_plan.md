@@ -1,6 +1,6 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1-M4.3 与 M5.0-M5.2 已完成；后续分批迁移剩余 27 个模板
+> 状态：M1-M4.3 与 M5.0-M5.2 已完成；M5.3 Stage 1/Base 五模板迁移正在验收
 >
 > 日期：2026-07-29
 >
@@ -106,11 +106,11 @@ M1 初始状态下，`legacy_filename` 与表中的 `source_path` 相同；M5 �
 |---|---|---|
 | `pa.persona` | `提示词大纲_人设与思维方式.prompt.md` | 人设与思维方式 |
 | `pa.binary_decision` | `二元决策.prompt.md` | 交易二元决策树 |
-| `pa.market_diagnosis` | `市场诊断框架.txt` | 市场诊断框架 |
-| `pa.kline_signal` | `文件16-K线信号识别.txt` | K 线信号识别 |
-| `pa.bar_checklist` | `逐棒分析检查单.txt` | 逐棒分析检查单 |
-| `pa.stop_target_position` | `文件17-止损和止盈与仓位管理.txt` | 止损、止盈与仓位约束 |
-| `pa.measured_move` | `文件23-MeasuredMove与结构目标.txt` | Measured Move 与结构目标 |
+| `pa.market_diagnosis` | `市场诊断框架.prompt.md` | 市场诊断框架 |
+| `pa.kline_signal` | `文件16-K线信号识别.prompt.md` | K 线信号识别 |
+| `pa.bar_checklist` | `逐棒分析检查单.prompt.md` | 逐棒分析检查单 |
+| `pa.stop_target_position` | `文件17-止损和止盈与仓位管理.prompt.md` | 止损、止盈与仓位约束 |
+| `pa.measured_move` | `文件23-MeasuredMove与结构目标.prompt.md` | Measured Move 与结构目标 |
 | `pa.channel.bullish.identification` | `上涨通道分析识别.txt` | 上涨通道识别 |
 | `pa.channel.bullish.strategy` | `上涨通道交易策略.txt` | 上涨通道策略 |
 | `pa.channel.bearish.identification` | `下跌通道分析识别.txt` | 下跌通道识别 |
@@ -598,6 +598,20 @@ GUI 默认显示：
   [`PA-M5-BINARY-001`](./diagnostics/prompt_m5_binary_decision_migration_2026-07-29.md)；
   实现提交 `980c294` 与 GitHub Actions run `30490054789` 的 Python 3.11/3.12 双矩阵
   已通过，M5.2 已收口。
+
+**M5.3 Stage 1/Base 五模板迁移结果（2026-07-29）**：
+
+- 在共享依赖验收后，将 `pa.market_diagnosis`、`pa.kline_signal`、
+  `pa.bar_checklist`、`pa.stop_target_position` 和 `pa.measured_move` 成组迁移为
+  `.prompt.md`；manifest 只修改对应 `source_path`。
+- 5 个 raw/TemplateStore 字节数与 SHA-256 逐项不变；稳定 ID、旧 `.txt`
+  `legacy_filename`、manifest v2、阶段、角色、输出合同和依赖不变。
+- 四种 assembled Prompt digest 与 M4 最终报告
+  `ce8b9555c8b947cce70046f415e3715f7db09d8f759eb4db808d440cc0e2c79a`
+  逐项不变。
+- 批次诊断为
+  [`PA-M5-STAGE-BASE-001`](./diagnostics/prompt_m5_stage_base_migration_2026-07-29.md)；
+  完整本地门禁与 GitHub Actions 双矩阵通过前不启动 router 策略对批次。
 
 **退出门禁**：
 

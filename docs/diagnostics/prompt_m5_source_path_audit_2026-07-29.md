@@ -69,3 +69,6 @@ legacy filename 合同均保持不变。批次证据见
 
 M5.2 继续单独迁移高耦合 `pa.binary_decision`，并额外固定决策树解析合同。批次证据见
 [`PA-M5-BINARY-001`](./prompt_m5_binary_decision_migration_2026-07-29.md)。
+
+M5.3 在共享依赖验收后成组迁移 5 个 Stage 1/Base 直接依赖模板。批次证据见
+[`PA-M5-STAGE-BASE-001`](./prompt_m5_stage_base_migration_2026-07-29.md)。
