@@ -18,6 +18,26 @@
 
 ---
 
+## [Unreleased] — 2026-07-30（L2：可选语义审查 Agent 评估）
+
+- 在 Prompt ID M1-M5 收口后，审查现有
+  `Stage1Step -> RouteStep -> Stage2Step -> PersistStep` 边界，以及 Normalizer、
+  schema/coherence/trace/business-rule 校验、受限重试和防篡改能力。
+- M4 真实候选只有 2 条，虽为 0 终局失败、0 验证重试、0 路由冲突，但没有经人工确认的
+  “validator 通过但语义错误”正样本，无法证明第三个 Agent 有新增召回。
+- 结论为不实现生产语义审查 Agent，也不把 Stage 1/Stage 2 拆成更多常驻 Agent。当前两阶段
+  已具备职责分离；额外调用会增加上下文复制、token、延迟、误报和权威冲突。
+- 只允许未来进行脱敏后喂养、离线隔离、完全人工触发的 shadow 评估；reviewer 不得修改
+  Stage 1、重路由、触发 Stage 2 重试或写生产记录。
+- 固定重新评估门禁：至少 20 个经人工裁决的语义错误正样本、60 个分层 clean negative，
+  新增召回率至少 80%、误报率不超过 5%、重复稳定率至少 95%、平均输入 token 增幅不超过
+  10%、p95 延迟增幅不超过 20%。10 批只用于 smoke，不作为上线证据。
+- 评估证据见
+  [`PA-SEMANTIC-REVIEW-EVAL-001`](./diagnostics/semantic_review_agent_evaluation_2026-07-30.md)。
+  当前不创建 Agent 代码，优先级恢复为 L5 真实 outcome/evidence 数据收集。
+
+---
+
 ## [Unreleased] — 2026-07-30（L2：Prompt ID 解耦 M5.5 Pattern/Context 迁移）
 
 - 使用 `git mv` 将 channel width、wedge、second entry、breakout failure、H1/H2、

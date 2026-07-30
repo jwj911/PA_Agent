@@ -53,6 +53,9 @@
 - M5 完成审计：
   [`docs/diagnostics/prompt_m5_completion_audit_2026-07-30.md`](./docs/diagnostics/prompt_m5_completion_audit_2026-07-30.md)，
   逐 ID 比对 M5.0 基线 Git blob、legacy/ID 加载与 29/29 迁移合同。
+- 语义审查 Agent 评估：
+  [`docs/diagnostics/semantic_review_agent_evaluation_2026-07-30.md`](./docs/diagnostics/semantic_review_agent_evaluation_2026-07-30.md)，
+  当前结论为不实现生产多 Agent，只允许满足门禁后的人工离线 shadow 评估。
 - 短中期执行计划：[`docs/iteration_plan.md`](./docs/iteration_plan.md)，在长期边界以
   `architecture_roadmap` 为准的前提下，拆解后续若干轮交付物、验收标准和依赖顺序。
 - L6/L3 真实观察手册：[`docs/live_observation_runbook.md`](./docs/live_observation_runbook.md)，
@@ -664,6 +667,10 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     实现提交 `a9ecb76` 与 GitHub Actions run `30509955576` 双矩阵已通过；最终审计又逐 ID
     证明当前 Git blob 与 M5.0 基线相同、legacy/ID loader 等价。M5 已收口，下一迭代仅评估
     可选语义审查 Agent，不直接引入多 Agent 或 Prompt 正文优化。
+    `PA-SEMANTIC-REVIEW-EVAL-001` 已完成该评估：当前两阶段与确定性校验边界足够，只有
+    2 条 clean live 候选且没有人工确认的规则外语义错误，不能证明第三个 Agent 有收益。
+    不实现生产 reviewer；未来只允许人工触发、离线隔离的 shadow 工具，并须先满足 20 个
+    正样本、60 个 clean negative、召回/误报/稳定性及 token/延迟门禁。
 21. **L1 外部扩展兼容观察当前进度**：外部风格 data source/AI client registrar 已完成 5 轮
     重复观察；versioned registrar 必须声明 `pa-agent.registry-extension.v1`，旧的未声明版本
     callable 继续兼容，未知显式版本只隔离当前扩展。观察样例只使用 marker builder，不连接

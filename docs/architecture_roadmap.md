@@ -22,7 +22,7 @@
 | 路线 | 当前状态 | 已有基础 | 主要剩余工作 |
 |---|---|---|---|
 | L1 Provider/数据源注册表 | 扩展兼容观察与下线策略/CI 门禁已收口；legacy registrar 按政策 retain | registry、entry point、v1 registrar、失败隔离、并发/lazy-import 和固定样例观察已完成；`compatibility_policy.json` 强制保留未声明版本 callable | 观察真实安装扩展；最早 0.3.0 且具备 v0.2.0 tag、inventory 和迁移报告后才评估删除 |
-| L2 Prompt 模板引擎 | Prompt ID M1-M5 与 29/29 最终审计已收口；旧 loader/fallback 按政策 retain | TemplateStore、29 个稳定 Prompt ID、ID 路由/loader、TemplateContext/AnalysisRecord/Pipeline 双合同、GUI 显示名 + ID/tooltip、Stage 1 schema v2、router 权威兼容 Normalizer、manifest v2、无 filename 模型上下文、固定 `tiktoken 0.12.0`、离线/live 退出报告、legacy 到 source path 投影和 29 个 `.prompt.md` 模板已完成 | 独立评估可选语义审查 Agent；最早 0.3.0 且具备 v0.2.0 tag、fallback 零命中和 golden 报告后才评估删除旧入口 |
+| L2 Prompt 模板引擎 | Prompt ID M1-M5、29/29 最终审计和语义审查 Agent 评估已收口；当前不实现生产多 Agent；旧 loader/fallback 按政策 retain | TemplateStore、29 个稳定 Prompt ID、ID 路由/loader、TemplateContext/AnalysisRecord/Pipeline 双合同、GUI 显示名 + ID/tooltip、Stage 1 schema v2、router 权威兼容 Normalizer、manifest v2、无 filename 模型上下文、固定 `tiktoken 0.12.0`、离线/live 退出报告、legacy 到 source path 投影和 29 个 `.prompt.md` 模板已完成 | 观察 validator/retry/route 指标；只有积累 20 个语义错误正样本和 60 个 clean negative 后才重开离线 shadow reviewer；最早 0.3.0 且具备 v0.2.0 tag、fallback 零命中和 golden 报告后才评估删除旧入口 |
 | L3 Pipeline Builder | 三轮真实稳定观察与默认 Pipeline 切换已收口，legacy 作为显式回滚保留 | 完整四步 Pipeline、Task 10 全终态矩阵、5 场景×3 轮 fixture 对照；3 个独立真实 pair 的 6 个单体校验和 3 个成对校验均为 `valid=true`；新旧缺失配置默认 `true`，显式 `false` 回滚 | 持续观察 lifecycle/terminal/record 指标；出现未解释偏差先回滚，不删除 legacy facade |
 | L4 性能优化 | v2 hosted baseline 与同环境 10% p95 对照已收口，进入每日持续观察 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；`pa-agent.performance.v1` 报告、`l4.synthetic.v2` 批量折算采样、p50/p95、100/500/5000 bars 基准、版本隔离 baseline cache 和 artifact；run `29975410917`/`29975592352` 完成建基线与 restore 对照 | 维护每日 schedule；runner image、benchmark version 或采样合同变化时重建 baseline |
 | L5 经验库升级 | 记录筛选/review catalog/可核验 outcome 导入、本地 evidence 重核、evidence-backed readiness、固定切分、opaque 标注/报告管道已交付，真实数据评估未收口 | completed record shape-only scan；脱敏 record ID catalog；固定 outcome policy + 本地证据 SHA-256；annotation/export/evaluate envelope 校验与本地文件重哈希门禁；人工 `success|failure` 最小化导入与 digest 去重；全量相关性排序 + K 线相似度；版本化 dataset/split/report；HMAC opaque catalog 和 leave-one-out 对照；不改变线上排序 | 为真实 outcome 提供并保留本地证据文件，导入至少两个不同 symbol 的 instrument group，完成相关性标注和指标报告；证据充分后才评估权重 |
@@ -360,6 +360,10 @@ M5.5 已迁移最后 12 个 channel width、pattern 和 context 模板；迁移�
 最终报告均与迁移前证据一致；实现提交 `a9ecb76` 和 GitHub Actions run `30509955576`
 的双矩阵已通过。`PA-M5-COMPLETE-001` 又逐 ID 证明当前 Git blob 与 M5.0 基线相同、
 legacy/ID loader 等价，M5 已收口。下一迭代只评估可选语义审查 Agent，不直接引入多 Agent。
+`PA-SEMANTIC-REVIEW-EVAL-001` 已完成该评估：现有两阶段已经实现诊断/决策职责分离，并有
+Normalizer、coherence、trace、业务规则、受限重试和程序 router 权威；2 条 clean live
+候选不足以证明第三个 Agent 有增益。当前不实现生产 reviewer，只保留满足 20 个正样本、
+60 个 clean negative 及质量/成本门禁后的人工离线 shadow 选项。
 
 ## 6. L3：Pipeline Builder / State Machine
 
