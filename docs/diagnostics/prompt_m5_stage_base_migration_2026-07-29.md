@@ -4,7 +4,7 @@
 >
 > 日期：2026-07-29
 >
-> 状态：M5.3 本地全部质量门禁已通过，远端验收待完成
+> 状态：M5.3 本地全部质量门禁与远端验收均已完成
 
 ## 目标
 
@@ -63,8 +63,11 @@ M4 最终退出报告 SHA-256 保持
 - Ruff 0.15.13 baseline 精确保持 3,712 条批准诊断。
 - 293 个 focused Ruff 目标与展开后的 363 个 focused Black 文件通过。
 - CI 清单自检、兼容政策、`git diff --check` 和 M4 最终报告逐字节复现通过。
+- 实现提交：`8c36501`。
+- GitHub Actions run `30504189236`：
+  - Windows/Python 3.11 job `90750251163` 为 `success`；
+  - Windows/Python 3.12 job `90750251230` 为 `success`。
 
 ## 后续
 
-完整本地门禁与 GitHub Actions Python 3.11/3.12 双矩阵通过后，M5.3 才能收口。剩余
-22 个模板按 router 语义对和独立 pattern 组继续分批迁移。
+M5.3 已收口。剩余 22 个模板按 router 语义对和独立 pattern 组继续分批迁移。

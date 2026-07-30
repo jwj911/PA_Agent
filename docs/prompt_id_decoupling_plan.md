@@ -1,6 +1,6 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1-M4.3 与 M5.0-M5.2 已完成；M5.3 Stage 1/Base 五模板迁移正在验收
+> 状态：M1-M4.3 与 M5.0-M5.3 已完成；后续分批迁移剩余 22 个模板
 >
 > 日期：2026-07-29
 >
@@ -611,7 +611,8 @@ GUI 默认显示：
   逐项不变。
 - 批次诊断为
   [`PA-M5-STAGE-BASE-001`](./diagnostics/prompt_m5_stage_base_migration_2026-07-29.md)；
-  完整本地门禁与 GitHub Actions 双矩阵通过前不启动 router 策略对批次。
+  实现提交 `8c36501` 与 GitHub Actions run `30504189236` 的 Python 3.11/3.12 双矩阵
+  已通过，M5.3 已收口。
 
 **退出门禁**：
 

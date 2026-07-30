@@ -644,7 +644,8 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     `30490054789` 双矩阵已通过。
     M5.3 在 Binary Decision 验收后成组迁移 5 个直接依赖的 Stage 1/Base 模板；每个模板
     的 raw/TemplateStore 摘要、旧 filename 投影和四种组装摘要必须逐项不变，router 动态
-    策略对继续留在后续独立批次。
+    策略对继续留在后续独立批次。实现提交 `8c36501` 与 GitHub Actions run
+    `30504189236` 双矩阵已通过。
 21. **L1 外部扩展兼容观察当前进度**：外部风格 data source/AI client registrar 已完成 5 轮
     重复观察；versioned registrar 必须声明 `pa-agent.registry-extension.v1`，旧的未声明版本
     callable 继续兼容，未知显式版本只隔离当前扩展。观察样例只使用 marker builder，不连接
