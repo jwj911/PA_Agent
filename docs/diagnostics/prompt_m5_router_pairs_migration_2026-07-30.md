@@ -4,7 +4,7 @@
 >
 > 日期：2026-07-30
 >
-> 状态：M5.4 实现与本地全部质量门禁已完成；远端验收待执行
+> 状态：M5.4 本地全部质量门禁与远端验收均已完成
 
 ## 目标
 
@@ -89,8 +89,11 @@ M4 最终退出报告 SHA-256 保持
 - Ruff 0.15.13 baseline 精确保持 3,712 条批准诊断。
 - 293 个 focused Ruff 目标与展开后的 363 个 focused Black 文件通过。
 - CI 清单自检、兼容政策、`py_compile` 和 `git diff --check` 通过。
+- 实现提交：`47d0b76`。
+- GitHub Actions run `30507318293`：
+  - Windows/Python 3.11 job `90759786082` 为 `success`；
+  - Windows/Python 3.12 job `90759786120` 为 `success`。
 
 ## 后续
 
-实现提交推送并通过 GitHub Actions Python 3.11/3.12 双矩阵后，M5.4 方可收口。届时
-剩余 12 个独立 pattern/context 模板继续按小批次迁移。
+M5.4 已收口。剩余 12 个独立 pattern/context 模板继续按小批次迁移。

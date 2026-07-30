@@ -36,7 +36,9 @@
 - CI targeted 177 个目标与完整 `not e2e and not live` 回归通过，coverage 56.83%；
   3,712 条 Ruff baseline、293 个 focused Ruff 目标、363 个 focused Black 文件、CI 清单
   自检、兼容政策、`py_compile` 和差异检查通过。
-- 实现提交与远端双矩阵验收尚待执行；完成前不把 M5.4 标记为收口。
+- 实现提交 `47d0b76` 已推送到 `main`；GitHub Actions run `30507318293` 的
+  Windows/Python 3.11 与 3.12 两个矩阵 job 均为 `success`。M5.4 已收口，后续迁移剩余
+  12 个独立 pattern/context 模板。
 
 ---
 

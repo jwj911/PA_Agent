@@ -1,6 +1,6 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1-M4.3 与 M5.0-M5.3 已完成；M5.4 已通过本地全部门禁，远端验收待执行
+> 状态：M1-M4.3 与 M5.0-M5.4 已完成；后续分批迁移剩余 12 个模板
 >
 > 日期：2026-07-30
 >
@@ -630,7 +630,8 @@ GUI 默认显示：
   offline/live/final 三项 gate 均为 `true`。
 - 批次诊断为
   [`PA-M5-ROUTER-PAIRS-001`](./diagnostics/prompt_m5_router_pairs_migration_2026-07-30.md)；
-  当前实现与本地全部门禁已完成，远端 Python 3.11/3.12 双矩阵通过后方可收口。
+  实现提交 `47d0b76` 与 GitHub Actions run `30507318293` 的 Python 3.11/3.12 双矩阵
+  已通过，M5.4 已收口。
 
 **退出门禁**：
 

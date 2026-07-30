@@ -75,4 +75,5 @@ M5.3 在共享依赖验收后成组迁移 5 个 Stage 1/Base 直接依赖模板�
 
 M5.4 按 router 语义边界成组迁移 10 个 channel/spike/range 模板，并额外固定五组路由与
 Stage 2 组装合同。批次证据见
-[`PA-M5-ROUTER-PAIRS-001`](./prompt_m5_router_pairs_migration_2026-07-30.md)。
+[`PA-M5-ROUTER-PAIRS-001`](./prompt_m5_router_pairs_migration_2026-07-30.md)；实现提交
+`47d0b76` 与 GitHub Actions run `30507318293` 双矩阵已通过。
