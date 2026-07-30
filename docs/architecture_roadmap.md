@@ -1,12 +1,13 @@
 # L1-L6 架构升级路线图
 
 > 状态：规划基线
-> 更新时间：2026-07-30
+> 更新时间：2026-07-31
 > 适用分支：`main`
 > 关联路线：[`docs/backend_review_report.md`](./backend_review_report.md)
 > 短中期执行计划：[`docs/iteration_plan.md`](./iteration_plan.md)
 > 最近验收：GitHub Actions run `30509955576`，`main@a9ecb76` 的
 > Windows/Python 3.11/3.12 全门禁通过。
+> 当前执行基线：`main@71de023`；L5 真实 evidence 前置条件稳定阻塞，L5 仍未完成。
 
 本文档把长期路线图 L1-L6 细化为可分批迁移的架构计划。目标是降低模块之间的隐式耦合，
 让 GUI、无 GUI 运行、测试和未来的服务端入口共享同一套应用核心，同时保持当前两阶段分析
@@ -25,19 +26,24 @@
 | L2 Prompt 模板引擎 | Prompt ID M1-M5、29/29 最终审计和语义审查 Agent 评估已收口；当前不实现生产多 Agent；旧 loader/fallback 按政策 retain | TemplateStore、29 个稳定 Prompt ID、ID 路由/loader、TemplateContext/AnalysisRecord/Pipeline 双合同、GUI 显示名 + ID/tooltip、Stage 1 schema v2、router 权威兼容 Normalizer、manifest v2、无 filename 模型上下文、固定 `tiktoken 0.12.0`、离线/live 退出报告、legacy 到 source path 投影和 29 个 `.prompt.md` 模板已完成 | 观察 validator/retry/route 指标；只有积累 20 个语义错误正样本和 60 个 clean negative 后才重开离线 shadow reviewer；最早 0.3.0 且具备 v0.2.0 tag、fallback 零命中和 golden 报告后才评估删除旧入口 |
 | L3 Pipeline Builder | 三轮真实稳定观察与默认 Pipeline 切换已收口，legacy 作为显式回滚保留 | 完整四步 Pipeline、Task 10 全终态矩阵、5 场景×3 轮 fixture 对照；3 个独立真实 pair 的 6 个单体校验和 3 个成对校验均为 `valid=true`；新旧缺失配置默认 `true`，显式 `false` 回滚 | 持续观察 lifecycle/terminal/record 指标；出现未解释偏差先回滚，不删除 legacy facade |
 | L4 性能优化 | v2 hosted baseline 与同环境 10% p95 对照已收口，进入每日持续观察 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；`pa-agent.performance.v1` 报告、`l4.synthetic.v2` 批量折算采样、p50/p95、100/500/5000 bars 基准、版本隔离 baseline cache 和 artifact；run `29975410917`/`29975592352` 完成建基线与 restore 对照 | 维护每日 schedule；runner image、benchmark version 或采样合同变化时重建 baseline |
-| L5 经验库升级 | 记录筛选/review catalog/可核验 outcome 导入、本地 evidence 重核、evidence-backed readiness、固定切分、opaque 标注/报告管道已交付，真实数据评估未收口 | completed record shape-only scan；脱敏 record ID catalog；固定 outcome policy + 本地证据 SHA-256；annotation/export/evaluate envelope 校验与本地文件重哈希门禁；人工 `success|failure` 最小化导入与 digest 去重；全量相关性排序 + K 线相似度；版本化 dataset/split/report；HMAC opaque catalog 和 leave-one-out 对照；不改变线上排序 | 为真实 outcome 提供并保留本地证据文件，导入至少两个不同 symbol 的 instrument group，完成相关性标注和指标报告；证据充分后才评估权重 |
+| L5 经验库升级 | 工具链已交付；真实执行连续三轮稳定阻塞，L5 仍未完成；不是代码缺陷且没有真实质量指标 | completed record shape-only scan；脱敏 record ID catalog；固定 outcome policy + 本地证据 SHA-256；annotation/export/evaluate envelope 校验与本地文件重哈希门禁；人工 `success|failure` 最小化导入与 digest 去重；全量相关性排序 + K 线相似度；版本化 dataset/split/report；HMAC opaque catalog 和 leave-one-out 对照；不改变线上排序 | 提供至少两个不同 symbol 的真实 eligible 已平仓记录及本地 evidence，建议至少 4 个案例；随后完成人工 annotation 和固定 split 报告，证据充分后才评估权重 |
 | L6 无 GUI 运行 | fixed-fixture 全终态等价、跨进程 replay 和真实 Provider 成功主路径已收口，进入持续观察 | `AppEvent`/`EventSink`、严格 correlation replay、共享 core/gui bootstrap、`HeadlessAnalysisAdapter`、PyQt-free CLI；2026-07-23 真实 legacy/Pipeline pair 均完成 5 事件、record 写入和 shape-only 等价校验 | Provider、事件或记录合同变化时按 `docs/live_observation_runbook.md` 重跑；单次 live 成功不替代固定 fixture 失败路径矩阵 |
 
-当前经验目录仍为空，因而 L5 的 scorer 目前只能由合成 fixture 验证，不能据此判断真实交易
-结构的检索质量。真实 `records/pending/` 的 shape-only scan 为 2 条记录中 1 eligible、
-1 partial；操作者已明确选择暂不导入，经验目录复核仍为 0 个 JSON。L5 后续工作必须等待
-可核验 outcome，并以至少两个 instrument group、人工 outcome/相关性标签和离线指标为前置条件。
-当前 `pa-agent.experience-eval-readiness.v1` 预检稳定报告 `evaluation_salt_missing`、
-`no_experience_cases` 和 `annotations_not_provided`，不包含市场数据或本地路径。
+当前真实 experience JSON 仍为 0，因而 L5 的 scorer 只能由合成 fixture 验证，不能据此判断
+真实交易结构的检索质量。在 `main@71de023` 连续三轮执行中，shape-only scan 均为 2 条记录中
+1 eligible、1 partial，eligible cycle 聚合为 `trending_tr=1`，退出码均为 0。review catalog
+schema、安全 allowlist 和 Git ignore 检查通过，聚合 `eligible=1`；不在提交文档中记录实际
+`record_id`。操作者已明确让唯一 eligible 继续 defer，当前没有 outcome evidence 或第二
+instrument group。
+`pa-agent.experience-eval-readiness.v1` 的 export preflight 连续三轮均以退出码 1 稳定报告
+`evaluation_salt_missing`、`no_experience_cases`，evaluation preflight 另含
+`annotations_not_provided`；三轮对象和退出码完全一致。
 当存在经验案例时，preflight、annotation export 和 evaluate 还必须对本地 evidence 目录重新
 计算 SHA-256；缺失、空/不可读或摘要不匹配的文件不能进入报告，报告只记录重核状态与聚合计数。
-真实 review catalog 已为唯一 eligible record 生成稳定 `record_id`，symbol/绝对路径扫描均为
-0 命中；该记录仍无可核验已平仓证据并继续 defer，未写入经验目录。
+当前没有 evidence、annotation、dataset、split、report 或 salt；L5 仍未完成。该阻塞是外部
+真实数据前置条件，不是代码缺陷；没有生成虚假指标，也没有修改线上排序、权重或 fallback。
+完整 aggregate-only 证据见
+[`PA-L5-REAL-EVIDENCE-BLOCKED-001`](./diagnostics/l5_real_evidence_blocker_2026-07-31.md)。
 
 ### 1.1 当前收尾判定
 
@@ -579,8 +585,10 @@ cycle/direction/patterns、K 线和结构化 Stage 1/2，使用内容 digest 去
 
 在真实经验案例不足前，不调整 body/direction/range 权重。数据合同已建立，仍需：
 
-- 对 eligible completed records 使用已平仓净已实现收益政策确认 `success`/`failure`，并保留
-  可复核本地证据及其 SHA-256；不确定案例继续 defer；
+- 至少两个不同 symbol 的真实 eligible 已平仓记录；建议至少 4 个案例，并尽量保证同 cycle
+  有跨 instrument 候选；
+- 对这些 records 使用已平仓净已实现收益政策确认 `success`/`failure`，并保留可复核本地
+  evidence 及其 SHA-256；不确定案例继续 defer；
 - `success`/`failure`、symbol、timeframe、cycle、direction、patterns 的完整元数据；
 - 至少两个不同 `meta.symbol` 的 instrument group，并完成人工相关性标注；
 - 使用 `build_fixed_split()` 生成固定 train/evaluation 切分，避免同一 instrument group
@@ -766,7 +774,9 @@ pa-agent headless analyze --input snapshot.json --run --records-dir records/ --e
 - 已建立 `pa-agent.experience-split.v1` instrument-grouped 固定切分和 dataset digest；
 - 已建立真实经验 HMAC opaque 导出、人工标注门禁、leave-one-out 旧/新排序和版本化报告管道；
 - 已建立本地 outcome evidence 重哈希门禁，annotation export/evaluate 必须验证所有案例摘要；
-- 下一步按 runbook 导入真实案例、人工标注并建立固定 train/evaluation benchmark；
+- `main@71de023` 的三轮真实执行稳定阻塞；下一步按 runbook 导入至少两个不同 symbol 的真实
+  eligible 已平仓记录及本地 evidence，建议至少 4 个案例，再完成人工 annotation 并建立固定
+  train/evaluation benchmark；
 - 仅在指标改善且稳定性可接受时调整线上权重。
 
 ### Phase 6：L4 预算收口
@@ -867,4 +877,5 @@ Task 6 完成 `Stage1Step`，Task 7 完成 `RouteStep`，Task 8 完成 `Stage2St
 L6 已补齐 mock/fixed-fixture GUI/headless 全终态等价和 `pa-agent.event.v1` envelope 版本契约；
 `AppContext.build_core()` 公共入口、legacy/Pipeline 成对 artifact 合同和三轮真实成功 pair
 也已交付；L3 默认 flag 已切换为 `true` 并保留显式 legacy 回滚。当前外部证据主线只剩 L5
-真实经验数据；L1/L2 按兼容策略 retain，L4 每日观察。
+真实经验数据；三轮 blocker 稳定性不等于 L5 完成，也不支持任何权重结论。L1/L2 按兼容
+策略 retain，L4 每日观察。

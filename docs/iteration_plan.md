@@ -1,7 +1,7 @@
 # L1-L6 后续迭代执行计划
 
 > 状态：短中期执行计划
-> 更新时间：2026-07-30
+> 更新时间：2026-07-31
 > 适用范围：后续若干轮原子迭代
 > 长期边界：以 [`docs/architecture_roadmap.md`](./architecture_roadmap.md) 为准
 
@@ -11,6 +11,9 @@
 > 多 Agent，优先级恢复为 L5 真实 outcome/evidence 数据收集。
 > 当前代码/合同侧迭代、L2/M4.3 退出门禁、L6 真实成功主路径和 L3 三轮稳定观察/默认切换
 > 已完成；外部证据未收尾项为 L5 真实数据证据。
+> L5 执行基线为 `main@71de023`；三轮 scan/export/evaluation 对象与退出码完全一致，但因
+> 真实 evidence 和第二 instrument group 缺失稳定阻塞，详见
+> [`PA-L5-REAL-EVIDENCE-BLOCKED-001`](./diagnostics/l5_real_evidence_blocker_2026-07-31.md)。
 
 本文档用于把长期架构路线图拆成短中期可执行轮次，明确下一批交付物、验收标准、
 依赖关系和风险边界。长期模块边界、迁移原则、完成定义仍以
@@ -25,7 +28,7 @@
 | L2 Prompt 模板引擎 | Prompt ID M1-M5、29/29 最终审计和语义审查 Agent 评估已收口；当前不实现生产多 Agent；旧 loader/fallback 按政策 retain | TemplateStore、29 个稳定 Prompt ID、ID 路由/loader、TemplateContext/AnalysisRecord/Pipeline 双合同、GUI 显示名 + ID/tooltip、Stage 1 schema v2、router 权威兼容 Normalizer、manifest v2、无 filename 模型上下文、固定 `tiktoken 0.12.0`、离线/live 退出报告、source path 投影和 29 个 `.prompt.md` 模板已交付 | 观察 validator/retry/route；满足 20 个正样本、60 个 clean negative 和质量/成本门禁后才重开离线 shadow reviewer；最早 0.3.0 且满足 tag/fallback 零命中/golden 证据后才评估删除旧入口 |
 | L3 Pipeline Builder | 三轮真实稳定观察与默认 Pipeline 切换已收口，legacy 作为显式回滚保留 | 完整四步 Pipeline、Task 10 全终态矩阵、5 场景×3 轮 fixture 对照；3 个独立真实 pair 的 6 个单体校验和 3 个成对校验均为 `valid=true`；缺失配置默认 `true`，显式 `false` 回滚 | 持续观察 lifecycle/terminal/record 指标；出现未解释偏差先回滚，不删除 legacy facade |
 | L4 性能预算 | v2 hosted baseline、restore、九项 p95 对照和 10% 门禁已收口，进入每日观察 | HTTP client 复用、forming 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；`pa-agent.performance.v1` 报告、`l4.synthetic.v2` 批量折算采样、p50/p95、100/500/5000 bars 基准、版本隔离 baseline cache；run `29975410917`/`29975592352` 已通过 | 维护每日 schedule；runner image、benchmark version 或采样合同变化时重建 baseline |
-| L5 经验库升级 | 记录筛选/review catalog/可核验 outcome 导入、本地 evidence 重核、evidence-backed readiness/evaluator、固定切分和 opaque 标注/报告管道已交付，真实数据评估未收口 | completed record shape-only scan；脱敏 record ID catalog；固定 outcome policy + 本地证据 SHA-256；annotation/export/evaluate envelope 校验与本地文件重哈希门禁；人工 `success|failure` 最小化导入与 digest 去重；版本化 dataset/split/report 和 leave-one-out 对照；不改变线上排序 | 为真实 outcome 提供并保留本地证据文件，导入至少两个不同 symbol 的 instrument group，完成相关性标注和指标报告；证据充分后才评估权重 |
+| L5 经验库升级 | 工具链已交付；真实执行连续三轮稳定阻塞，L5 仍未完成；不是代码缺陷且没有真实质量指标 | completed record shape-only scan；脱敏 record ID catalog；固定 outcome policy + 本地证据 SHA-256；annotation/export/evaluate envelope 校验与本地文件重哈希门禁；人工 `success|failure` 最小化导入与 digest 去重；版本化 dataset/split/report 和 leave-one-out 对照；不改变线上排序 | 提供至少两个不同 symbol 的真实 eligible 已平仓记录及本地 evidence，建议至少 4 个案例；随后完成人工 annotation 和固定 split 报告，证据充分后才评估权重 |
 | L6 Headless/编排 | fixed-fixture 全终态等价、跨进程 replay 和真实 Provider 成功主路径已收口，进入持续观察 | Headless adapter、PyQt-free CLI、strict replay、GUI/headless 全终态 fixture；2026-07-23 真实 legacy/Pipeline pair 均完成 5 事件、record 写入和 shape-only 等价校验 | Provider、事件或记录合同变化时按 runbook 重跑；单次 live 成功不替代固定 fixture 失败路径矩阵 |
 
 L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、数据源连接和订阅；
@@ -40,10 +43,10 @@ L6 的当前约束必须继续保持：`bootstrap_gui()` 负责 Qt `EventBus`、
 |---|---|---|---|
 | 已收口 | L6 | fixed-fixture 全终态等价、strict replay、live harness 和真实成功 pair 已交付 | 保持受控显式执行；Provider、事件或记录合同变化时重跑 |
 | 已收口 | L3 | 完整四步 Pipeline、Task 10 矩阵、受控 rollout、三轮真实 pair 和默认切换已交付 | 持续观察；显式 `false` 保留 legacy 回滚，暂不删除旧实现 |
-| P0 | L5 | curation/review/evidence-backed 评估管道、本地文件重核和 readiness 已建立；唯一 eligible 尚无已平仓证据并继续 defer，经验目录为空 | 提供并保留本地 evidence file，按 record ID 导入至少两个不同 symbol 的 group，使文件重核和 preflight 通过，再生成 Recall/NDCG/fallback/stability 报告 |
+| P0 | L5 | 三轮 scan/export/evaluation 对象与退出码一致；唯一 eligible 继续 defer，无 evidence、第二 instrument group、annotation 或评估产物；L5 未完成 | 提供至少两个不同 symbol 的真实 eligible 已平仓记录及本地 evidence，建议至少 4 个案例；preflight 通过后完成人工 annotation，再生成固定 split 和指标报告 |
 | 已收口 | L4 | v1 负向证据证明 restore/阻断/失败保护；v2 run `29975410917`/`29975592352` 完成建基线和同环境对照 | 每日 schedule 持续观察；环境或合同变化时重建 baseline |
 | 观察 | L1 | 下线策略已固定，当前 retain | 收集真实安装扩展 inventory；未满足 0.3.0/tag/迁移证据前继续保留 |
-| P0 | L5 真实 evidence | 语义审查 Agent 评估结论为不实现生产 reviewer；10 批只算 smoke，正负样本门禁未满足 | 提供本地 evidence file，按 record ID 导入至少两个不同 symbol 的 group，使文件重核和 preflight 通过，再生成 Recall/NDCG/fallback/stability 报告 |
+| P0 | L5 真实 evidence | 语义审查 Agent 评估结论为不实现生产 reviewer；当前真实 evidence intake 稳定阻塞，不以合成数据或虚假指标绕过 | 提供至少两个不同 symbol 的真实 eligible 已平仓记录及本地 evidence，建议至少 4 个案例；随后人工 annotation 和离线评估 |
 
 当前外部证据链路只剩 **L5 真实 outcome/evidence**。L2/M4.3 的离线与真实 Provider 门禁
 均已完成，M5 不再受 live 证据阻塞；L3/L6 已收口并进入持续观察，L1 的实现与下线策略按
@@ -78,7 +81,9 @@ flag-off/flag-on 受控 fixture rollout 观察，并于 2026-07-23/24 连续取�
 4. **L2：评估可选语义审查 Agent**。已完成。结论是不实现生产 reviewer；未来只允许
    人工触发的离线 shadow 工具，并须先满足 20 个语义错误正样本、60 个 clean negative、
    新增召回/误报/稳定性及 token/延迟门禁。10 批只能验证工具链，不能支持上线结论。
-5. **L5：真实案例 opaque 导出、人工标注和离线指标报告**。具备真实 evidence 后立即恢复。
+5. **L5：真实案例 opaque 导出、人工标注和离线指标报告**。本轮已在
+   `main@71de023` 稳定阻塞；取得至少两个不同 symbol 的真实 eligible 已平仓记录及本地
+   evidence 后立即恢复，建议先积累至少 4 个案例。
 6. **L3/L6**：保持持续观察；Provider、事件或记录合同变化时重跑真实 pair，出现偏差先回滚。
 7. **L4**：每日持续基准，不凭单次波动修改热路径。
 8. **L1/L2 旧入口**：按 `compatibility_policy.json` retain；证据与版本条件未满足前不删除。
@@ -855,6 +860,27 @@ target 和差异检查通过。
   双矩阵验收，两个 job 的 targeted、non-live、Ruff baseline、Focused Ruff 和 Black 均为
   `success`。
 
+## 2.24.8 本轮诊断结果（L5：真实 evidence 前置条件阻塞）
+
+- 执行基线为 `main@71de023`。pending scan 连续三轮均为退出码 0：
+  `record_count=2`、`eligible=1`、`partial=1`、`trending_tr=1`；
+- review catalog schema 与安全 allowlist 检查通过，聚合 `eligible=1`，产物受 Git ignore
+  保护；诊断不记录实际 `record_id`。操作者明确让唯一 eligible 继续 defer，当前没有
+  outcome evidence 或第二 instrument group；
+- export preflight 连续三轮均以退出码 1 返回 `evaluation_salt_missing`、
+  `no_experience_cases`；evaluation preflight 另含 `annotations_not_provided`。三类规范
+  JSON 对象和退出码逐轮完全一致；
+- 当前为 0 个 experience JSON、0 个 evidence、0 个 annotation，且没有 dataset、split、
+  report 或 salt；因此没有生成 Recall@K、NDCG@K、fallback、stability 或新旧差值；
+- 该结果是可复现的真实数据前置 blocker，不是代码缺陷。L5 仍未完成，没有虚假指标，也未
+  修改线上排序、权重、legacy fallback、Prompt、Provider 或 Pipeline；
+- L5 聚焦测试 **27 passed**；Ruff、`py_compile`、177 个 CI targeted 目标、293 个
+  focused Ruff 目标、3,712 条 Ruff baseline 和差异检查通过；
+- 诊断见
+  [`PA-L5-REAL-EVIDENCE-BLOCKED-001`](./diagnostics/l5_real_evidence_blocker_2026-07-31.md)。
+  解锁需要至少两个不同 symbol 的真实 eligible 已平仓记录及本地 evidence，建议至少 4 个
+  案例，然后完成人工 annotation。
+
 ## 2.25 本轮完成结果（L6：显式 live headless observation harness）
 
 本轮不执行真实 Provider，只提供受控、可审计的真实观察入口：
@@ -1223,7 +1249,8 @@ adapter 对照测试；三轮真实 pair 与默认切换也已完成，后续持
 
 仍需交付：
 
-- 按 `docs/experience_evaluation_runbook.md` 导入真实案例并完成人工相关性标签。
+- 按 `docs/experience_evaluation_runbook.md` 导入至少两个不同 symbol 的真实 eligible
+  已平仓记录及本地 evidence，建议至少 4 个案例，再完成人工相关性标签。
 - 生成固定 split 下的真实指标报告，并在证据充分后评估线上权重。
 - 生成旧排序规则和候选新规则的并排报告，并进行人工抽样评审。
 

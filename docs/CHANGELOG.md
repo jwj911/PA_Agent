@@ -18,6 +18,29 @@
 
 ---
 
+## [Unreleased] — 2026-07-31（L5：真实 evidence 离线评估前置阻塞）
+
+- 在 `main@71de023` 执行已批准的 L5 真实证据评估 blocker 分支。pending scan 连续三轮均为
+  退出码 0：`record_count=2`、`eligible=1`、`partial=1`、`trending_tr=1`。
+- review catalog 使用正确的 `pa-agent.experience-curation-review.v1` schema，聚合
+  `eligible=1`；Git ignore 和安全 allowlist 检查通过，提交文档不记录实际 `record_id`。
+  操作者明确让唯一 eligible 继续 defer；当前无 outcome evidence、无第二 instrument group。
+- export preflight 连续三轮均以退出码 1 返回 `evaluation_salt_missing`、
+  `no_experience_cases`；evaluation preflight 另含 `annotations_not_provided`。三轮规范 JSON
+  对象与退出码完全一致。
+- 当前为 0 个 experience JSON、0 个 evidence、0 个 annotation，且无 dataset、split、
+  report 或 salt。本轮没有生成 Recall@K、NDCG@K、fallback、stability 或新旧差值，L5 仍未
+  完成；这是外部真实数据前置条件阻塞，不是代码缺陷，也没有虚假指标。
+- 未修改线上排序、相似度权重、legacy fallback、Prompt、Provider 或 Pipeline。解锁需要至少
+  两个不同 symbol 的真实 eligible 已平仓记录及本地 evidence，建议至少 4 个案例，然后完成
+  人工 annotation。
+- 新增 aggregate-only 诊断
+  [`PA-L5-REAL-EVIDENCE-BLOCKED-001`](./diagnostics/l5_real_evidence_blocker_2026-07-31.md)；
+  L5 聚焦测试 **27 passed**，Ruff、`py_compile`、177 个 CI targeted 目标、293 个 focused
+  Ruff 目标、3,712 条 Ruff baseline 和差异检查通过。
+
+---
+
 ## [Unreleased] — 2026-07-30（L2：可选语义审查 Agent 评估）
 
 - 在 Prompt ID M1-M5 收口后，审查现有

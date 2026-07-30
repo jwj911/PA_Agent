@@ -558,8 +558,10 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     `docs/experience_evaluation_runbook.md`。运行导出/评估前必须先执行
     `tools/run_experience_evaluation.py preflight`；`pa-agent.experience-eval-readiness.v1`
     只能输出聚合计数和稳定 blocker code，不得输出 symbol、价格、K 线、路径、salt 或案例
-    原文。当前真实 blocker 为 `evaluation_salt_missing`、`no_experience_cases` 和
-    `annotations_not_provided`；提交 `e79cb35` 已由 GitHub Actions run `30100558235`
+    原文。在 `main@71de023` 连续三轮执行中，export blocker 稳定为
+    `evaluation_salt_missing`、`no_experience_cases`，evaluation 另含
+    `annotations_not_provided`，对象和退出码逐轮完全一致；这只证明 blocker 可复现，不代表
+    dataset/split/report 可复现。提交 `e79cb35` 已由 GitHub Actions run `30100558235`
     在 Windows/Python 3.11/3.12 双矩阵验收。`experience_curation.py` 和
     `tools/curate_experience_record.py` 已补齐 completed `AnalysisRecord` 的 shape-only scan 与
     `pa-agent.experience-curation-review.v1` 脱敏 review catalog；catalog 只允许 timestamp、
@@ -580,11 +582,18 @@ powershell -ExecutionPolicy Bypass -File tools\setup_git_secrets.ps1
     和已核验案例数；提交 `1d167ad` 已由 GitHub Actions run `30161941541` 在
     Windows/Python 3.11/3.12 双矩阵验收；
     导入案例不保留源路径/文件名、Prompt、Provider 原始回复、usage、策略路径或 HTF 原文，
-    并以内容 digest 去重及当前 Key 二次脱敏。当前真实 scan 为 2 条记录中 1 eligible、
-    1 partial，经验目录仍为 0 个 JSON；提交 `1e80d0b` 已由 GitHub Actions run
-    `30059750285` 在 Windows/Python 3.11/3.12 双矩阵验收。操作者已明确选择暂不导入；
-    在取得可核验 outcome 前不得导入。真实脱敏数据集、至少两个 instrument group、人工
-    相关性标注、指标报告和线上权重校准仍待完成，不得顺手修改 `ExperienceReader` 线上排序。
+    并以内容 digest 去重及当前 Key 二次脱敏。当前真实 scan 连续三轮均为 2 条记录中
+    1 eligible、1 partial，eligible cycle 聚合为 `trending_tr=1`；review catalog schema、
+    Git ignore 和安全 allowlist 检查通过，聚合 `eligible=1`，提交文档不得写实际
+    `record_id`。提交 `1e80d0b` 已由 GitHub Actions run `30059750285` 在 Windows/Python
+    3.11/3.12 双矩阵验收。操作者已明确让唯一 eligible 继续 defer；当前没有 outcome
+    evidence 或第二 instrument group，也没有 experience JSON、annotation、dataset、split、
+    report 或 salt。该状态是外部真实数据前置阻塞，不是代码缺陷；L5 仍未完成，不得生成
+    虚假指标或把 blocker 写成排序质量改善。解锁至少需要两个不同 symbol 的真实 eligible
+    已平仓记录及本地 evidence，建议至少 4 个案例，然后完成人工 annotation。完整证据见
+    [`PA-L5-REAL-EVIDENCE-BLOCKED-001`](./docs/diagnostics/l5_real_evidence_blocker_2026-07-31.md)。
+    在取得这些输入前不得导入或调整权重，不得顺手修改 `ExperienceReader` 线上排序、
+    相似度权重、legacy fallback、Prompt、Provider 或 Pipeline。
 19. **L4 性能基准当前进度**：`pa_agent.perf.benchmark` 和
     `tools/run_l4_benchmark.py` 提供 `pa-agent.performance.v1` 报告、p50/p95、p95 budget
     和超过 10% baseline regression 判定；固定 suite 覆盖 snapshot build、indicator、
