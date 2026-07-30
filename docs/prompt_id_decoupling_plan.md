@@ -1,6 +1,6 @@
 # Prompt ID 与文件名解耦方案
 
-> 状态：M1-M4.3 与 M5.0-M5.4 已完成；M5.5 已通过本地全部门禁，远端验收待执行
+> 状态：M1-M5 与 29/29 最终完成审计已通过
 >
 > 日期：2026-07-30
 >
@@ -647,7 +647,12 @@ GUI 默认显示：
   `ce8b9555c8b947cce70046f415e3715f7db09d8f759eb4db808d440cc0e2c79a`。
 - 批次诊断为
   [`PA-M5-PATTERN-CONTEXT-001`](./diagnostics/prompt_m5_pattern_context_migration_2026-07-30.md)；
-  当前实现与本地全部门禁已完成，远端 Python 3.11/3.12 双矩阵通过后方可收口。
+  实现提交 `a9ecb76` 与 GitHub Actions run `30509955576` 的 Python 3.11/3.12 双矩阵
+  已通过，M5.5 已收口。
+- 最终审计
+  [`PA-M5-COMPLETE-001`](./diagnostics/prompt_m5_completion_audit_2026-07-30.md)
+  逐 ID 证明当前 29 个 `.prompt.md` Git blob 与 M5.0 基线 legacy `.txt` blob 相同，
+  legacy/ID loader 内容相等，M5 完成定义满足。
 
 **退出门禁**：
 
@@ -745,3 +750,6 @@ digest 不变，不要求用 live 调用替代确定性等价证据。
 - 修改某个 `source_path` 不需要修改 router、schema、历史记录或 GUI 业务逻辑。
 - 旧 API 和旧记录在兼容期可用，且移除计划受兼容政策约束。
 - M1-M3 有字节等价证据，M4 有合同评估证据，M5 有内容摘要不变证据。
+
+`PA-M5-COMPLETE-001` 已逐项证明上述完成定义，Prompt ID 与文件名解耦主线收口。后续语义
+审查 Agent 评估属于独立迭代，不回改本方案的身份与物理迁移合同。

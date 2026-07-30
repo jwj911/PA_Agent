@@ -38,7 +38,12 @@
 - CI targeted 177 个目标与完整 `not e2e and not live` 回归通过，coverage 56.83%；
   3,712 条 Ruff baseline、293 个 focused Ruff 目标、363 个 focused Black 文件、CI 清单
   自检、兼容政策、`py_compile` 和差异检查通过。
-- 实现提交与远端双矩阵验收尚待执行；完成前不把 M5.5 或整个 M5 标记为收口。
+- 实现提交 `a9ecb76` 已推送到 `main`；GitHub Actions run `30509955576` 的
+  Windows/Python 3.11 与 3.12 两个矩阵 job 均为 `success`。
+- 29/29 最终审计逐 ID 证明当前 `.prompt.md` 与 M5.0 基线 legacy `.txt` 的 Git blob
+  相同，29 个 legacy loader 与 ID loader 内容相等；全量证据见
+  [`PA-M5-COMPLETE-001`](./diagnostics/prompt_m5_completion_audit_2026-07-30.md)。
+  M5.5 与整个 M5 已收口，下一迭代评估可选语义审查 Agent。
 
 ---
 

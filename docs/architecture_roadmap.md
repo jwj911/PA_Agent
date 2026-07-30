@@ -5,7 +5,7 @@
 > 适用分支：`main`
 > 关联路线：[`docs/backend_review_report.md`](./backend_review_report.md)
 > 短中期执行计划：[`docs/iteration_plan.md`](./iteration_plan.md)
-> 最近验收：GitHub Actions run `30507318293`，`main@47d0b76` 的
+> 最近验收：GitHub Actions run `30509955576`，`main@a9ecb76` 的
 > Windows/Python 3.11/3.12 全门禁通过。
 
 本文档把长期路线图 L1-L6 细化为可分批迁移的架构计划。目标是降低模块之间的隐式耦合，
@@ -22,7 +22,7 @@
 | 路线 | 当前状态 | 已有基础 | 主要剩余工作 |
 |---|---|---|---|
 | L1 Provider/数据源注册表 | 扩展兼容观察与下线策略/CI 门禁已收口；legacy registrar 按政策 retain | registry、entry point、v1 registrar、失败隔离、并发/lazy-import 和固定样例观察已完成；`compatibility_policy.json` 强制保留未声明版本 callable | 观察真实安装扩展；最早 0.3.0 且具备 v0.2.0 tag、inventory 和迁移报告后才评估删除 |
-| L2 Prompt 模板引擎 | Prompt ID M1-M4.3、离线/真实 Provider 退出门禁和 M5.0-M5.4 已完成；M5.5 最后 12 个模板已通过本地全部门禁，远端验收待执行；旧 loader/fallback 按政策 retain | TemplateStore、29 个稳定 Prompt ID、ID 路由/loader、TemplateContext/AnalysisRecord/Pipeline 双合同、GUI 显示名 + ID/tooltip、Stage 1 schema v2、router 权威兼容 Normalizer、manifest v2、无 filename 模型上下文、固定 `tiktoken 0.12.0`、离线/live 退出报告、legacy 到 source path 投影和 29 个 `.prompt.md` 模板已完成 | 完成 M5.5 远端验收和 29/29 最终审计；最早 0.3.0 且具备 v0.2.0 tag、fallback 零命中和 golden 报告后才评估删除旧入口 |
+| L2 Prompt 模板引擎 | Prompt ID M1-M5 与 29/29 最终审计已收口；旧 loader/fallback 按政策 retain | TemplateStore、29 个稳定 Prompt ID、ID 路由/loader、TemplateContext/AnalysisRecord/Pipeline 双合同、GUI 显示名 + ID/tooltip、Stage 1 schema v2、router 权威兼容 Normalizer、manifest v2、无 filename 模型上下文、固定 `tiktoken 0.12.0`、离线/live 退出报告、legacy 到 source path 投影和 29 个 `.prompt.md` 模板已完成 | 独立评估可选语义审查 Agent；最早 0.3.0 且具备 v0.2.0 tag、fallback 零命中和 golden 报告后才评估删除旧入口 |
 | L3 Pipeline Builder | 三轮真实稳定观察与默认 Pipeline 切换已收口，legacy 作为显式回滚保留 | 完整四步 Pipeline、Task 10 全终态矩阵、5 场景×3 轮 fixture 对照；3 个独立真实 pair 的 6 个单体校验和 3 个成对校验均为 `valid=true`；新旧缺失配置默认 `true`，显式 `false` 回滚 | 持续观察 lifecycle/terminal/record 指标；出现未解释偏差先回滚，不删除 legacy facade |
 | L4 性能优化 | v2 hosted baseline 与同环境 10% p95 对照已收口，进入每日持续观察 | HTTP client 复用、forming-bar 判定复用、K 线几何 O(n) 化、记录缓存和并发锁；`pa-agent.performance.v1` 报告、`l4.synthetic.v2` 批量折算采样、p50/p95、100/500/5000 bars 基准、版本隔离 baseline cache 和 artifact；run `29975410917`/`29975592352` 完成建基线与 restore 对照 | 维护每日 schedule；runner image、benchmark version 或采样合同变化时重建 baseline |
 | L5 经验库升级 | 记录筛选/review catalog/可核验 outcome 导入、本地 evidence 重核、evidence-backed readiness、固定切分、opaque 标注/报告管道已交付，真实数据评估未收口 | completed record shape-only scan；脱敏 record ID catalog；固定 outcome policy + 本地证据 SHA-256；annotation/export/evaluate envelope 校验与本地文件重哈希门禁；人工 `success|failure` 最小化导入与 digest 去重；全量相关性排序 + K 线相似度；版本化 dataset/split/report；HMAC opaque catalog 和 leave-one-out 对照；不改变线上排序 | 为真实 outcome 提供并保留本地证据文件，导入至少两个不同 symbol 的 instrument group，完成相关性标注和指标报告；证据充分后才评估权重 |
@@ -357,8 +357,9 @@ M5.4 已按 router 语义边界迁移 bullish/bearish channel、bullish/bearish 
 模板。
 M5.5 已迁移最后 12 个 channel width、pattern 和 context 模板；迁移合同现覆盖 29/29，
 运行时目录为 29 个 `.prompt.md`、0 个 `.txt`。正文、10 组路由/Stage 2 组装摘要和 M4
-最终报告均与迁移前证据一致；本地全部门禁已通过，远端双矩阵和最终完成审计通过前不标记
-M5 收口。
+最终报告均与迁移前证据一致；实现提交 `a9ecb76` 和 GitHub Actions run `30509955576`
+的双矩阵已通过。`PA-M5-COMPLETE-001` 又逐 ID 证明当前 Git blob 与 M5.0 基线相同、
+legacy/ID loader 等价，M5 已收口。下一迭代只评估可选语义审查 Agent，不直接引入多 Agent。
 
 ## 6. L3：Pipeline Builder / State Machine
 

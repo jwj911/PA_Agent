@@ -80,4 +80,6 @@ Stage 2 组装合同。批次证据见
 
 M5.5 迁移最后 12 个 pattern/context 模板，迁移合同覆盖 29/29，运行时目录达到
 29 个 `.prompt.md`、0 个 `.txt`。批次证据见
-[`PA-M5-PATTERN-CONTEXT-001`](./prompt_m5_pattern_context_migration_2026-07-30.md)。
+[`PA-M5-PATTERN-CONTEXT-001`](./prompt_m5_pattern_context_migration_2026-07-30.md)；
+实现提交 `a9ecb76` 与 GitHub Actions run `30509955576` 双矩阵已通过。全量收口证据见
+[`PA-M5-COMPLETE-001`](./prompt_m5_completion_audit_2026-07-30.md)。
